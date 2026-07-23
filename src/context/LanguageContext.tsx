@@ -99,33 +99,52 @@ const translations: Record<Language, Record<string, string>> = {
     'how.step3Desc': 'Propone automáticamente horarios disponibles y coordina la visita presencial sin fricción.',
     'how.step4Title': 'Tu equipo humano cierra la venta',
     'how.step4Desc': 'Tus agentes reciben la ficha completa con score del lead y agendamiento confirmado para cerrar el trato.',
+    'how.cta': 'Comenzar a Automatizar Ahora',
 
     // Interactive Demo
-    'demo.badge': 'Sandbox Interactivo Live',
+    'demo.badge': 'Demostración Interactiva Live',
     'demo.title': 'Prueba el Agente de IA en Vivo',
-    'demo.subtitle': 'Hazle preguntas como si fueras un comprador interesado en un departamento o un inversionista buscando rendimiento.',
+    'demo.subtitle': 'Selecciona una herramienta interactiva o mira el video demostrativo de agendamiento en tiempo real.',
+    'demo.tab1': 'Workspace Interactivo Live',
+    'demo.tab2': 'Video Demostrativo',
+    'demo.videoTitle': 'De consulta a visita agendada en 5 segundos',
+    'demo.videoDesc': 'Mira cómo Aria Prop califica al comprador, calcula presupuesto y agenda la cita en Google Calendar automáticamente.',
 
     // Testimonials
     'test.badge': 'Casos de Éxito Reales',
     'test.title': 'Agencias que ya escalaron sus ventas con Aria Prop',
     'test.subtitle': 'Resultados comprobados por directores comerciales y agentes independientes en Latinoamérica y España.',
 
-    // Security & Trust
-    'security.badge': 'Seguridad de Grado Bancario',
-    'security.title': 'Tus datos y tus prospectos siempre protegidos',
-    'security.subtitle': 'Cumplimiento estricto de la normativa RGPD y cifrado de extremo a extremo en todas las conversaciones.',
+    // Security & Seals
+    'seal.badge': 'Seguridad & Confianza Enterprise',
+    'seal.title': 'Tus Datos e Inmuebles Protegidos con Grado Bancario',
+    'seal.subtitle': 'Cumplimiento estricto de la normativa RGPD y cifrado de extremo a extremo en todas las conversaciones.',
+    'seal.seal1Title': 'Cifrado SSL 256-bit',
+    'seal.seal1Desc': 'Todas las conversaciones y datos del catálogo viajan totalmente cifrados.',
+    'seal.seal2Title': 'Cumplimiento RGPD & GDPR',
+    'seal.seal2Desc': 'Protección estricta de datos personales de compradores e inversionistas.',
+    'seal.seal3Title': 'Infraestructura Cloud Serverless',
+    'seal.seal3Desc': 'Respuestas inmediatas sin caídas ni sobrecarga de servidor.',
+    'seal.seal4Title': 'Aislamiento por Agencia',
+    'seal.seal4Desc': 'Tus leads y catálogo pertenecen exclusivamente a tu agencia.',
+    'seal.verified': 'Verificado & Certificado',
 
     // Integrations
-    'integrations.badge': 'Ecosistema Conectado',
-    'integrations.title': 'Se integra perfectamente con tus herramientas',
-    'integrations.subtitle': 'Conecta Aria Prop con tu CRM inmobiliario, WhatsApp Business, Google Calendar y portales líderes.',
+    'integ.badge': 'Ecosistema Conectado',
+    'integ.title': 'Se integra perfectamente con tus herramientas actuales',
+    'integ.subtitle': 'Conecta Aria Prop con tu CRM inmobiliario, WhatsApp Business, Google Calendar y portales de mercado.',
+    'integ.compliance': 'Encriptación AES-256 bits • Cumplimiento estricto de RGPD / GDPR para protección de datos personales',
 
     // Final CTA
-    'final.badge': 'Empieza Hoy Mismo',
-    'final.title': 'Transforma la atención comercial de tu agencia inmobiliaria',
-    'final.subtitle': 'Configura tu primer agente de IA en menos de 10 minutos y comienza a captar prospectos 24/7 sin comisiones ocultas.',
-    'final.ctaPrimary': 'Crear cuenta gratis',
-    'final.ctaSecondary': 'Hablar con un especialista',
+    'cta.badge': 'Transforma tu Agencia Inmobiliaria',
+    'cta.title1': '¿Listo para captar y agendar prospectos',
+    'cta.title2': 'las 24 horas del día',
+    'cta.subtitle': 'Configura tu primer agente de IA en menos de 10 minutos y comienza a captar prospectos 24/7 sin comisiones ocultas.',
+    'cta.primary': 'Comenzar Prueba Gratuita',
+    'cta.secondary': 'Hablar con un Especialista',
+    'cta.trust1': 'Instalación en 2 min',
+    'cta.trust2': 'Sin comisiones ocultas',
+    'cta.trust3': 'Soporte 24/7 en español',
 
     // Footer
     'footer.description': 'La plataforma líder de Inteligencia Artificial para el sector inmobiliario en Latinoamérica y España. Automatización de leads, cualificación y agendamiento 24/7.',
@@ -286,33 +305,52 @@ const translations: Record<Language, Record<string, string>> = {
     'how.step3Desc': 'Proposes open time slots and coordinates in-person or virtual tours effortlessly.',
     'how.step4Title': 'Your team closes the sale',
     'how.step4Desc': 'Agents receive full lead score profiles and confirmed appointments ready to close.',
+    'how.cta': 'Start Automating Now',
 
     // Interactive Demo
-    'demo.badge': 'Live Interactive Sandbox',
+    'demo.badge': 'Live Interactive Demo',
     'demo.title': 'Test the AI Agent Live',
-    'demo.subtitle': 'Ask questions as a home buyer or an investor looking for ROI analysis.',
+    'demo.subtitle': 'Select an interactive tool or watch the real-time tour scheduling demonstration.',
+    'demo.tab1': 'Live Interactive Workspace',
+    'demo.tab2': 'Video Demonstration',
+    'demo.videoTitle': 'From query to booked tour in 5 seconds',
+    'demo.videoDesc': 'See how Aria Prop qualifies the buyer, checks budget, and schedules the tour on Google Calendar automatically.',
 
     // Testimonials
     'test.badge': 'Real Success Stories',
     'test.title': 'Agencies scaling sales with Aria Prop',
     'test.subtitle': 'Proven results from commercial directors and independent brokers.',
 
-    // Security & Trust
-    'security.badge': 'Bank-Grade Security',
-    'security.title': 'Your data and prospects always protected',
-    'security.subtitle': 'Strict GDPR compliance and end-to-end encryption across all channels.',
+    // Security & Seals
+    'seal.badge': 'Enterprise Security & Trust',
+    'seal.title': 'Bank-Grade Data & Property Protection',
+    'seal.subtitle': 'Strict GDPR compliance and end-to-end encryption across all channels.',
+    'seal.seal1Title': '256-bit SSL Encryption',
+    'seal.seal1Desc': 'All conversations and catalog data are fully encrypted.',
+    'seal.seal2Title': 'GDPR & Privacy Compliance',
+    'seal.seal2Desc': 'Strict personal data protection for buyers and investors.',
+    'seal.seal3Title': 'Cloud Serverless Infrastructure',
+    'seal.seal3Desc': 'Instant responses with zero downtime or server overload.',
+    'seal.seal4Title': 'Agency Data Isolation',
+    'seal.seal4Desc': 'Your leads and catalog belong exclusively to your agency.',
+    'seal.verified': 'Verified & Certified',
 
     // Integrations
-    'integrations.badge': 'Connected Ecosystem',
-    'integrations.title': 'Integrates seamlessly with your stack',
-    'integrations.subtitle': 'Connect Aria Prop with your CRM, WhatsApp Business API, Google Calendar, and listing portals.',
+    'integ.badge': 'Connected Ecosystem',
+    'integ.title': 'Integrates seamlessly with your current stack',
+    'integ.subtitle': 'Connect Aria Prop with your CRM, WhatsApp Business API, Google Calendar, and market portals.',
+    'integ.compliance': 'AES-256 bit encryption • Strict GDPR compliance for personal data protection',
 
     // Final CTA
-    'final.badge': 'Get Started Today',
-    'final.title': 'Transform your real estate sales engagement',
-    'final.subtitle': 'Set up your first AI agent in under 10 minutes and start capturing leads 24/7 without hidden fees.',
-    'final.ctaPrimary': 'Create free account',
-    'final.ctaSecondary': 'Speak with a specialist',
+    'cta.badge': 'Transform Your Real Estate Agency',
+    'cta.title1': 'Ready to capture and book leads',
+    'cta.title2': '24 hours a day',
+    'cta.subtitle': 'Set up your first AI agent in under 10 minutes and start capturing leads 24/7 without hidden fees.',
+    'cta.primary': 'Start Free Trial',
+    'cta.secondary': 'Speak with a Specialist',
+    'cta.trust1': '2 min setup',
+    'cta.trust2': 'No hidden fees',
+    'cta.trust3': '24/7 support',
 
     // Footer
     'footer.description': 'The leading Artificial Intelligence platform for real estate in LATAM and Europe. 24/7 lead automation, qualification, and tour scheduling.',

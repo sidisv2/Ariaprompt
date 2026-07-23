@@ -53,7 +53,7 @@ export const IntegrationsSection: React.FC = () => {
         {/* Security / Compliance Banner */}
         <div className="mt-12 p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 max-w-2xl mx-auto flex items-center justify-center gap-3 text-xs text-indigo-950 font-medium">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Encriptación AES-256 bits • Cumplimiento estricto de RGPD / GDPR para protección de datos personales</span>
+          <span>{t('integ.compliance')}</span>
         </div>
 
       </div>

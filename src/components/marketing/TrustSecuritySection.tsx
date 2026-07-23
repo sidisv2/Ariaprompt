@@ -59,7 +59,7 @@ export const TrustSecuritySection: React.FC = () => {
               <p className="text-xs text-slate-600 leading-relaxed">{s.desc}</p>
               <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Verificado & Certificado</span>
+                <span>{t('seal.verified')}</span>
               </div>
             </div>
           ))}

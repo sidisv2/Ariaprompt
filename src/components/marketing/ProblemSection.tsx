@@ -75,7 +75,7 @@ export const ProblemSection: React.FC = () => {
             onClick={() => openAuthModal('signup', 'pro', 'dashboard-checkout')}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer hover:scale-105"
           >
-            <span>Solucionar esto ahora con Aria Prop</span>
+            <span>{t('problem.cta')}</span>
             <ArrowRight className="w-4 h-4 stroke-[3]" />
           </button>
         </div>
