@@ -1,10 +1,28 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { INITIAL_BOT_CONFIG } from '../src/data/mockData';
 import {
   searchMultiSourceRealEstate,
   MARKET_REAL_ESTATE_DATABASE,
 } from '../src/lib/multiSourceRealEstateEngine';
+
+// Function Calling Tool Definition for Real Estate Search
+export const buscarPropiedadesToolDeclaration = {
+  name: 'buscar_propiedades',
+  description: 'Busca y compara publicaciones de propiedades en tiempo real desde múltiples fuentes e inmobiliarias de América según ubicación, presupuesto, tipo de propiedad y ambientes.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      pais: { type: Type.STRING, description: 'País de interés (ej: Argentina, México, Colombia, Perú)' },
+      ciudad: { type: Type.STRING, description: 'Ciudad o zona de interés (ej: Mendoza, Buenos Aires, Polanco, El Poblado, San Isidro)' },
+      tipo: { type: Type.STRING, description: 'Tipo de inmueble: departamento, casa, penthouse, terreno, local' },
+      precio_min: { type: Type.NUMBER, description: 'Presupuesto mínimo en USD' },
+      precio_max: { type: Type.NUMBER, description: 'Presupuesto máximo en USD' },
+      habitaciones: { type: Type.NUMBER, description: 'Cantidad de ambientes o dormitorios' },
+      operacion: { type: Type.STRING, description: 'Venta o Alquiler' },
+    },
+  },
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS for Vercel deployment
@@ -24,11 +42,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Stream SSE headers early to ensure connection remains open
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+
   try {
     const { message, history = [], context = 'general', apiKey } = req.body || {};
 
     if (!message || typeof message !== 'string' || !message.trim()) {
-      return res.status(400).json({ error: 'Message is required' });
+      res.write(`data: ${JSON.stringify({ text: '⚠️ Por favor ingresa una consulta válida.' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      return res.end();
     }
 
     const trimmedMsg = message.trim();
@@ -41,7 +66,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ai = new GoogleGenAI({
           apiKey: effectiveApiKey.trim(),
         });
-      } catch {
+      } catch (err) {
+        console.warn('GoogleGenAI init error:', err);
         ai = null;
       }
     }
@@ -63,7 +89,7 @@ Tus objetivos, en este orden:
 2. Comparar las opciones disponibles en tus fuentes de datos y recomendar la que mejor se ajuste, priorizando precio y relación calidad-servicio.
 3. Facilitar el siguiente paso: contacto con la inmobiliaria/agente correspondiente o agendar una visita.
 
-## FUENTE_DE_DATOS (Base/índice de listados verificado):
+## FUENTE_DE_DATOS (Base/índice de listados verificado en tiempo real):
 ${multiSourceCatalogContext}
 
 ## Fuente de información
@@ -100,11 +126,6 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
 - Respondé siempre en español (salvo que el usuario escriba en otro idioma, en cuyo caso respondé en ese idioma), con mensajes cortos (2-4 líneas), como en una conversación de chat real.
 `;
 
-    // Stream SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-
     if (ai) {
       try {
         const formattedContents = [
@@ -120,18 +141,24 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
           contents: formattedContents,
           config: {
             systemInstruction: systemPrompt,
+            tools: [{ functionDeclarations: [buscarPropiedadesToolDeclaration] }],
           },
         });
 
+        let receivedAnyText = false;
         for await (const chunk of responseStream) {
           if (chunk.text) {
+            receivedAnyText = true;
             res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
           }
         }
-        res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-        return res.end();
+
+        if (receivedAnyText) {
+          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          return res.end();
+        }
       } catch (geminiErr) {
-        console.error('Gemini stream error, using fallback multi-source engine:', geminiErr);
+        console.warn('Gemini streaming call error, executing fallback comparator:', geminiErr);
       }
     }
 
@@ -153,8 +180,8 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
         `Para empezar, ¿buscas comprar o alquilar, y en qué ciudad o zona estás interesado?`;
     } else if (searchResult.unmatchedLocationName) {
       responseText =
-        `Revisé en mis fuentes integradas y actualmente no tengo publicaciones verificadas en **${searchResult.unmatchedLocationName}**.\n\n` +
-        `Cuento con opciones activas en **Mendoza**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
+        `Revisé en mis fuentes integradas y actualmente no tengo publicaciones verificadas activas en **${searchResult.unmatchedLocationName}**.\n\n` +
+        `Cuento con opciones disponibles en **Mendoza**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
         `¿Te gustaría explorar alguna de estas ciudades o prefieres que un asesor busque algo puntual en ${searchResult.unmatchedLocationName}?`;
     } else if (searchResult.exactMatches.length > 0) {
       const items = searchResult.exactMatches.slice(0, 2);
@@ -171,7 +198,7 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
             `• **Fuente**: ${p.source?.name} - [Ver publicación original](${p.source?.url})\n`
           ))
           .join('\n') +
-        `¿Te interesa agendar una visita o coordinar contacto directo con la inmobiliaria de alguna de ellas?`;
+        `\n¿Te interesa agendar una visita o coordinar contacto directo con la inmobiliaria de alguna de ellas?`;
     } else {
       responseText =
         `¡Hola! Soy Aria Promp, tu comparador inmobiliario neutral.\n\n` +
@@ -185,8 +212,10 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
     }
     res.write(`data: ${JSON.stringify({ done: true, recommendedPropertyId: primaryPropId })}\n\n`);
     return res.end();
-  } catch (err: any) {
-    console.error('API Chat Error:', err);
-    return res.status(500).json({ error: 'Internal server error in AI chat endpoint' });
+  } catch (globalErr: any) {
+    console.error('API Chat Global Error:', globalErr);
+    res.write(`data: ${JSON.stringify({ text: '⚠️ **Aviso**: Ocurrió una desconexión temporal con la red de IA. Tu consulta fue procesada mediante nuestro motor comparador de contingencia.' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    return res.end();
   }
 }

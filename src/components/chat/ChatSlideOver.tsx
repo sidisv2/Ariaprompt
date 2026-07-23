@@ -73,21 +73,9 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
     const textToSend = customText || input;
     if (!textToSend.trim()) return;
 
-    // Enforce 2 free message limit for non-admin users
-    if (!isAdmin) {
-      const sent = getSentCount();
-      if (sent >= 2) {
-        openAuthModal('login');
-        return;
-      }
-    }
-
     setInput('');
     await send(textToSend, initialContext, messages);
-
-    if (!isAdmin) {
-      incrementSentCount();
-    }
+    incrementSentCount();
   };
 
   if (!isOpen) return null;

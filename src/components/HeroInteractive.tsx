@@ -28,16 +28,8 @@ export const HeroInteractive: React.FC<{ initialContext?: string }> = ({ initial
     setValue(text);
     inputRef.current?.focus();
     setTimeout(async () => {
-      // enforce free-message limit
-      if (!isAdmin) {
-        const sent = getSentCount();
-        if (sent >= 2) {
-          openAuthModal('login');
-          return;
-        }
-      }
-      const reply = await send(text, initialContext, messages);
-      if (!isAdmin) incrementSentCount();
+      await send(text, initialContext, messages);
+      incrementSentCount();
     }, 120);
   };
 
@@ -45,16 +37,8 @@ export const HeroInteractive: React.FC<{ initialContext?: string }> = ({ initial
     e?.preventDefault();
     if (!value.trim()) return;
 
-    if (!isAdmin) {
-      const sent = getSentCount();
-      if (sent >= 2) {
-        openAuthModal('login');
-        return;
-      }
-    }
-
-    const reply = await send(value, initialContext, messages);
-    if (!isAdmin) incrementSentCount();
+    await send(value, initialContext, messages);
+    incrementSentCount();
     setValue('');
   };
 
