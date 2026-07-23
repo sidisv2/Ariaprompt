@@ -1,216 +1,264 @@
 import { useState } from 'react';
 import { INITIAL_PROPERTIES, INITIAL_BOT_CONFIG } from '../data/mockData';
+import { Property } from '../types';
 
-// Helper client-side AI response generator for guaranteed resilience
+function searchCatalogProperties(query: string, properties: Property[]): Property[] {
+  const q = query.toLowerCase();
+
+  return properties.filter((p) => {
+    const city = p.location.city.toLowerCase();
+    const zone = p.location.zone.toLowerCase();
+    const address = p.location.address.toLowerCase();
+    const title = p.title.toLowerCase();
+    const type = p.type.toLowerCase();
+
+    const cityMatch = q.includes(city);
+    const zoneMatch = q.includes(zone);
+    const addressMatch = q.includes(address);
+    const titleMatch = q.includes(title);
+    const typeMatch = q.includes(type);
+
+    const argentinaMatch = (q.includes('argentina') || q.includes('buenos aires') || q.includes('madero')) && city.includes('buenos aires');
+    const mexicoMatch = (q.includes('méxico') || q.includes('mexico') || q.includes('cdmx') || q.includes('polanco')) && city.includes('méxico');
+    const colombiaMatch = (q.includes('colombia') || q.includes('medellin') || q.includes('medellín') || q.includes('poblado')) && city.includes('medellín');
+    const peruMatch = (q.includes('peru') || q.includes('perú') || q.includes('lima') || q.includes('san isidro')) && city.includes('lima');
+
+    return cityMatch || zoneMatch || addressMatch || titleMatch || typeMatch || argentinaMatch || mexicoMatch || colombiaMatch || peruMatch;
+  });
+}
+
+function detectUnmatchedLocation(query: string): string | null {
+  const q = query.toLowerCase();
+  const knownExternalLocations = [
+    'mendoza', 'córdoba', 'cordoba', 'rosario', 'bariloche', 'salta', 'mar del plata',
+    'madrid', 'barcelona', 'valencia', 'sevilla', 'marbella', 'ibiza',
+    'miami', 'orlando', 'new york', 'nueva york', 'los angeles',
+    'santiago', 'chile', 'valparaiso', 'viña del mar',
+    'bogota', 'bogotá', 'cali', 'cartagena',
+    'montevideo', 'punta del este', 'uruguay',
+    'cancun', 'cancún', 'tulum', 'guadalajara', 'monterrey', 'playa del carmen', 'queretaro'
+  ];
+
+  for (const loc of knownExternalLocations) {
+    if (q.includes(loc)) {
+      return loc.charAt(0).toUpperCase() + loc.slice(1);
+    }
+  }
+  return null;
+}
+
 function generateClientFallbackText(message: string, context: string): string {
-  const trimmed = message.trim().toLowerCase();
-
-  const matchingProp =
-    INITIAL_PROPERTIES.find(
-      (p) =>
-        trimmed.includes(p.location.city.toLowerCase()) ||
-        trimmed.includes(p.location.zone.toLowerCase()) ||
-        trimmed.includes(p.type) ||
-        trimmed.includes('lujo') ||
-        trimmed.includes('madrid')
-    ) || INITIAL_PROPERTIES[0];
-
-  let customPrice = matchingProp.price;
-  let customRent = Math.round(matchingProp.price * 0.0075);
-
-  const priceKMatch = message.match(
-    /(?:costo|costó|precio|compr[ae]|valio|valió|depto|propiedad|valor)?\s*(?:de\s*)?\$?\s*(\d+(?:\.\d+)?)\s*(?:k|mil)/i
-  );
-  const priceRawMatch = message.match(
-    /(?:costo|costó|precio|compr[ae]|valio|valió|valor)?\s*(?:de\s*)?\$?\s*(\d{5,8})/i
-  );
-  if (priceKMatch) {
-    customPrice = parseFloat(priceKMatch[1]) * 1000;
-  } else if (priceRawMatch) {
-    customPrice = parseInt(priceRawMatch[1], 10);
-  }
-
-  const rentMatch = message.match(
-    /(?:renta|alquiler|arriendo|canon|rento)?\s*(?:mensual|mes|de)?\s*\$?\s*(\d{3,6})\s*(?:usd|dolares|dólares|\/mes|mensuales)?/i
-  );
-  if (rentMatch && parseInt(rentMatch[1], 10) < customPrice) {
-    customRent = parseInt(rentMatch[1], 10);
-  }
-
-  const grossYield = ((customRent * 12 / customPrice) * 100).toFixed(2);
-  const netRent = Math.round(customRent * 0.85);
-  const paybackYears = (customPrice / (customRent * 12)).toFixed(1);
+  const trimmed = message.trim();
+  const lowerMsg = trimmed.toLowerCase();
 
   if (
-    trimmed === 'hola' ||
-    trimmed === 'hola!' ||
-    trimmed === 'buenas' ||
-    trimmed === 'buenos dias' ||
-    trimmed === 'hello' ||
-    trimmed === 'hi'
+    lowerMsg === 'hola' ||
+    lowerMsg === 'hola!' ||
+    lowerMsg === 'buenas' ||
+    lowerMsg === 'buenos dias' ||
+    lowerMsg === 'hello' ||
+    lowerMsg === 'hi'
   ) {
     return (
       `¡Hola! 👋 Bienvenido a **${INITIAL_BOT_CONFIG.agencyName}**. Soy **${INITIAL_BOT_CONFIG.agentName}**, tu asistente inmobiliario de IA 24/7.\n\n` +
-      `¿En qué puedo ayudarte hoy?\n` +
-      `- 🏠 **Buscar propiedades** en venta o alquiler por zona o presupuesto.\n` +
-      `- 📊 **Calcular el ROI y flujo de caja** de una inversión inmobiliaria especificando precio y alquiler.\n` +
-      `- 📄 **Consultar memorias técnicas y dossiers PDF** de nuestro catálogo.\n\n` +
-      `¿Qué tipo de propiedad estás buscando o qué consulta deseas realizar?`
+      `Actualmente cuento con catálogo exclusivo en **Buenos Aires (Puerto Madero)**, **Ciudad de México (Polanco)**, **Medellín (El Poblado)** y **Lima (San Isidro)**.\n\n` +
+      `¿En qué ciudad o presupuesto estás interesado?`
     );
   }
 
-  if (context === 'finance') {
+  const matches = searchCatalogProperties(trimmed, INITIAL_PROPERTIES);
+  const unmatchedLoc = detectUnmatchedLocation(trimmed);
+
+  if (unmatchedLoc && matches.length === 0) {
     return (
-      `### 📊 **Análisis Financiero & Cálculo de ROI Personalizado**\n\n` +
-      `Procesando tus datos específicos: **Precio de Adquisición: $${customPrice.toLocaleString('en-US')} USD** y **Canon de Arriendo: $${customRent.toLocaleString('en-US')} USD/mes**.\n\n` +
-      `#### 📈 **Métricas Financieras Calculadas Exactas**:\n` +
-      `1. **Precio de Compra**: **$${customPrice.toLocaleString('en-US')} USD**\n` +
-      `2. **Ingreso Anual por Renta**: **$${(customRent * 12).toLocaleString('en-US')} USD / año**\n` +
-      `3. **ROI Bruto Anual (Cap Rate)**: **${grossYield}% Anual** ${parseFloat(grossYield) >= 8 ? '🔥 *(¡Excelente rendimiento por encima de la media de mercado!)*' : '👍 *(Rendimiento estable para la zona)*'}\n` +
-      `4. **Gastos Operativos Estimados (HOA/Impuestos 15%)**: ~$${Math.round(customRent * 0.15).toLocaleString('en-US')} USD/mes\n` +
-      `5. **Flujo de Caja Neto Libre (Cash Flow)**: **$${netRent.toLocaleString('en-US')} USD / mes** ($${(netRent * 12).toLocaleString('en-US')} USD/año)\n` +
-      `6. **Período de Recuperación de Inversión**: **${paybackYears} Años**\n\n` +
-      `#### 🏢 **Proyección de Valorización Patrimonial a 5 Años**:\n` +
-      `- **Año 1 (+5.0%)**: $${Math.round(customPrice * 1.05).toLocaleString('en-US')} USD\n` +
-      `- **Año 3 (+15.0%)**: $${Math.round(customPrice * 1.15).toLocaleString('en-US')} USD\n` +
-      `- **Año 5 (+25.0%)**: **$${Math.round(customPrice * 1.25).toLocaleString('en-US')} USD** (Ganancia de capital de +$${Math.round(customPrice * 0.25).toLocaleString('en-US')} USD)\n\n` +
-      `🔒 *Puedes agendar una llamada directa para estructurar el plan de financiamiento.*`
+      `### 📍 **Sin Disponibilidad Actual en ${unmatchedLoc}**\n\n` +
+      `Por el momento no contamos con propiedades disponibles en **${unmatchedLoc}** dentro de nuestro catálogo activo.\n\n` +
+      `#### 🏠 **Ubicaciones Exclusivas Disponibles en Nuestro Catálogo**:\n` +
+      `- 🇦🇷 **Buenos Aires, Argentina**: Ático Dúplex en Puerto Madero ($1,400,000 USD)\n` +
+      `- 🇲🇽 **Ciudad de México**: Penthouse de Ultra Lujo en Polanco ($1,850,000 USD)\n` +
+      `- 🇨🇴 **Medellín, Colombia**: Casa Campestre en El Poblado ($950,000 USD)\n` +
+      `- 🇵🇪 **Lima, Perú**: Departamento Exclusivo en San Isidro ($620,000 USD)\n\n` +
+      `💬 *¿Te gustaría explorar alguna de nuestras opciones disponibles o prefieres que un asesor humano te contacte por WhatsApp para buscar algo específico en ${unmatchedLoc}?*`
     );
   }
 
-  if (context === 'rag') {
+  if (matches.length > 0) {
+    const selectedProp = matches[0];
+    const customRent = Math.round(selectedProp.price * 0.007);
+    const grossYield = ((customRent * 12 / selectedProp.price) * 100).toFixed(2);
+    const paybackYears = (selectedProp.price / (customRent * 12)).toFixed(1);
+
     return (
-      `### 📄 **Informe RAG Técnico Personalizado**\n\n` +
-      `Analizando especificaciones para inmuebles en el catálogo (**${matchingProp.title}**):\n\n` +
-      `- **Superficie Construida**: ${matchingProp.features.areaM2} m² (${matchingProp.features.bedrooms} hab / ${matchingProp.features.bathrooms} baños).\n` +
-      `- **Ubicación Exacta**: ${matchingProp.location.address}, ${matchingProp.location.zone}, ${matchingProp.location.city}.\n` +
-      `- **Memoria de Calidades**: Aislamiento térmico-acústico de alto rendimiento, carpintería exterior con puente térmico, climatización domótica y suelos de roble natural.\n` +
-      `- **Certificación Energética**: Etiqueta A++.\n` +
-      `- **Amenidades**: Terraza privativa de ${matchingProp.features.terraceM2 || 0}m², piscina climatizada y doble plaza de garaje subterránea.\n\n` +
-      `📅 ¿Te gustaría agendar una visita guiada presencial o recibir el dossier PDF completo por WhatsApp?`
+      `### 🏛️ **Coincidencia Encontrada en Nuestro Catálogo**\n\n` +
+      `Basado en tu consulta, te presento una opción destacada que coincide con tus criterios:\n\n` +
+      `#### 📌 **${selectedProp.title}** (${selectedProp.code})\n` +
+      `- **Ubicación**: ${selectedProp.location.address}, ${selectedProp.location.zone}, **${selectedProp.location.city}**\n` +
+      `- **Precio de Lista**: **$${selectedProp.price.toLocaleString('en-US')} USD**\n` +
+      `- **Distribución**: ${selectedProp.features.bedrooms} hab | ${selectedProp.features.bathrooms} baños | ${selectedProp.features.areaM2} m²\n` +
+      `- **Descripción**: ${selectedProp.description}\n\n` +
+      `#### 💰 **Estudio Financiero Real**:\n` +
+      `- **Inversión Requerida**: $${selectedProp.price.toLocaleString('en-US')} USD\n` +
+      `- **Renta Mensual Estimada**: ~$${customRent.toLocaleString('en-US')} USD/mes\n` +
+      `- **Cap Rate Bruto Anual**: **~${grossYield}%**\n` +
+      `- **Retorno Estimado**: ~${paybackYears} años\n\n` +
+      `📅 ¿Te gustaría agendar una visita a este inmueble en **${selectedProp.location.city}** o recibir el dossier PDF por WhatsApp?`
     );
   }
 
+  const defaultProp = INITIAL_PROPERTIES[0];
   return (
-    `### 🏛️ **Análisis Ejecutivo Inmobiliario Personalizado**\n\n` +
-    `Estimado cliente, analizando tu consulta para inmuebles destacados en el rango de **$${customPrice.toLocaleString('en-US')} USD**:\n\n` +
-    `#### 📌 **Propiedad Recomendada del Catálogo**:\n` +
-    `- **Título**: **${matchingProp.title}** (${matchingProp.code})\n` +
-    `- **Ubicación**: ${matchingProp.location.zone}, ${matchingProp.location.city}\n` +
-    `- **Precio de Lista**: **$${matchingProp.price.toLocaleString('en-US')} USD**\n` +
-    `- **Distribución**: ${matchingProp.features.bedrooms} recámaras | ${matchingProp.features.bathrooms} baños | ${matchingProp.features.areaM2} m²\n\n` +
-    `#### 💰 **Estudio Financiero & Retorno Estimado**:\n` +
-    `| Criterio Financiero | Valor Calculado (USD) |\n` +
-    `| :--- | :--- |\n` +
-    `| **Inversión Inicial** | $${customPrice.toLocaleString('en-US')} USD |\n` +
-    `| **Renta Bruta Estimada** | $${(customRent * 12).toLocaleString('en-US')} USD / año |\n` +
-    `| **ROI Bruto Anual** | **~${grossYield}% Anual** |\n` +
-    `| **Tiempo de Retorno** | **${paybackYears} Años** |\n` +
-    `| **Plusvalía Proyectada (5 Años)** | **$${Math.round(customPrice * 1.25).toLocaleString('en-US')} USD (+25%)** |\n\n` +
-    `📅 ¿Deseas coordinar una visita presencial o recibir más detalles por WhatsApp?`
+    `### 🏢 **Asesoría Inmobiliaria 24/7**\n\n` +
+    `Para darte la mejor recomendación en nuestro catálogo, disponemos de inmuebles en **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
+    `Por ejemplo, en **${defaultProp.location.city} (${defaultProp.location.zone})** tenemos disponible **${defaultProp.title}** a **$${defaultProp.price.toLocaleString('en-US')} USD**.\n\n` +
+    `¿Podrías indicarme la ciudad, presupuesto o número de habitaciones que estás buscando?`
   );
 }
 
-export function useChat(options?: { initialContext?: 'general' | 'finance' | 'rag' }) {
-  const [messages, setMessages] = useState<Array<{ sender: 'user' | 'agent'; text: string }>>([]);
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'bot' | 'agent';
+  content: string;
+  text?: string;
+  timestamp: string;
+  recommendedPropertyId?: string;
+}
+
+export function useChat(options?: { initialContext?: string }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'welcome-1',
+      sender: 'bot',
+      content: INITIAL_BOT_CONFIG.welcomeMessage,
+      text: INITIAL_BOT_CONFIG.welcomeMessage,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const streamFallbackText = async (text: string) => {
-    const words = text.split(' ');
-    let current = '';
-    for (let i = 0; i < words.length; i++) {
-      current += (i === 0 ? '' : ' ') + words[i];
-      setMessages((prev) => {
-        const copy = [...prev];
-        const lastIndex = copy.length - 1;
-        if (lastIndex >= 0 && copy[lastIndex].sender === 'agent') {
-          copy[lastIndex] = { ...copy[lastIndex], text: current };
-        }
-        return copy;
-      });
-      await new Promise((r) => setTimeout(r, 15));
-    }
-    return current;
-  };
+  const sendMessage = async (text: string, overrideContext?: string, _historyArg?: any) => {
+    if (!text.trim()) return;
+    const ctx = overrideContext || options?.initialContext || 'general';
 
-  const send = async (message: string, context: string = options?.initialContext || 'general', history: any[] = []) => {
-    setError(null);
-    if (!message || !message.trim()) return null;
+    const userMessageId = `user-${Date.now()}`;
+    const userMsg: ChatMessage = {
+      id: userMessageId,
+      sender: 'user',
+      content: text,
+      text: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
 
-    const formattedHistory = history.map((m) => ({
-      sender: m.sender,
-      content: m.text,
-    }));
-
-    setMessages((prev) => [
-      ...prev,
-      { sender: 'user', text: message },
-      { sender: 'agent', text: '' },
-    ]);
+    setMessages((prev) => [...prev, userMsg]);
     setIsTyping(true);
 
-    try {
-      const storedApiKey = localStorage.getItem('gemini_api_key') || undefined;
+    const botMessageId = `bot-${Date.now()}`;
+    const placeholderBotMsg: ChatMessage = {
+      id: botMessageId,
+      sender: 'bot',
+      content: '',
+      text: '',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
 
-      const res = await fetch('/api/chat', {
+    setMessages((prev) => [...prev, placeholderBotMsg]);
+
+    try {
+      const history = messages
+        .filter((m) => m.content && m.content !== INITIAL_BOT_CONFIG.welcomeMessage)
+        .map((m) => ({ sender: m.sender === 'user' ? 'user' : 'bot', content: m.content || m.text || '' }));
+
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, history: formattedHistory, context, apiKey: storedApiKey }),
-      }).catch(() => null);
+        body: JSON.stringify({ message: text, history, context: ctx }),
+      });
 
-      if (!res || !res.ok || !res.body) {
-        // Fallback to client-side AI response generator seamlessly
-        const fallbackText = generateClientFallbackText(message, context);
-        return await streamFallbackText(fallbackText);
+      if (!response.ok || !response.body) {
+        throw new Error(`API response error status ${response.status}`);
       }
 
-      const reader = res.body.getReader();
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let fullText = '';
+      let done = false;
+      let accumulatedText = '';
+      let recommendedPropId: string | undefined = undefined;
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n\n');
+        if (value) {
+          const chunkStr = decoder.decode(value);
+          const lines = chunkStr.split('\n\n');
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.replace('data: ', ''));
-              if (data.text) {
-                fullText += data.text;
-                setMessages((prev) => {
-                  const copy = [...prev];
-                  const lastIndex = copy.length - 1;
-                  if (lastIndex >= 0 && copy[lastIndex].sender === 'agent') {
-                    copy[lastIndex] = { ...copy[lastIndex], text: fullText };
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.replace('data: ', '').trim();
+                if (jsonStr) {
+                  const parsed = JSON.parse(jsonStr);
+                  if (parsed.text) {
+                    accumulatedText += parsed.text;
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === botMessageId ? { ...m, content: accumulatedText, text: accumulatedText } : m))
+                    );
                   }
-                  return copy;
-                });
-              }
-            } catch {
-              // ignore partial parse errors
+                  if (parsed.recommendedPropertyId) {
+                    recommendedPropId = parsed.recommendedPropertyId;
+                  }
+                }
+              } catch {}
             }
           }
         }
       }
 
-      if (!fullText.trim()) {
-        const fallbackText = generateClientFallbackText(message, context);
-        return await streamFallbackText(fallbackText);
+      if (recommendedPropId) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === botMessageId ? { ...m, recommendedPropertyId: recommendedPropId } : m))
+        );
       }
+    } catch (err) {
+      console.warn('Streaming fetch failed, using location-accurate fallback engine:', err);
 
-      return fullText;
-    } catch {
-      const fallbackText = generateClientFallbackText(message, context);
-      return await streamFallbackText(fallbackText);
+      const fallbackText = generateClientFallbackText(text, ctx);
+      const matches = searchCatalogProperties(text, INITIAL_PROPERTIES);
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === botMessageId
+            ? {
+                ...m,
+                content: fallbackText,
+                text: fallbackText,
+                recommendedPropertyId: matches.length > 0 ? matches[0].id : undefined,
+              }
+            : m
+        )
+      );
     } finally {
       setIsTyping(false);
     }
   };
 
-  return { messages, setMessages, isTyping, error, send };
+  const clearMessages = () => {
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: 'bot',
+        content: INITIAL_BOT_CONFIG.welcomeMessage,
+        text: INITIAL_BOT_CONFIG.welcomeMessage,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+  };
+
+  return {
+    messages,
+    isTyping,
+    sendMessage,
+    send: sendMessage,
+    clearMessages,
+    resetMessages: clearMessages,
+  };
 }
