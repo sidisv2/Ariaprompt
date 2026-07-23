@@ -42,32 +42,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Stream SSE headers early to ensure connection remains open
-  res.setHeader('Content-Type', 'text/event-stream');
+  // Stream SSE headers early to ensure connection remains open and unbuffered on Vercel
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx/Proxy buffering
+
+  if (typeof (res as any).flushHeaders === 'function') {
+    (res as any).flushHeaders();
+  }
+
+  const sendChunk = (data: any) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
+  };
 
   try {
     const { message, history = [], context = 'general', apiKey } = req.body || {};
 
     if (!message || typeof message !== 'string' || !message.trim()) {
-      res.write(`data: ${JSON.stringify({ text: '⚠️ Por favor ingresa una consulta válida.' })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      sendChunk({ text: '⚠️ Por favor ingresa una consulta válida.' });
+      sendChunk({ done: true });
       return res.end();
     }
 
     const trimmedMsg = message.trim();
     const lowerMsg = trimmedMsg.toLowerCase();
-    const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY;
+
+    // Multi-variable API Key Resolution with quotes stripping
+    const rawKey =
+      apiKey ||
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.VITE_GEMINI_API_KEY ||
+      '';
+    const cleanApiKey = rawKey.replace(/^["']|["']$/g, '').trim();
 
     let ai: GoogleGenAI | null = null;
-    if (effectiveApiKey && effectiveApiKey.trim()) {
+    if (cleanApiKey) {
       try {
         ai = new GoogleGenAI({
-          apiKey: effectiveApiKey.trim(),
+          apiKey: cleanApiKey,
         });
       } catch (err) {
-        console.warn('GoogleGenAI init error:', err);
+        console.error('GoogleGenAI Initialization Error:', err);
         ai = null;
       }
     }
@@ -136,8 +156,10 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
           { role: 'user', parts: [{ text: trimmedMsg }] },
         ];
 
+        const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
         const responseStream = await ai.models.generateContentStream({
-          model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+          model: modelName,
           contents: formattedContents,
           config: {
             systemInstruction: systemPrompt,
@@ -149,17 +171,22 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
         for await (const chunk of responseStream) {
           if (chunk.text) {
             receivedAnyText = true;
-            res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+            sendChunk({ text: chunk.text });
           }
         }
 
         if (receivedAnyText) {
-          res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+          sendChunk({ done: true });
           return res.end();
         }
-      } catch (geminiErr) {
-        console.warn('Gemini streaming call error, executing fallback comparator:', geminiErr);
+      } catch (geminiErr: any) {
+        console.error('Gemini Stream Call Error:', geminiErr?.message || geminiErr);
+        sendChunk({
+          text: `⚠️ **Aviso de API**: Ocurrió una restricción en la llamada a Gemini (${geminiErr?.message || 'Error de conexión'}). Mostrando comparativa de contingencia:\n\n`,
+        });
       }
+    } else {
+      console.warn('GEMINI_API_KEY no detectada o inválida. Usando motor comparador de contingencia.');
     }
 
     // Deterministic Neutral Comparator Fallback
@@ -207,15 +234,17 @@ Preguntá de forma conversacional, un par de datos por vez (no todo junto):
 
     const words = responseText.split(' ');
     for (const word of words) {
-      res.write(`data: ${JSON.stringify({ text: word + ' ' })}\n\n`);
-      await new Promise((r) => setTimeout(r, 15));
+      sendChunk({ text: word + ' ' });
+      await new Promise((r) => setTimeout(r, 12));
     }
-    res.write(`data: ${JSON.stringify({ done: true, recommendedPropertyId: primaryPropId })}\n\n`);
+    sendChunk({ done: true, recommendedPropertyId: primaryPropId });
     return res.end();
   } catch (globalErr: any) {
     console.error('API Chat Global Error:', globalErr);
-    res.write(`data: ${JSON.stringify({ text: '⚠️ **Aviso**: Ocurrió una desconexión temporal con la red de IA. Tu consulta fue procesada mediante nuestro motor comparador de contingencia.' })}\n\n`);
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    sendChunk({
+      text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro motor comparador de contingencia.',
+    });
+    sendChunk({ done: true });
     return res.end();
   }
 }
