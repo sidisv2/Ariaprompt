@@ -211,9 +211,9 @@ export const Playground: React.FC<PlaygroundProps> = ({
                           ? 'bg-emerald-600 text-slate-950 font-semibold rounded-tr-none shadow-md'
                           : 'bg-slate-900 text-slate-200 border border-white/10 rounded-tl-none prose prose-invert max-w-none'
                       }`}
-                      dangerouslySetInnerHTML={m.sender === 'agent' ? renderMarkdown(m.text) : undefined}
+                      dangerouslySetInnerHTML={m.sender !== 'user' ? renderMarkdown(m.content || m.text || '') : undefined}
                     >
-                      {m.sender === 'user' ? m.text : null}
+                      {m.sender === 'user' ? (m.content || m.text) : null}
                     </div>
                   </div>
                 ))
