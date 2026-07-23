@@ -50,24 +50,37 @@ export const AuthModal: React.FC<{
 
     const email = inputVal === 'admin' ? 'admin@admin.com' : inputVal;
 
+    if (tab === 'signup') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setErrorMsg('Por favor ingresa un correo electrónico válido (ej: usuario@agencia.com).');
+        setLoading(false);
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMsg('La contraseña debe tener al menos 6 caracteres por seguridad.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       if (tab === 'login') {
         const res = await signIn({ email, password });
-        if (!res.success) throw new Error(res.error || 'Credenciales incorrectas');
+        if (!res.success) throw new Error(res.error || 'Correo o contraseña incorrectos. Verifica tus datos.');
       } else {
-        const signupEmail = email.includes('@') ? email : `${email}@agencia.com`;
         const res = await signUp({
-          email: signupEmail,
+          email,
           password,
           nombre: displayName.trim() || email.split('@')[0],
         });
-        if (!res.success) throw new Error(res.error || 'Error registrando la cuenta');
+        if (!res.success) throw new Error(res.error || 'Error al crear la cuenta. Intenta de nuevo.');
       }
 
       onAuthSuccess?.();
       onClose();
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Error durante la autenticación');
+      setErrorMsg(err?.message || 'Ocurrió un error en el servidor. Inténtalo nuevamente.');
     } finally {
       setLoading(false);
     }

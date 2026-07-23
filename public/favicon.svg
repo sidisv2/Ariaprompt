@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#3730A3" />
+    </linearGradient>
+    <linearGradient id="emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+  </defs>
+  <!-- Background Icon -->
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  
+  <!-- Modern House / AI Sparkle Icon -->
+  <path d="M256 100 L390 210 L390 400 A 20 20 0 0 1 370 420 L142 420 A 20 20 0 0 1 122 400 L122 210 Z" fill="none" stroke="url(#emerald)" stroke-width="32" stroke-linejoin="round" stroke-linecap="round" />
+  <path d="M256 100 L390 210 M256 100 L122 210" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-linecap="round" />
+  
+  <!-- AI Sparkle inside house -->
+  <path d="M256 220 C256 250 266 260 296 260 C266 260 256 270 256 300 C256 270 246 260 216 260 C246 260 256 250 256 220 Z" fill="url(#emerald)" />
+  <circle cx="320" cy="310" r="14" fill="#38BDF8" />
+</svg>
