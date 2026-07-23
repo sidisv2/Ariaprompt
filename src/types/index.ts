@@ -53,6 +53,7 @@ export interface Property {
     country?: string;
     lat?: number;
     lng?: number;
+    googleMapsUrl?: string;
   };
   features: {
     bedrooms: number;
