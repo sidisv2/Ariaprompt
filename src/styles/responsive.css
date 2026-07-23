@@ -1,0 +1,32 @@
+/* Responsive rules para Desktop vs Mobile/Tablet */
+/* Desktop (>= 768px) */
+@media (min-width: 768px) {
+  nav.top-nav { display: flex; height: 64px; align-items: center; padding: 0 24px; }
+  .modal-card { max-width: 640px; margin: 6vh auto; border-radius: 12px; }
+  .bottom-nav { display: none; }
+  .bottom-sheet { display: none; }
+  .price-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+}
+
+/* Mobile ( < 768 ) */
+@media (max-width: 767px) {
+  nav.top-nav { display: none; }
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 64px; display: flex; justify-content: space-around; align-items: center; background: #0b1220; z-index: 60; }
+  .modal-card { border-radius: 14px 14px 0 0; position: fixed; bottom: 0; left: 0; right: 0; transform: translateY(0); }
+  .bottom-sheet { display: block; }
+  .price-cards { display: flex; gap: 12px; overflow-x: auto; padding: 12px; -webkit-overflow-scrolling: touch; }
+  .price-cards .card { min-width: 260px; flex: 0 0 auto; }
+}
+
+/* Common */
+.modal-overlay, .paywall-overlay { position: fixed; inset: 0; display:flex; align-items: center; justify-content: center; background: rgba(2,6,23,0.6); z-index: 80; }
+.modal-card, .paywall-card { background: #0b1220; color: #fff; padding: 18px; border-radius: 12px; max-width: 760px; width: 94%; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.chat-container { background: linear-gradient(180deg, #031018, #06141a); border: 1px solid rgba(255,255,255,0.04); }
+.chat-header { color: #fff; }
+.chat-messages { color: #e6eef2; }
+.chat-input .input { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; width: 100%; }
+.send-btn { background: #10b981; border-radius: 10px; padding: 10px; margin-left: 8px; display:flex; align-items:center; }
+
+/* Emergency patch to avoid blank screen while debugging */
+:root, body, #root, main { visibility: visible !important; opacity: 1 !important; display: block !important; }

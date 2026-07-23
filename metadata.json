@@ -1,0 +1,6 @@
+{
+  "name": "Aria Prop - Agentes de IA para el Sector Inmobiliario",
+  "description": "Automatiza la atención de tus inmuebles, cualifica leads y agenda visitas 24/7 con Aria Prop.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

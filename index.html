@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aria Prop - Agentes de IA para el Sector Inmobiliario</title>
+    <meta name="description" content="Automatiza la atención de tus inmuebles, cualifica leads y agenda visitas 24/7 con Aria Prop." />
+    <!-- Use base href to ensure relative paths resolve properly on subroutes -->
+    <base href="/" />
+
+    <!-- Google Fonts: Outfit & Plus Jakarta Sans for Ultra-Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CDN (runtime) - emergency: provides utility classes if build-step failed to inject CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome (icons fallback) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p1Cm3bKZ6qH2q2qz+q2b8V6dQGd2f1q5ZzV3d6k9s7e4G5f1h2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9a==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Lucide icons CDN (fallback) -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.244.0/dist/lucide.min.js"></script>
+
+    <!-- Primary stylesheet (relative path to source CSS for emergency/static serving) -->
+    <link rel="stylesheet" href="./src/index.css" />
+
+    <!-- Emergency inline styles to ensure readable UI if external CSS fails to load -->
+    <style>
+      /* Emergency reset / readable styles */
+      html,body{height:100%;margin:0;padding:0}
+      body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial;line-height:1.4;background:#09090b;color:#e2e8f0;padding:18px}
+      a{color:#60f0c8}
+      h1,h2,h3,h4,h5,h6{color:#fff;margin:0 0 8px}
+      p{margin:0 0 12px}
+      .container{max-width:1100px;margin:0 auto}
+
+      /* Ensure clickable elements show pointer */
+      button,a,input[type="submit"],input[type="button"],.btn,[role="button"],.clickable{cursor:pointer!important}
+
+      /* Button basic reset */
+      button, .btn {appearance:none;border:none;padding:8px 12px;border-radius:8px;background:#10b981;color:#05201a;font-weight:700}
+
+      /* Minimal layout helpers used by the app (fallbacks if Tailwind isn't applied) */
+      .flex{display:flex}
+      .flex-col{flex-direction:column}
+      .items-center{align-items:center}
+      .justify-center{justify-content:center}
+      .flex-1{flex:1}
+      .gap-3{gap:0.75rem}
+      .p-4{padding:1rem}
+      .rounded-3xl{border-radius:1.5rem}
+      .overflow-hidden{overflow:hidden}
+      .mx-auto{margin-left:auto;margin-right:auto}
+      .max-w-xl{max-width:36rem}
+      .space-y-4 > * + *{margin-top:1rem}
+      .min-h-screen{min-height:100vh}
+
+      /* Chat-specific fallback styles to keep layout readable */
+      .chat-container{display:flex;flex-direction:column;background:linear-gradient(180deg,#0b1220,#07080a);border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+      .chat-header{padding:12px;background:#0f766e;color:#e6f9f2}
+      .chat-messages{padding:12px;overflow-y:auto;flex:1}
+      .chat-input{padding:12px;border-top:1px solid rgba(255,255,255,0.04);display:flex;gap:8px}
+      .input{flex:1;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);color:#e6eef7}
+      .send-btn{background:#10b981;color:#05201a;border-radius:10px;padding:10px;border:none}
+      .message{margin-bottom:10px}
+      .message .bubble{display:inline-block;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.03)}
+      .message.user .bubble{background:#10b981;color:#05201a}
+      .typing{opacity:0.86;font-style:italic}
+    </style>
+
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Vite / dev entry: use absolute /src path so bundler resolves correctly; fallback to relative in static environments handled by the above CSS link -->
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
