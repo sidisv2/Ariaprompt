@@ -30,17 +30,27 @@ export interface PropertyDocument {
   uploadedAt: string;
 }
 
+export interface PropertySource {
+  name: string;
+  url: string;
+  isOfficialApi: boolean;
+  lastUpdated?: string;
+}
+
 export interface Property {
   id: string;
   title: string;
   code: string;
-  type: 'apartment' | 'penthouse' | 'villa' | 'chalet' | 'commercial' | 'land';
+  type: 'apartment' | 'house' | 'penthouse' | 'villa' | 'chalet' | 'commercial' | 'land';
   status: 'available' | 'reserved' | 'sold';
   price: number;
+  currency?: string;
   location: {
     address: string;
     city: string;
     zone: string;
+    province?: string;
+    country?: string;
     lat?: number;
     lng?: number;
   };
@@ -48,6 +58,7 @@ export interface Property {
     bedrooms: number;
     bathrooms: number;
     areaM2: number;
+    rooms?: number;
     terraceM2?: number;
     pool: boolean;
     garage: boolean;
@@ -60,6 +71,7 @@ export interface Property {
   documents: PropertyDocument[];
   featured: boolean;
   createdAt: string;
+  source?: PropertySource;
 }
 
 export interface BotConfig {

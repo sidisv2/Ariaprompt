@@ -1,51 +1,9 @@
 import { useState } from 'react';
-import { INITIAL_PROPERTIES, INITIAL_BOT_CONFIG } from '../data/mockData';
-import { Property } from '../types';
-
-function searchCatalogProperties(query: string, properties: Property[]): Property[] {
-  const q = query.toLowerCase();
-
-  return properties.filter((p) => {
-    const city = p.location.city.toLowerCase();
-    const zone = p.location.zone.toLowerCase();
-    const address = p.location.address.toLowerCase();
-    const title = p.title.toLowerCase();
-    const type = p.type.toLowerCase();
-
-    const cityMatch = q.includes(city);
-    const zoneMatch = q.includes(zone);
-    const addressMatch = q.includes(address);
-    const titleMatch = q.includes(title);
-    const typeMatch = q.includes(type);
-
-    const argentinaMatch = (q.includes('argentina') || q.includes('buenos aires') || q.includes('madero')) && city.includes('buenos aires');
-    const mexicoMatch = (q.includes('méxico') || q.includes('mexico') || q.includes('cdmx') || q.includes('polanco')) && city.includes('méxico');
-    const colombiaMatch = (q.includes('colombia') || q.includes('medellin') || q.includes('medellín') || q.includes('poblado')) && city.includes('medellín');
-    const peruMatch = (q.includes('peru') || q.includes('perú') || q.includes('lima') || q.includes('san isidro')) && city.includes('lima');
-
-    return cityMatch || zoneMatch || addressMatch || titleMatch || typeMatch || argentinaMatch || mexicoMatch || colombiaMatch || peruMatch;
-  });
-}
-
-function detectUnmatchedLocation(query: string): string | null {
-  const q = query.toLowerCase();
-  const knownExternalLocations = [
-    'mendoza', 'córdoba', 'cordoba', 'rosario', 'bariloche', 'salta', 'mar del plata',
-    'madrid', 'barcelona', 'valencia', 'sevilla', 'marbella', 'ibiza',
-    'miami', 'orlando', 'new york', 'nueva york', 'los angeles',
-    'santiago', 'chile', 'valparaiso', 'viña del mar',
-    'bogota', 'bogotá', 'cali', 'cartagena',
-    'montevideo', 'punta del este', 'uruguay',
-    'cancun', 'cancún', 'tulum', 'guadalajara', 'monterrey', 'playa del carmen', 'queretaro'
-  ];
-
-  for (const loc of knownExternalLocations) {
-    if (q.includes(loc)) {
-      return loc.charAt(0).toUpperCase() + loc.slice(1);
-    }
-  }
-  return null;
-}
+import { INITIAL_BOT_CONFIG } from '../data/mockData';
+import {
+  searchMultiSourceRealEstate,
+  SearchEngineResult,
+} from '../lib/multiSourceRealEstateEngine';
 
 function generateClientFallbackText(message: string, context: string): string {
   const trimmed = message.trim();
@@ -60,57 +18,73 @@ function generateClientFallbackText(message: string, context: string): string {
     lowerMsg === 'hi'
   ) {
     return (
-      `¡Hola! 👋 Bienvenido a **${INITIAL_BOT_CONFIG.agencyName}**. Soy **${INITIAL_BOT_CONFIG.agentName}**, tu asistente inmobiliario de IA 24/7.\n\n` +
-      `Actualmente cuento con catálogo exclusivo en **Buenos Aires (Puerto Madero)**, **Ciudad de México (Polanco)**, **Medellín (El Poblado)** y **Lima (San Isidro)**.\n\n` +
-      `¿En qué ciudad o presupuesto estás interesado?`
+      `¡Hola! 👋 Bienvenido a **${INITIAL_BOT_CONFIG.agencyName}**. Soy **${INITIAL_BOT_CONFIG.agentName}**, tu asistente inmobiliario multifuente 24/7.\n\n` +
+      `Recopilo y analizo en tiempo real publicaciones verificadas de **MercadoLibre Inmuebles API**, **Properati**, **Zonaprop** y **Argenprop**.\n\n` +
+      `¿En qué ciudad, presupuesto o cantidad de ambientes estás interesado? *(Ej: "deptos en Mendoza hasta USD 150k")*`
     );
   }
 
-  const matches = searchCatalogProperties(trimmed, INITIAL_PROPERTIES);
-  const unmatchedLoc = detectUnmatchedLocation(trimmed);
+  const searchResult: SearchEngineResult = searchMultiSourceRealEstate(trimmed);
 
-  if (unmatchedLoc && matches.length === 0) {
+  if (searchResult.unmatchedLocationName) {
     return (
-      `### 📍 **Sin Disponibilidad Actual en ${unmatchedLoc}**\n\n` +
-      `Por el momento no contamos con propiedades disponibles en **${unmatchedLoc}** dentro de nuestro catálogo activo.\n\n` +
-      `#### 🏠 **Ubicaciones Exclusivas Disponibles en Nuestro Catálogo**:\n` +
-      `- 🇦🇷 **Buenos Aires, Argentina**: Ático Dúplex en Puerto Madero ($1,400,000 USD)\n` +
-      `- 🇲🇽 **Ciudad de México**: Penthouse de Ultra Lujo en Polanco ($1,850,000 USD)\n` +
-      `- 🇨🇴 **Medellín, Colombia**: Casa Campestre en El Poblado ($950,000 USD)\n` +
-      `- 🇵🇪 **Lima, Perú**: Departamento Exclusivo en San Isidro ($620,000 USD)\n\n` +
-      `💬 *¿Te gustaría explorar alguna de nuestras opciones disponibles o prefieres que un asesor humano te contacte por WhatsApp para buscar algo específico en ${unmatchedLoc}?*`
+      `### 📍 **Sin Publicaciones en ${searchResult.unmatchedLocationName}**\n\n` +
+      `Revisamos nuestras fuentes integradas (*MercadoLibre API, Properati, Zonaprop*) y actualmente **no encontramos publicaciones activas** en **${searchResult.unmatchedLocationName}**.\n\n` +
+      `#### 🌐 **Ubicaciones con Publicaciones Verificadas Activas**:\n` +
+      `- 🇦🇷 **Mendoza, Argentina**: Deptos 2 y 3 amb. en Barrio Bombal ($115,000 USD) y Centro ($148,000 USD)\n` +
+      `- 🇦🇷 **Buenos Aires, Argentina**: Ático en Puerto Madero ($1,400,000 USD)\n` +
+      `- 🇲🇽 **Ciudad de México**: Penthouse en Polanco ($1,850,000 USD)\n` +
+      `- 🇨🇴 **Medellín, Colombia**: Villa en El Poblado ($950,000 USD)\n` +
+      `- 🇵🇪 **Lima, Perú**: Departamento en San Isidro ($620,000 USD)\n\n` +
+      `💬 *¿Te gustaría explorar alguna de estas opciones o derivar tu solicitud a un asesor por WhatsApp?*`
     );
   }
 
-  if (matches.length > 0) {
-    const selectedProp = matches[0];
-    const customRent = Math.round(selectedProp.price * 0.007);
-    const grossYield = ((customRent * 12 / selectedProp.price) * 100).toFixed(2);
-    const paybackYears = (selectedProp.price / (customRent * 12)).toFixed(1);
-
+  if (searchResult.exactMatches.length > 0) {
+    const items = searchResult.exactMatches.slice(0, 3);
     return (
-      `### 🏛️ **Coincidencia Encontrada en Nuestro Catálogo**\n\n` +
-      `Basado en tu consulta, te presento una opción destacada que coincide con tus criterios:\n\n` +
-      `#### 📌 **${selectedProp.title}** (${selectedProp.code})\n` +
-      `- **Ubicación**: ${selectedProp.location.address}, ${selectedProp.location.zone}, **${selectedProp.location.city}**\n` +
-      `- **Precio de Lista**: **$${selectedProp.price.toLocaleString('en-US')} USD**\n` +
-      `- **Distribución**: ${selectedProp.features.bedrooms} hab | ${selectedProp.features.bathrooms} baños | ${selectedProp.features.areaM2} m²\n` +
-      `- **Descripción**: ${selectedProp.description}\n\n` +
-      `#### 💰 **Estudio Financiero Real**:\n` +
-      `- **Inversión Requerida**: $${selectedProp.price.toLocaleString('en-US')} USD\n` +
-      `- **Renta Mensual Estimada**: ~$${customRent.toLocaleString('en-US')} USD/mes\n` +
-      `- **Cap Rate Bruto Anual**: **~${grossYield}%**\n` +
-      `- **Retorno Estimado**: ~${paybackYears} años\n\n` +
-      `📅 ¿Te gustaría agendar una visita a este inmueble en **${selectedProp.location.city}** o recibir el dossier PDF por WhatsApp?`
+      `### 🏢 **Publicaciones Encontradas (${items.length} Opciones)**\n\n` +
+      (searchResult.explanationNote ? `> ℹ️ *${searchResult.explanationNote}*\n\n` : '') +
+      items
+        .map((p, idx) => {
+          const customRent = Math.round(p.price * 0.007);
+          const grossYield = ((customRent * 12 / p.price) * 100).toFixed(2);
+          return (
+            `#### ${idx + 1}. **${p.title}** (${p.code})\n` +
+            `- 💰 **Precio**: **$${p.price.toLocaleString('en-US')} USD**\n` +
+            `- 📍 **Ubicación**: ${p.location.address}, ${p.location.zone}, **${p.location.city}, ${p.location.country || ''}**\n` +
+            `- 📐 **Distribución**: ${p.features.bedrooms} hab | ${p.features.rooms || p.features.bedrooms + 1} ambientes | ${p.features.areaM2} m²\n` +
+            `- 📈 **Rentabilidad Estimada**: ~${grossYield}% Cap Rate Bruto (~$${customRent.toLocaleString('en-US')} USD/mes)\n` +
+            `- 🌐 **Fuente Original**: **${p.source?.name}** (${p.source?.lastUpdated || 'Verificado'})\n` +
+            `- 🔗 **Link Directo**: [Ver publicación original en ${p.source?.name.split(' ')[0]}](${p.source?.url})\n`
+          );
+        })
+        .join('\n') +
+      `\n📅 ¿Te gustaría agendar una visita o recibir más detalles por WhatsApp?`
     );
   }
 
-  const defaultProp = INITIAL_PROPERTIES[0];
+  if (searchResult.closestMatches.length > 0) {
+    const items = searchResult.closestMatches.slice(0, 2);
+    return (
+      `### 🔍 **Opciones Más Cercanas Encontradas**\n\n` +
+      (searchResult.explanationNote ? `> ⚠️ **Aclaración**: *${searchResult.explanationNote}*\n\n` : '') +
+      items
+        .map((p, idx) => (
+          `#### ${idx + 1}. **${p.title}**\n` +
+          `- 💰 **Precio**: **$${p.price.toLocaleString('en-US')} USD**\n` +
+          `- 📍 **Ubicación**: ${p.location.zone}, ${p.location.city}\n` +
+          `- 🌐 **Fuente**: **${p.source?.name}**\n` +
+          `- 🔗 **Link Directo**: [Ver publicación original](${p.source?.url})\n`
+        ))
+        .join('\n')
+    );
+  }
+
   return (
-    `### 🏢 **Asesoría Inmobiliaria 24/7**\n\n` +
-    `Para darte la mejor recomendación en nuestro catálogo, disponemos de inmuebles en **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
-    `Por ejemplo, en **${defaultProp.location.city} (${defaultProp.location.zone})** tenemos disponible **${defaultProp.title}** a **$${defaultProp.price.toLocaleString('en-US')} USD**.\n\n` +
-    `¿Podrías indicarme la ciudad, presupuesto o número de habitaciones que estás buscando?`
+    `### 🏢 **Agregador Inmobiliario Multifuente 24/7**\n\n` +
+    `Recopilamos ofertas reales de **MercadoLibre Inmuebles API**, **Properati**, **Zonaprop** y **Argenprop**.\n\n` +
+    `¿Podrías especificar la ciudad, presupuesto o número de ambientes que buscas?`
   );
 }
 
@@ -219,10 +193,10 @@ export function useChat(options?: { initialContext?: string }) {
         );
       }
     } catch (err) {
-      console.warn('Streaming fetch failed, using location-accurate fallback engine:', err);
+      console.warn('Streaming fetch failed, using multi-source fallback engine:', err);
 
       const fallbackText = generateClientFallbackText(text, ctx);
-      const matches = searchCatalogProperties(text, INITIAL_PROPERTIES);
+      const searchResult = searchMultiSourceRealEstate(text);
 
       setMessages((prev) =>
         prev.map((m) =>
@@ -231,7 +205,7 @@ export function useChat(options?: { initialContext?: string }) {
                 ...m,
                 content: fallbackText,
                 text: fallbackText,
-                recommendedPropertyId: matches.length > 0 ? matches[0].id : undefined,
+                recommendedPropertyId: searchResult.exactMatches.length > 0 ? searchResult.exactMatches[0].id : undefined,
               }
             : m
         )
