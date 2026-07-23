@@ -190,6 +190,18 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
               )}
             </div>
 
+            {/* Cómo funciona */}
+            <button
+              onClick={() => {
+                const el = document.getElementById('how-it-works');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                else navigateTo('soluciones');
+              }}
+              className="hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              Cómo funciona
+            </button>
+
             {/* Precios */}
             <button
               onClick={() => navigateTo('pricing')}
@@ -198,6 +210,18 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
               }`}
             >
               Precios
+            </button>
+
+            {/* FAQ */}
+            <button
+              onClick={() => {
+                const el = document.getElementById('faq');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                else navigateTo('recursos');
+              }}
+              className="hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              FAQ
             </button>
           </nav>
 
@@ -236,10 +260,11 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                 </button>
 
                 <button
-                  onClick={() => openAuthModal('signup')}
-                  className="px-5 py-1.5 rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-xs shadow-lg shadow-emerald-400/20 transition-all cursor-pointer flex items-center gap-1"
+                  onClick={() => openAuthModal('signup', 'pro', 'dashboard-checkout')}
+                  className="px-5 py-1.5 rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-xs shadow-lg shadow-emerald-400/20 transition-all cursor-pointer flex items-center gap-1 hover:scale-105"
                 >
-                  <span>Regístrate gratis</span>
+                  <Sparkles className="w-3.5 h-3.5 fill-current" />
+                  <span>Agendar demo</span>
                 </button>
               </>
             )}

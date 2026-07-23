@@ -23,6 +23,11 @@ import { FAQ } from '../FAQ/FAQ';
 import { ProductoPage } from '../pages/ProductoPage';
 import { SolucionesPage } from '../pages/SolucionesPage';
 import { RecursosPage } from '../pages/RecursosPage';
+import { ProblemSection } from '../marketing/ProblemSection';
+import { HowItWorksSection } from '../marketing/HowItWorksSection';
+import { TestimonialsSection } from '../marketing/TestimonialsSection';
+import { IntegrationsSection } from '../marketing/IntegrationsSection';
+import { FinalCtaSection } from '../marketing/FinalCtaSection';
 import { DiscountOfferModal } from '../common/DiscountOfferModal';
 import { useAuth } from '../../context/AuthContext';
 import { Tag, Sparkles } from 'lucide-react';
@@ -163,20 +168,44 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         </main>
       ) : (
         <main className="flex-1 animate-page-fade">
+          {/* Section 2: Hero */}
           <HeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
+
+          {/* Section 3: Barra de Confianza (Social Proof) */}
           <SocialProofMarquee />
-          
-          {/* Cloudairy Multi-Tab Playground Live Demo */}
+
+          {/* Section 4: Sección de Problema (Agitación de Dolor) */}
+          <ProblemSection />
+
+          {/* Section 5: Sección de Solución / Cómo Funciona (Flujo en 4 Pasos) */}
+          <HowItWorksSection />
+
+          {/* Section 6: Funcionalidades Clave (Bento Grid) */}
+          <BentoGridFeatures />
+
+          {/* Section 7: Demo Interactiva (Playground Simulado) */}
           <section className="py-16 bg-slate-950 border-t border-white/5">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <Playground />
             </div>
           </section>
 
-          <SolutionsGrid onSelectPrompt={onOpenPrompt} />
-          <BentoGridFeatures />
+          {/* Section 8: Testimonios / Resultados Comprobados */}
+          <TestimonialsSection />
+
+          {/* Section 9: Integraciones (WhatsApp, Calendar, CRMs, Portales) */}
+          <IntegrationsSection />
+
+          {/* Section 10: Precios / Cotización */}
           <PricingSection onRouteChange={onRouteChange} />
+
+          {/* Section 11: Preguntas Frecuentes (FAQ) */}
           <FAQ />
+
+          {/* Section 12: CTA Final de Cierre */}
+          <FinalCtaSection />
+
+          {/* Section 13: Footer */}
           <Footer />
         </main>
       )}

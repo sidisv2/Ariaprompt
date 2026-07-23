@@ -44,26 +44,26 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
             {/* Top Shiny Badge */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-emerald-500/30 shadow-lg shadow-emerald-500/10">
               <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="text-xs font-bold text-emerald-300">Aria Prop: Agente de IA Inmobiliario 24/7 en Línea</span>
+              <span className="text-xs font-bold text-emerald-300">Aria Prop: Agente de IA Inmobiliario 24/7</span>
               <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
             </div>
 
-            {/* Impact Title (Cloudairy Style) */}
+            {/* Impact Title */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.1]">
-              Plataforma Todo en Uno <br className="hidden sm:block" />
+              Nunca pierdas otro <br className="hidden sm:block" />
               <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                con IA Inmobiliaria
+                lead inmobiliario
               </span>.
             </h1>
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl font-normal">
-              Atiende dudas sobre precios, ubicación y planos 24/7. Cualifica a los compradores, evalúa rentabilidades y agenda llamadas en automático.
+              Aria Prop atiende a tus prospectos en menos de 5 segundos, cualifica su presupuesto y agenda visitas a tus inmuebles 24/7 en WhatsApp y Web sin intervención humana.
             </p>
 
-            {/* Cloudairy Social Proof Rating */}
+            {/* Social Proof Rating */}
             <div className="flex items-center gap-2 text-xs text-slate-300 font-medium">
-              <span>Más de <strong>50.000</strong> prospectos atendidos con</span>
+              <span>Más de <strong>50.000</strong> prospectos calificados con</span>
               <div className="flex items-center text-amber-400">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 <Star className="w-3.5 h-3.5 fill-current" />
@@ -73,46 +73,26 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
               </div>
             </div>
 
-            {/* Cloudairy-Style Floating Email Input Bar */}
-            <div className="pt-2">
-              <div className="flex flex-col sm:flex-row items-center gap-2 p-2 rounded-2xl bg-slate-900 border border-emerald-400/40 shadow-2xl backdrop-blur-xl max-w-lg">
-                <div className="flex items-center gap-2.5 px-3 flex-1 w-full">
-                  <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleEmailSignup()}
-                    placeholder="Ingresa tu correo electrónico"
-                    className="w-full bg-transparent text-xs text-white placeholder-slate-400 focus:outline-none py-2 font-medium"
-                  />
-                </div>
-                <button
-                  onClick={handleEmailSignup}
-                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-xs shadow-lg shadow-emerald-400/30 transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-                >
-                  <span className="text-slate-950 font-black">Regístrate gratis</span>
-                  <ArrowRight className="w-4 h-4 text-slate-950 stroke-[3]" />
-                </button>
-              </div>
-            </div>
-
-            {/* Secondary CTAs */}
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            {/* 2 Main Action CTAs */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               <button
                 onClick={handleStartFreeTrial}
-                className="px-5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 font-bold text-xs border border-white/10 hover:border-emerald-500/40 transition-all flex items-center gap-2 cursor-pointer"
+                className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-black text-sm shadow-xl shadow-emerald-400/25 transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-105"
               >
-                <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Probar 7 Días Gratis</span>
+                <Sparkles className="w-4 h-4 fill-current text-slate-950" />
+                <span>Agendar demo gratis</span>
+                <ArrowRight className="w-4 h-4 text-slate-950 stroke-[3]" />
               </button>
 
               <button
-                onClick={() => onRouteChange('embed-preview')}
-                className="px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-white font-semibold text-xs border border-white/10 hover:border-emerald-500/40 transition-all flex items-center gap-2 cursor-pointer"
+                onClick={() => {
+                  const el = document.getElementById('how-it-works');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  else onRouteChange('soluciones');
+                }}
+                className="px-6 py-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 font-extrabold text-sm border border-white/15 hover:border-emerald-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Ver Widget Embebible</span>
+                <Zap className="w-4 h-4 text-emerald-400" />
               </button>
             </div>
 

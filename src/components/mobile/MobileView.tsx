@@ -22,6 +22,11 @@ import { EmbedChatWidget } from '../embed/EmbedChatWidget';
 import { ProductoPage } from '../pages/ProductoPage';
 import { SolucionesPage } from '../pages/SolucionesPage';
 import { RecursosPage } from '../pages/RecursosPage';
+import { ProblemSection } from '../marketing/ProblemSection';
+import { HowItWorksSection } from '../marketing/HowItWorksSection';
+import { TestimonialsSection } from '../marketing/TestimonialsSection';
+import { IntegrationsSection } from '../marketing/IntegrationsSection';
+import { FinalCtaSection } from '../marketing/FinalCtaSection';
 
 interface MobileViewProps {
   currentRoute: AppRoute;
@@ -155,17 +160,44 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </div>
         )}
 
-        {currentRoute === 'marketing' && (
+        {(currentRoute === 'marketing' || !currentRoute) && (
           <div>
+            {/* Section 2: Mobile Hero */}
             <MobileHeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
+
+            {/* Section 3: Barra de Confianza (Social Proof) */}
             <SocialProofMarquee />
-            <div className="p-4">
+
+            {/* Section 4: Sección de Problema */}
+            <ProblemSection />
+
+            {/* Section 5: Cómo Funciona (4 Pasos) */}
+            <HowItWorksSection />
+
+            {/* Section 6: Funcionalidades Clave */}
+            <BentoGridFeatures />
+
+            {/* Section 7: Demo Interactiva */}
+            <div className="p-4 bg-slate-950 border-t border-white/5">
               <Playground />
             </div>
-            <SolutionsGrid onSelectPrompt={onOpenPrompt} />
-            <BentoGridFeatures />
+
+            {/* Section 8: Testimonios / Resultados */}
+            <TestimonialsSection />
+
+            {/* Section 9: Integraciones */}
+            <IntegrationsSection />
+
+            {/* Section 10: Precios / Cotización */}
             <MobilePricingSection onRouteChange={onRouteChange} />
+
+            {/* Section 11: Preguntas Frecuentes (FAQ) */}
             <FAQ />
+
+            {/* Section 12: CTA Final de Cierre */}
+            <FinalCtaSection />
+
+            {/* Section 13: Footer */}
             <Footer />
           </div>
         )}

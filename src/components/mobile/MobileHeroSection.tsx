@@ -34,10 +34,10 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
       {/* Main Headline */}
       <div className="text-center space-y-3">
         <h1 className="text-3xl font-black text-white leading-tight tracking-tight">
-          Multiplica tus Ventas Inmobiliarias con <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300">Aria Prop IA</span>
+          Nunca pierdas otro <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300">lead inmobiliario</span>
         </h1>
         <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
-          Atiende clientes en WhatsApp y Web 24/7, muestra fotos RAG, califica prospectos y programa visitas automáticamente.
+          Aria Prop atiende a tus prospectos en menos de 5 segundos, cualifica su presupuesto y agenda visitas a tus inmuebles 24/7 en WhatsApp y Web.
         </p>
       </div>
 
@@ -47,8 +47,21 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
           onClick={handleStartTrial}
           className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span>Probar 7 Días Gratis</span>
+          <Sparkles className="w-4 h-4 fill-current" />
+          <span>Agendar demo gratis</span>
           <ArrowRight className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => {
+            const el = document.getElementById('how-it-works');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            else onRouteChange('soluciones');
+          }}
+          className="w-full py-3 px-4 rounded-xl bg-slate-900 text-slate-200 font-extrabold text-xs border border-white/10 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Zap className="w-4 h-4 text-emerald-400" />
+          <span>Ver cómo funciona</span>
         </button>
       </div>
 
