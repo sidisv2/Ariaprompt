@@ -11,7 +11,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRouteChange, agencyName = 'Aria Prop' }) => {
-  const { user, openAuthModal, signOut } = useAuth();
+  const { user, openAuthModal, signOut, requestSignOut } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
   const [activeDropdown, setActiveDropdown] = useState<'producto' | 'soluciones' | 'recursos' | null>(null);
 
@@ -49,9 +49,9 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
 
             {/* Account / Profile Pill on Left */}
             <div
-              onClick={() => navigateTo('dashboard-roles')}
+              onClick={() => navigateTo('dashboard-profile')}
               className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-emerald-400/50 hover:bg-slate-700/80 text-xs font-bold text-white cursor-pointer transition-all hover:scale-105 shadow-sm"
-              title="Gestión de Perfil, Roles y Suscripciones"
+              title="Perfil de Usuario y Suscripción"
             >
               <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-bold text-[9px]">
                 <User className="w-2.5 h-2.5 stroke-[3]" />
@@ -60,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                 {user ? user.nombre.split(' ')[0] : 'Cuenta'}
               </span>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-400 text-slate-950 text-[9px] font-black uppercase">
-                {user?.role === 'admin' ? 'Admin' : user ? 'Pro' : 'Guest'}
+                {user ? 'Pro' : 'Guest'}
               </span>
             </div>
 
@@ -242,7 +242,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                   <span>{t('nav.panel')}</span>
                 </button>
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => requestSignOut ? requestSignOut() : signOut()}
                   className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
                   title="Cerrar sesión"
                 >

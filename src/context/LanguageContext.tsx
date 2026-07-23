@@ -164,8 +164,8 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.confirmPasswordPlaceholder': 'Repite tu contraseña',
     'auth.nameLabel': 'Nombre Completo',
     'auth.namePlaceholder': 'Carlos Mendoza',
-    'auth.loginButton': 'Iniciar Sesión',
-    'auth.signupButton': 'Registrarse Gratis',
+    'auth.loginButton': 'Iniciar Sesión con Correo',
+    'auth.signupButton': 'Registrarse con Correo',
     'auth.forgotPassword': '¿Olvidaste tu contraseña?',
     'auth.noAccount': '¿No tienes cuenta? Regístrate aquí',
     'auth.hasAccount': '¿Ya tienes cuenta? Inicia sesión',
@@ -176,6 +176,13 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.successSignup': '¡Cuenta creada con éxito! Bienvenido a Aria Prop.',
     'auth.logout': 'Cerrar sesión',
     'auth.demoButton': 'Probar demo sin registrarme',
+    'auth.google': 'Continuar con Google',
+
+    // Logout Modal
+    'logout.title': '¿Estás seguro de cerrar sesión?',
+    'logout.subtitle': 'Tu sesión actual se cerrará y serás redirigido a la página principal.',
+    'logout.confirm': 'Cerrar sesión',
+    'logout.cancel': 'Cancelar',
 
     // Chat UI
     'chat.inputPlaceholder': 'Escribe tu consulta sobre inmuebles, ROI o documentos...',
@@ -344,8 +351,8 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.confirmPasswordPlaceholder': 'Repeat password',
     'auth.nameLabel': 'Full Name',
     'auth.namePlaceholder': 'Charles Smith',
-    'auth.loginButton': 'Log In',
-    'auth.signupButton': 'Sign Up Free',
+    'auth.loginButton': 'Log In with Email',
+    'auth.signupButton': 'Sign Up with Email',
     'auth.forgotPassword': 'Forgot your password?',
     'auth.noAccount': 'Don\'t have an account? Sign up here',
     'auth.hasAccount': 'Already have an account? Log in',
@@ -356,6 +363,13 @@ const translations: Record<Language, Record<string, string>> = {
     'auth.successSignup': 'Account created successfully! Welcome to Aria Prop.',
     'auth.logout': 'Log out',
     'auth.demoButton': 'Try demo without registering',
+    'auth.google': 'Continue with Google',
+
+    // Logout Modal
+    'logout.title': 'Are you sure you want to log out?',
+    'logout.subtitle': 'Your current session will be closed and you will be redirected to the homepage.',
+    'logout.confirm': 'Log Out',
+    'logout.cancel': 'Cancel',
 
     // Chat UI
     'chat.inputPlaceholder': 'Ask about properties, ROI calculations, or documents...',

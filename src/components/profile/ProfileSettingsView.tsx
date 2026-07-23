@@ -16,7 +16,8 @@ import {
   Sparkles,
   CheckCircle2,
   Lock,
-  Upload
+  Upload,
+  LogOut
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { uploadFileToSupabase } from '../../lib/storageService';
@@ -349,12 +350,22 @@ export const ProfileSettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* Save Button */}
-      <div className="flex justify-end pt-2">
+      {/* Save Button & Logout Action */}
+      <div className="flex items-center justify-between pt-2">
+        {user && (
+          <button
+            type="button"
+            onClick={() => useAuth().requestSignOut()}
+            className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold text-xs border border-red-500/30 flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Cerrar Sesión</span>
+          </button>
+        )}
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all cursor-pointer ml-auto"
         >
           {saving ? (
             <>

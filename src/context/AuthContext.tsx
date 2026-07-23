@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured, saveUserProfile, UserProfile, getUserProfile } from '../lib/supabase';
 import { AppRoute, UserPreferences } from '../types';
+import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 
 export interface AppUser {
   id: string;
@@ -26,6 +27,7 @@ interface AuthContextType {
   loading: boolean;
   userPreferences: UserPreferences;
   authModalOpen: boolean;
+  logoutModalOpen: boolean;
   modalTab: 'login' | 'signup';
   pendingPlan: string | null;
   pendingRoute: AppRoute | null;
@@ -33,6 +35,9 @@ interface AuthContextType {
   signIn: (data: { email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
+  requestSignOut: () => void;
+  confirmSignOut: () => Promise<void>;
+  cancelSignOut: () => void;
   updateUserProfile: (updates: { nombre?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
   updateUserPreferences: (prefs: Partial<UserPreferences>) => void;
   requireAuthForPayment: (options?: { planId?: string; targetRoute?: AppRoute; onAuthenticated?: () => void }) => boolean;
@@ -52,6 +57,13 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
   const [user, setUser] = useState<AppUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState<boolean>(false);
+  const [modalTab, setModalTab] = useState<'login' | 'signup'>('login');
+  const [pendingPlan, setPendingPlan] = useState<string | null>(null);
+  const [pendingRoute, setPendingRoute] = useState<AppRoute | null>(null);
+  const [pendingCallback, setPendingCallback] = useState<(() => void) | null>(null);
+
   const [userPreferences, setUserPreferences] = useState<UserPreferences>(() => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_PREFS_KEY);
@@ -61,7 +73,6 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   });
 
-  // Save preferences changes to localStorage
   const updateUserPreferences = (prefs: Partial<UserPreferences>) => {
     setUserPreferences((prev) => {
       const updated = { ...prev, ...prefs };
@@ -74,11 +85,10 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     });
   };
 
-  // Update user profile function (nombre, avatar)
   const updateUserProfile = async (updates: { nombre?: string; avatarUrl?: string }): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Usuario no autenticado' };
 
-    const updatedUser: AppUser = {
+    const updatedUser = {
       ...user,
       nombre: updates.nombre !== undefined ? updates.nombre : user.nombre,
       avatarUrl: updates.avatarUrl !== undefined ? updates.avatarUrl : user.avatarUrl,
@@ -86,50 +96,15 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
 
     setUser(updatedUser);
 
-    // Persist in local storage session
     try {
       localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(updatedUser));
     } catch (e) {
-      console.warn('Could not update local storage user session:', e);
+      console.warn('Error updating session in localStorage:', e);
     }
 
-    // Save to Supabase profile table
-    const profile: UserProfile = {
-      id: updatedUser.id,
-      email: updatedUser.email,
-      nombre: updatedUser.nombre,
-      fecha_registro: updatedUser.createdAt,
-      avatar_url: updatedUser.avatarUrl,
-    };
-
-    const result = await saveUserProfile(profile);
-
-    // Also update Supabase auth metadata if configured
-    if (isSupabaseConfigured) {
-      try {
-        await supabase.auth.updateUser({
-          data: {
-            nombre: updatedUser.nombre,
-            full_name: updatedUser.nombre,
-            avatar_url: updatedUser.avatarUrl,
-          },
-        });
-      } catch (err) {
-        console.warn('Error updating Supabase auth metadata:', err);
-      }
-    }
-
-    return result;
+    return { success: true };
   };
 
-  // Auth modal state
-  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
-  const [modalTab, setModalTab] = useState<'login' | 'signup'>('login');
-  const [pendingPlan, setPendingPlan] = useState<string | null>(null);
-  const [pendingRoute, setPendingRoute] = useState<AppRoute | null>(null);
-  const [pendingCallback, setPendingCallback] = useState<(() => void) | null>(null);
-
-  // 1. Initialize & listen to Supabase Auth state changes
   useEffect(() => {
     let mounted = true;
 
@@ -142,16 +117,14 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
             await mapSupabaseUserToAppUser(data.session.user);
           }
         } catch (err) {
-          console.warn('Error fetching Supabase session:', err);
+          console.warn('Supabase session load error:', err);
         }
       } else {
-        // Fallback local session for seamless demo/testing without Supabase keys
         try {
           const stored = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
           if (stored && mounted) {
             const parsed = JSON.parse(stored);
-            const storedRole = localStorage.getItem('aria_prop_mock_role') || parsed.role || undefined;
-            setUser({ ...parsed, role: storedRole });
+            setUser({ ...parsed, role: 'user' });
           }
         } catch (err) {
           console.warn('Error reading local mock auth session:', err);
@@ -163,7 +136,6 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
 
     loadInitialSession();
 
-    // Global listener for Supabase Auth state change
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!mounted) return;
 
@@ -182,7 +154,6 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     };
   }, []);
 
-  // Helper to map Supabase user to AppUser & save to profiles table
   const mapSupabaseUserToAppUser = async (sbUser: SupabaseUser) => {
     const nombre =
       (sbUser.user_metadata as any)?.nombre ||
@@ -202,29 +173,12 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       nombre,
       avatarUrl,
       createdAt: sbUser.created_at || new Date().toISOString(),
+      role: 'user', // Always user for public signups
     };
 
-    // Try to retrieve role from profiles table (if present)
-    try {
-      const profile = await getUserProfile(sbUser.id);
-      const role = (profile as any)?.role || 'user';
-      setUser({ ...appUser, role });
-
-      // Ensure profile saved
-      const profilePayload: UserProfile = {
-        id: appUser.id,
-        email: appUser.email,
-        nombre: appUser.nombre,
-        fecha_registro: appUser.createdAt,
-        avatar_url: appUser.avatarUrl,
-      };
-      await saveUserProfile(profilePayload);
-    } catch (err) {
-      setUser({ ...appUser, role: 'user' });
-    }
+    setUser(appUser);
   };
 
-  // Execute post-authentication action if user had a pending payment selection
   const handlePostAuthAction = () => {
     if (pendingCallback) {
       pendingCallback();
@@ -234,12 +188,12 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     if (pendingRoute && onRouteChange) {
       onRouteChange(pendingRoute);
       setPendingRoute(null);
-    } else if (pendingPlan && onRouteChange) {
-      onRouteChange('dashboard-checkout');
+    } else if (onRouteChange) {
+      onRouteChange('dashboard-metrics');
     }
   };
 
-  // Sign Up method
+  // Public Sign Up: STRICTLY ASSIGNS ROLE 'user'
   const signUp = async ({ email, password, nombre }: { email: string; password: string; nombre: string }) => {
     setLoading(true);
 
@@ -274,8 +228,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         return { success: false, error: err.message || 'Error al registrar usuario' };
       }
     } else {
-      // Local Mock Fallback when Supabase is not configured
-      await new Promise((resolve) => setTimeout(resolve, 800)); // smooth simulation
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       const mockUser: AppUser = {
         id: `usr_${Date.now()}`,
@@ -283,21 +236,11 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         nombre: nombre || email.split('@')[0],
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || email)}&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
-        role: email === 'admin@admin.com' ? 'admin' : 'user',
+        role: 'user', // STRICTLY REGULAR USER
       };
 
       setUser(mockUser);
       localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(mockUser));
-      localStorage.setItem('aria_prop_mock_role', mockUser.role || 'user');
-
-      // Save to local profile storage
-      await saveUserProfile({
-        id: mockUser.id,
-        email: mockUser.email,
-        nombre: mockUser.nombre,
-        fecha_registro: mockUser.createdAt,
-        avatar_url: mockUser.avatarUrl,
-      });
 
       setAuthModalOpen(false);
       handlePostAuthAction();
@@ -306,7 +249,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   };
 
-  // Sign In method
+  // Sign In method: STRICTLY REGULAR USER
   const signIn = async ({ email, password }: { email: string; password: string }) => {
     setLoading(true);
 
@@ -335,8 +278,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         return { success: false, error: err.message || 'Credenciales incorrectas' };
       }
     } else {
-      // Local Mock Fallback
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
       const mockUser: AppUser = {
         id: `usr_${Date.now()}`,
@@ -344,12 +286,11 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         nombre: email.split('@')[0],
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
-        role: (email === 'admin@admin.com' || email === 'admin' || password === 'admin') ? 'admin' : 'user',
+        role: 'user',
       };
 
       setUser(mockUser);
       localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(mockUser));
-      localStorage.setItem('aria_prop_mock_role', mockUser.role || 'user');
 
       setAuthModalOpen(false);
       handlePostAuthAction();
@@ -358,8 +299,9 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   };
 
-  // Sign In with Google OAuth
+  // Sign In with Google OAuth (Prominent)
   const signInWithGoogle = async () => {
+    setLoading(true);
     if (isSupabaseConfigured) {
       try {
         const { error } = await supabase.auth.signInWithOAuth({
@@ -368,20 +310,23 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
             redirectTo: window.location.origin,
           },
         });
-        if (error) return { success: false, error: error.message };
+        if (error) {
+          setLoading(false);
+          return { success: false, error: error.message };
+        }
+        setLoading(false);
         return { success: true };
       } catch (err: any) {
-        return { success: false, error: err.message || 'Error con Google OAuth' };
+        setLoading(false);
+        return { success: false, error: err.message || 'Error conectando con Google OAuth' };
       }
     } else {
-      // Mock Google OAuth resolution
-      setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      await new Promise((resolve) => setTimeout(resolve, 700));
 
       const mockUser: AppUser = {
         id: `usr_google_${Date.now()}`,
         email: 'usuario.google@gmail.com',
-        nombre: 'Usuario Google LATAM',
+        nombre: 'Usuario Google',
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         createdAt: new Date().toISOString(),
         role: 'user',
@@ -389,7 +334,6 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
 
       setUser(mockUser);
       localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(mockUser));
-      localStorage.setItem('aria_prop_mock_role', mockUser.role || 'user');
 
       setAuthModalOpen(false);
       handlePostAuthAction();
@@ -398,29 +342,42 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   };
 
-  // Sign Out
+  // Immediate Sign Out
   const signOut = async () => {
     setLoading(true);
     if (isSupabaseConfigured) {
-      await supabase.auth.signOut();
+      try { await supabase.auth.signOut(); } catch {}
     }
     setUser(null);
     setSession(null);
     try { localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY); } catch {}
-    try { localStorage.removeItem('aria_prop_mock_role'); } catch {}
     setLoading(false);
+    if (onRouteChange) {
+      onRouteChange('marketing');
+    }
   };
 
-  // Require Auth Guard before payments or subscriptions
+  // Request Sign Out (Triggers Confirmation Modal)
+  const requestSignOut = () => {
+    setLogoutModalOpen(true);
+  };
+
+  const cancelSignOut = () => {
+    setLogoutModalOpen(false);
+  };
+
+  const confirmSignOut = async () => {
+    setLogoutModalOpen(false);
+    await signOut();
+  };
+
   const requireAuthForPayment = (options?: { planId?: string; targetRoute?: AppRoute; onAuthenticated?: () => void }): boolean => {
     if (user) {
-      // User is already logged in, proceed directly!
       if (options?.onAuthenticated) options.onAuthenticated();
       if (options?.targetRoute && onRouteChange) onRouteChange(options.targetRoute);
       return true;
     }
 
-    // User is NOT logged in: Block payment and trigger Auth Modal!
     if (options?.planId) setPendingPlan(options.planId);
     if (options?.targetRoute) setPendingRoute(options.targetRoute);
     if (options?.onAuthenticated) setPendingCallback(() => options.onAuthenticated!);
@@ -449,6 +406,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         loading,
         userPreferences,
         authModalOpen,
+        logoutModalOpen,
         modalTab,
         pendingPlan,
         pendingRoute,
@@ -456,6 +414,9 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         signIn,
         signInWithGoogle,
         signOut,
+        requestSignOut,
+        confirmSignOut,
+        cancelSignOut,
         updateUserProfile,
         updateUserPreferences,
         requireAuthForPayment,
@@ -464,6 +425,13 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       }}
     >
       {children}
+
+      {/* Global Logout Confirmation Modal */}
+      <LogoutConfirmModal
+        isOpen={logoutModalOpen}
+        onClose={cancelSignOut}
+        onConfirm={confirmSignOut}
+      />
     </AuthContext.Provider>
   );
 };

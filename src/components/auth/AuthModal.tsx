@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { X, Mail, Lock, User, Sparkles, ShieldCheck, ArrowRight, Play } from 'lucide-react';
+import { X, Mail, Lock, User, Sparkles, ArrowRight, Play } from 'lucide-react';
 
 export const AuthModal: React.FC<{
   isOpen: boolean;
@@ -33,13 +33,6 @@ export const AuthModal: React.FC<{
 
   if (!isOpen) return null;
 
-  const handleDevAdminFill = () => {
-    setTab('login');
-    setIdentifier('admin@admin.com');
-    setPassword('admin123');
-    setErrorMsg(null);
-  };
-
   const handleDemoAccess = async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -67,11 +60,9 @@ export const AuthModal: React.FC<{
       return;
     }
 
-    const email = inputVal === 'admin' ? 'admin@admin.com' : inputVal;
-
     if (tab === 'signup') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(inputVal)) {
         setErrorMsg(t('auth.invalidEmail'));
         setLoading(false);
         return;
@@ -90,13 +81,13 @@ export const AuthModal: React.FC<{
 
     try {
       if (tab === 'login') {
-        const res = await signIn({ email, password });
+        const res = await signIn({ email: inputVal, password });
         if (!res.success) throw new Error(res.error || t('auth.invalidCredentials'));
       } else {
         const res = await signUp({
-          email,
+          email: inputVal,
           password,
-          nombre: displayName.trim() || email.split('@')[0],
+          nombre: displayName.trim() || inputVal.split('@')[0],
         });
         if (!res.success) throw new Error(res.error || 'Error al crear la cuenta. Intenta de nuevo.');
       }
@@ -115,11 +106,11 @@ export const AuthModal: React.FC<{
     setErrorMsg(null);
     try {
       const res = await signInWithGoogle();
-      if (!res.success) throw new Error(res.error || 'Error con Google Auth');
+      if (!res.success) throw new Error(res.error || 'Error con Google OAuth');
       onAuthSuccess?.();
       onClose();
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Error con Google Auth');
+      setErrorMsg(err?.message || 'Error con Google OAuth');
     } finally {
       setLoading(false);
     }
@@ -150,23 +141,8 @@ export const AuthModal: React.FC<{
             {tab === 'login' ? t('auth.loginTitle') : t('auth.signupTitle')}
           </h2>
           <p className="text-xs text-slate-400">
-            Accede a tu workspace privado de agentes inmobiliarios de IA
+            Accede a tu workspace inmobiliario inteligente
           </p>
-        </div>
-
-        {/* Dev Admin Quick Access Banner */}
-        <div className="p-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs text-emerald-300 font-medium">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Acceso Dev Admin</span>
-          </div>
-          <button
-            type="button"
-            onClick={handleDevAdminFill}
-            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-bold transition-all cursor-pointer shrink-0"
-          >
-            Auto-Rellenar
-          </button>
         </div>
 
         {/* Login / Sign Up Tabs */}
@@ -193,6 +169,28 @@ export const AuthModal: React.FC<{
           >
             {t('nav.signup')}
           </button>
+        </div>
+
+        {/* PROMINENT GOOGLE OAUTH BUTTON (Standard at Top) */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="w-full py-3 rounded-2xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs shadow-lg transition-all cursor-pointer flex items-center justify-center gap-3 border border-slate-300 hover:scale-[1.01] active:scale-95"
+        >
+          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+            <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z" />
+            <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
+            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.8s.7 5.1 1.9 7.5l3.7-2.9z" />
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z" />
+          </svg>
+          <span className="text-slate-900 font-extrabold">{t('auth.google')}</span>
+        </button>
+
+        {/* Divider */}
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+          <span className="relative bg-slate-900 px-3 text-[10px] text-slate-400 uppercase font-bold tracking-wider">o con correo</span>
         </div>
 
         {/* Form */}
