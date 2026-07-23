@@ -30,19 +30,19 @@ export const TestimonialsSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 bg-slate-950 border-t border-white/5 relative overflow-hidden text-left">
+    <section className="py-20 bg-slate-50 border-b border-slate-200/80 relative overflow-hidden text-left">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-extrabold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold uppercase tracking-wider">
             <Quote className="w-4 h-4" />
             <span>Casos de Éxito & Resultados Comprobados</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            Lo que dicen las <span className="bg-gradient-to-r from-amber-300 via-emerald-400 to-amber-300 bg-clip-text text-transparent">agencias líderes en LATAM</span>
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+            Lo que dicen las <span className="text-indigo-600">agencias líderes en LATAM</span>
           </h2>
-          <p className="text-sm sm:text-base text-slate-400 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
             Resultados medibles en tasa de conversión, visitas agendadas y facturación directa.
           </p>
         </div>
@@ -52,13 +52,13 @@ export const TestimonialsSection: React.FC = () => {
           {testimonials.map((t, idx) => (
             <div
               key={idx}
-              className="p-7 rounded-3xl bg-slate-900/90 border border-white/10 hover:border-amber-500/40 transition-all duration-300 shadow-xl flex flex-col justify-between space-y-6 relative group hover:scale-[1.02]"
+              className="p-7 rounded-3xl bg-white border border-slate-200/80 hover:border-indigo-300 transition-all duration-300 shadow-md hover:shadow-xl flex flex-col justify-between space-y-6 relative group hover:scale-[1.02]"
             >
               <div className="space-y-4">
                 {/* Metric Badge */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-xs font-extrabold flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5" />
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-extrabold flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                     <span>{t.metric}</span>
                   </span>
                   <div className="flex text-amber-400">
@@ -69,23 +69,23 @@ export const TestimonialsSection: React.FC = () => {
                 </div>
 
                 {/* Quote Text */}
-                <p className="text-xs text-slate-300 leading-relaxed italic">
+                <p className="text-xs text-slate-700 leading-relaxed italic">
                   "{t.quote}"
                 </p>
               </div>
 
               {/* Author Details */}
-              <div className="flex items-center gap-3 pt-2 border-t border-white/5">
-                <div className="w-10 h-10 rounded-full bg-slate-800 border border-emerald-400/40 flex items-center justify-center text-emerald-400 font-black text-sm shrink-0">
+              <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-black text-sm shrink-0">
                   {t.name.charAt(0)}
                 </div>
                 <div>
-                  <h4 className="text-xs font-extrabold text-white flex items-center gap-1">
+                  <h4 className="text-xs font-extrabold text-slate-900 flex items-center gap-1">
                     <span>{t.name}</span>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400/20" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 fill-indigo-100" />
                   </h4>
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-slate-500" />
+                  <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                    <Building2 className="w-3 h-3 text-slate-400" />
                     <span>{t.role} — {t.agency}</span>
                   </p>
                 </div>

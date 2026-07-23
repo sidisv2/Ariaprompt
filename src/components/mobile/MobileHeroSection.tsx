@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Sparkles, ArrowRight, ShieldCheck, Zap, MessageSquare, Building2, Play } from 'lucide-react';
 import { TwitterActionCard } from '../marketing/TwitterActionCard';
 import { InteractiveSandboxWidget } from '../marketing/InteractiveSandboxWidget';
+import { HeroPromptAssistant } from '../marketing/HeroPromptAssistant';
 
 interface MobileHeroSectionProps {
   sampleProperties: Property[];
@@ -33,23 +34,28 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
 
       {/* Main Headline */}
       <div className="text-center space-y-3">
-        <h1 className="text-3xl font-black text-white leading-tight tracking-tight">
-          Nunca pierdas otro <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300">lead inmobiliario</span>
+        <h1 className="text-3xl font-black text-slate-900 leading-tight tracking-tight">
+          Nunca pierdas otro <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-indigo-600 to-teal-600">lead inmobiliario</span>
         </h1>
-        <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
+        <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
           Aria Prop atiende a tus prospectos en menos de 5 segundos, cualifica su presupuesto y agenda visitas a tus inmuebles 24/7 en WhatsApp y Web.
         </p>
+      </div>
+
+      {/* Cloudairy Prompt Assistant Widget */}
+      <div className="py-2">
+        <HeroPromptAssistant onStartDemo={handleStartTrial} />
       </div>
 
       {/* Action Buttons */}
       <div className="space-y-2.5 pt-1">
         <button
           onClick={handleStartTrial}
-          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Sparkles className="w-4 h-4 fill-current" />
+          <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
           <span>Agendar demo gratis</span>
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4 text-slate-950" />
         </button>
 
         <button
@@ -58,9 +64,9 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
             if (el) el.scrollIntoView({ behavior: 'smooth' });
             else onRouteChange('soluciones');
           }}
-          className="w-full py-3 px-4 rounded-xl bg-slate-900 text-slate-200 font-extrabold text-xs border border-white/10 flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-3 px-4 rounded-xl bg-white text-slate-900 font-extrabold text-xs border border-slate-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Zap className="w-4 h-4 text-emerald-400" />
+          <Zap className="w-4 h-4 text-indigo-600" />
           <span>Ver cómo funciona</span>
         </button>
       </div>

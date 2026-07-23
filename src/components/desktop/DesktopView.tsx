@@ -25,7 +25,9 @@ import { SolucionesPage } from '../pages/SolucionesPage';
 import { RecursosPage } from '../pages/RecursosPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
+import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
 import { TestimonialsSection } from '../marketing/TestimonialsSection';
+import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
 import { DiscountOfferModal } from '../common/DiscountOfferModal';
@@ -168,7 +170,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         </main>
       ) : (
         <main className="flex-1 animate-page-fade">
-          {/* Section 2: Hero */}
+          {/* Section 2: Hero con Asistente Interactivo Cloudairy */}
           <HeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
 
           {/* Section 3: Barra de Confianza (Social Proof) */}
@@ -177,35 +179,34 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           {/* Section 4: Sección de Problema (Agitación de Dolor) */}
           <ProblemSection />
 
-          {/* Section 5: Sección de Solución / Cómo Funciona (Flujo en 4 Pasos) */}
+          {/* Section 5: Cómo Funciona (Flujo en 4 Pasos) */}
           <HowItWorksSection />
 
-          {/* Section 6: Funcionalidades Clave (Bento Grid) */}
+          {/* Section 6: Funcionalidades Clave (Bento Grid estilo Cloudairy) */}
           <BentoGridFeatures />
 
-          {/* Section 7: Demo Interactiva (Playground Simulado) */}
-          <section className="py-16 bg-slate-950 border-t border-white/5">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <Playground />
-            </div>
-          </section>
+          {/* Section 7: Demo Interactiva o Video Corto */}
+          <InteractiveDemoSection />
 
-          {/* Section 8: Testimonios / Resultados Comprobados */}
+          {/* Section 8: Testimonios con Métricas de Resultado */}
           <TestimonialsSection />
 
-          {/* Section 9: Integraciones (WhatsApp, Calendar, CRMs, Portales) */}
+          {/* Section 9: Sellos de Confianza y Seguridad Enterprise */}
+          <TrustSecuritySection />
+
+          {/* Section 10: Integraciones (WhatsApp, Calendar, CRMs, Portales) */}
           <IntegrationsSection />
 
-          {/* Section 10: Precios / Cotización */}
+          {/* Section 11: Precios / Cotización */}
           <PricingSection onRouteChange={onRouteChange} />
 
-          {/* Section 11: Preguntas Frecuentes (FAQ) */}
+          {/* Section 12: Preguntas Frecuentes (FAQ) */}
           <FAQ />
 
-          {/* Section 12: CTA Final de Cierre */}
+          {/* Section 13: CTA Final de Cierre con Gradiente Suave */}
           <FinalCtaSection />
 
-          {/* Section 13: Footer */}
+          {/* Section 14: Footer Completo */}
           <Footer />
         </main>
       )}

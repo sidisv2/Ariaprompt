@@ -24,7 +24,9 @@ import { SolucionesPage } from '../pages/SolucionesPage';
 import { RecursosPage } from '../pages/RecursosPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
+import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
 import { TestimonialsSection } from '../marketing/TestimonialsSection';
+import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
 
@@ -178,26 +180,27 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <BentoGridFeatures />
 
             {/* Section 7: Demo Interactiva */}
-            <div className="p-4 bg-slate-950 border-t border-white/5">
-              <Playground />
-            </div>
+            <InteractiveDemoSection />
 
             {/* Section 8: Testimonios / Resultados */}
             <TestimonialsSection />
 
-            {/* Section 9: Integraciones */}
+            {/* Section 9: Sellos de Confianza y Seguridad */}
+            <TrustSecuritySection />
+
+            {/* Section 10: Integraciones */}
             <IntegrationsSection />
 
-            {/* Section 10: Precios / Cotización */}
+            {/* Section 11: Precios / Cotización */}
             <MobilePricingSection onRouteChange={onRouteChange} />
 
-            {/* Section 11: Preguntas Frecuentes (FAQ) */}
+            {/* Section 12: Preguntas Frecuentes (FAQ) */}
             <FAQ />
 
-            {/* Section 12: CTA Final de Cierre */}
+            {/* Section 13: CTA Final de Cierre */}
             <FinalCtaSection />
 
-            {/* Section 13: Footer */}
+            {/* Section 14: Footer Completo */}
             <Footer />
           </div>
         )}
