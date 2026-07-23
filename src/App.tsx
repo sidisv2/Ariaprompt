@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppRoute, Property, Lead, BotConfig } from './types';
 import { INITIAL_PROPERTIES, INITIAL_LEADS, INITIAL_BOT_CONFIG } from './data/mockData';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { useDeviceType } from './hooks/useDeviceType';
 import { DesktopView } from './components/desktop/DesktopView';
 import { MobileView } from './components/mobile/MobileView';
@@ -172,47 +173,50 @@ export default function App() {
     handleRouteChange('dashboard-leads');
   };
 
-  const commonProps = {
-    currentRoute,
-    onRouteChange: handleRouteChange,
-    properties,
-    leads,
-    botConfig,
-    selectedLeadForChat,
-    onClearSelectedLead: () => setSelectedLeadForChat(undefined),
-    onInterveneLead: handleInterveneLead,
-    onAddProperty: handleAddProperty,
-    onUpdateLeadStatus: handleUpdateLeadStatus,
-    onUpdateBotConfig: handleUpdateBotConfig,
-    onOpenPrompt: handleOpenPrompt,
+  const handleNavigate = (route: AppRoute) => {
+    handleRouteChange(route);
   };
 
   return (
-    <AuthProvider onRouteChange={handleRouteChange}>
-      {isMobile ? (
-        <MobileView {...commonProps} />
-      ) : (
-        <DesktopView {...commonProps} />
-      )}
+    <LanguageProvider>
+      <AuthProvider>
+        {effectiveDevice === 'mobile' ? (
+          <MobileView
+            currentRoute={currentRoute}
+            onRouteChange={handleNavigate}
+            properties={properties}
+            leads={leads}
+            botConfig={botConfig}
+          />
+        ) : (
+          <DesktopView
+            currentRoute={currentRoute}
+            onRouteChange={handleNavigate}
+            properties={properties}
+            leads={leads}
+            botConfig={botConfig}
+            onOpenPrompt={handleOpenPrompt}
+          />
+        )}
 
-      {/* Global Floating Assistant Button across all views */}
-      <FloatingAssistant onClick={() => setSlideOverOpen(true)} isOpen={slideOverOpen} />
+        {/* Floating Quick Assistant Trigger */}
+        <FloatingAssistant onOpenPrompt={handleOpenPrompt} />
 
-      {/* Slide-over Right Drawer Assistant */}
-      <ChatSlideOver
-        isOpen={slideOverOpen}
-        onClose={() => setSlideOverOpen(false)}
-        prefilledPrompt={prefilledPrompt}
-      />
+        {/* Slide-over Right Drawer Assistant */}
+        <ChatSlideOver
+          isOpen={slideOverOpen}
+          onClose={() => setSlideOverOpen(false)}
+          prefilledPrompt={prefilledPrompt}
+        />
 
-      {/* Floating Device Switcher Pill for seamless testing of both interfaces */}
-      <DeviceSwitcherBadge
-        deviceType={deviceType}
-        forcedDevice={forcedDevice}
-        overrideDevice={overrideDevice}
-        screenWidth={screenWidth}
-      />
-    </AuthProvider>
+        {/* Floating Device Switcher Pill */}
+        <DeviceSwitcherBadge
+          deviceType={deviceType}
+          forcedDevice={forcedDevice}
+          overrideDevice={overrideDevice}
+          screenWidth={screenWidth}
+        />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
-

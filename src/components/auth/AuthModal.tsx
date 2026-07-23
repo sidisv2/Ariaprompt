@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { X, Mail, Lock, User, Sparkles, ShieldCheck, ArrowRight, KeyRound } from 'lucide-react';
 
 export const AuthModal: React.FC<{
@@ -8,6 +9,7 @@ export const AuthModal: React.FC<{
   onAuthSuccess?: () => void;
   initialTab?: 'login' | 'signup';
 }> = ({ isOpen, onClose, onAuthSuccess, initialTab = 'login' }) => {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<'login' | 'signup'>(initialTab);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -156,7 +158,7 @@ export const AuthModal: React.FC<{
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Iniciar Sesión
+            {t('auth.loginTab')}
           </button>
           <button
             type="button"
@@ -167,7 +169,7 @@ export const AuthModal: React.FC<{
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Registrarse
+            {t('auth.signupTab')}
           </button>
         </div>
 
@@ -175,44 +177,44 @@ export const AuthModal: React.FC<{
         <form onSubmit={handleAction} className="space-y-4">
           {tab === 'signup' && (
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Nombre completo</label>
+              <label className="text-xs font-semibold text-slate-300">{t('auth.nameLabel')}</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Ej: Carlos Mendoza"
-                  className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+                  placeholder={t('auth.namePlaceholder')}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Correo o usuario</label>
+            <label className="text-xs font-semibold text-slate-300">{t('auth.emailLabel')}</label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="admin@admin.com o usuario"
-                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+                placeholder={t('auth.emailPlaceholder')}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Contraseña</label>
+            <label className="text-xs font-semibold text-slate-300">{t('auth.passLabel')}</label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+                placeholder={t('auth.passPlaceholder')}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
               />
             </div>
           </div>
@@ -233,7 +235,7 @@ export const AuthModal: React.FC<{
               <span className="w-4 h-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin"></span>
             ) : (
               <>
-                <span>{tab === 'login' ? 'Entrar a Aria Prop' : 'Crear Cuenta Gratis'}</span>
+                <span>{tab === 'login' ? t('auth.btnSubmitLogin') : t('auth.btnSubmitSignup')}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -243,7 +245,7 @@ export const AuthModal: React.FC<{
         {/* Divider */}
         <div className="relative flex items-center justify-center">
           <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-          <span className="relative bg-slate-900 px-3 text-[11px] text-slate-500 uppercase font-bold">O continúa con</span>
+          <span className="relative bg-slate-900 px-3 text-[11px] text-slate-500 uppercase font-bold">O</span>
         </div>
 
         {/* Social Auth Button */}
@@ -256,10 +258,10 @@ export const AuthModal: React.FC<{
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z" />
             <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z" />
-            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12s.7 2.3 1.9 4.7l3.7-1.9z" />
-            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z" />
+            <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.8s.7 5.1 1.9 7.5l3.7-2.9z" />
+            <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16c1.8 3.7 5.6 7 10.1 7z" />
           </svg>
-          <span>Continuar con Google</span>
+          <span>{t('auth.google')}</span>
         </button>
       </div>
     </div>

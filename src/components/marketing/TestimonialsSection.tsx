@@ -1,7 +1,10 @@
 import React from 'react';
 import { Star, Building2, TrendingUp, Quote, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const TestimonialsSection: React.FC = () => {
+  const { t } = useLanguage();
+
   const testimonials = [
     {
       name: 'Carlos Mendoza',
@@ -37,13 +40,13 @@ export const TestimonialsSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold uppercase tracking-wider">
             <Quote className="w-4 h-4" />
-            <span>Casos de Éxito & Resultados Comprobados</span>
+            <span>{t('test.badge')}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Lo que dicen las <span className="text-indigo-600">agencias líderes en LATAM</span>
+            {t('test.title')}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Resultados medibles en tasa de conversión, visitas agendadas y facturación directa.
+            {t('test.subtitle')}
           </p>
         </div>
 

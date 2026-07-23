@@ -1,34 +1,36 @@
 import React from 'react';
 import { MessageSquare, Bot, CalendarCheck, Award, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const HowItWorksSection: React.FC = () => {
   const { openAuthModal } = useAuth();
+  const { t } = useLanguage();
 
   const steps = [
     {
-      step: 'Paso 1',
+      step: '01',
       icon: <MessageSquare className="w-6 h-6 text-indigo-600" />,
-      title: 'El lead escribe en tu web o WhatsApp',
-      description: 'El comprador potencial consulta sobre un inmueble a cualquier hora (incluso a las 2 AM).',
+      title: t('how.step1Title'),
+      description: t('how.step1Desc'),
     },
     {
-      step: 'Paso 2',
+      step: '02',
       icon: <Bot className="w-6 h-6 text-teal-600" />,
-      title: 'Aria Prop responde y cualifica en < 5s',
-      description: 'Analiza su presupuesto, número de habitaciones y evalúa si es un cliente con intención real de compra.',
+      title: t('how.step2Title'),
+      description: t('how.step2Desc'),
     },
     {
-      step: 'Paso 3',
+      step: '03',
       icon: <CalendarCheck className="w-6 h-6 text-cyan-600" />,
-      title: 'Agenda la visita en tu calendario',
-      description: 'Propone automáticamente horarios disponibles y coordina la visita presencial sin fricción.',
+      title: t('how.step3Title'),
+      description: t('how.step3Desc'),
     },
     {
-      step: 'Paso 4',
+      step: '04',
       icon: <Award className="w-6 h-6 text-amber-600" />,
-      title: 'Tu equipo humano cierra la venta',
-      description: 'El asesor recibe el expediente cualificado del cliente listo para mostrar el inmueble y firmar.',
+      title: t('how.step4Title'),
+      description: t('how.step4Desc'),
     },
   ];
 
@@ -40,13 +42,13 @@ export const HowItWorksSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-extrabold uppercase tracking-wider">
             <Bot className="w-4 h-4" />
-            <span>Flujo Automatizado en 4 Pasos</span>
+            <span>{t('how.badge')}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-            ¿Cómo funciona <span className="text-indigo-600">Aria Prop</span>?
+            {t('how.title')}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            De la primera consulta a la firma del contrato: automatiza el 80% del trabajo pesado de captación e interactúa con tus compradores en tiempo récord.
+            {t('how.subtitle')}
           </p>
         </div>
 
@@ -79,7 +81,7 @@ export const HowItWorksSection: React.FC = () => {
             onClick={() => openAuthModal('signup', 'pro', 'dashboard-checkout')}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-xl shadow-emerald-500/20 transition-all cursor-pointer hover:scale-105"
           >
-            <span>Ver demo interactiva en vivo</span>
+            <span>{t('how.cta')}</span>
             <ArrowRight className="w-4 h-4 stroke-[3]" />
           </button>
         </div>

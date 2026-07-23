@@ -1,28 +1,30 @@
 import React from 'react';
 import { Clock, AlertTriangle, MessageSquareOff, TrendingDown, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const ProblemSection: React.FC = () => {
   const { openAuthModal } = useAuth();
+  const { t } = useLanguage();
 
   const problems = [
     {
       icon: <Clock className="w-6 h-6 text-rose-600" />,
-      tag: '67% Fuera de Horario',
-      title: 'Los leads buscan de noche y en fines de semana',
-      description: 'El comprador inmobiliario promedio consulta inmuebles después de trabajar. Sin atención 24/7, esos prospectos se van con la competencia.',
+      tag: t('problem.card1Tag'),
+      title: t('problem.card1Title'),
+      description: t('problem.card1Desc'),
     },
     {
       icon: <TrendingDown className="w-6 h-6 text-amber-600" />,
-      tag: 'Tiempos de Respuesta Lentos',
-      title: 'Tardarte 15 minutos desploma la conversión un 80%',
-      description: 'En bienes raíces, el primero en responder califica y agenda la visita. Si tardas horas en enviar la ficha, pierdes la comisión.',
+      tag: t('problem.card2Tag'),
+      title: t('problem.card2Title'),
+      description: t('problem.card2Desc'),
     },
     {
       icon: <MessageSquareOff className="w-6 h-6 text-indigo-600" />,
-      tag: 'Seguimiento Manual Ineficiente',
-      title: 'Horas perdidas respondiendo lo mismo',
-      description: 'Tus agentes dedican el 60% de su jornada contestando preguntas repetitivas sobre m², precios y cocheras, en lugar de estar cerrando ventas.',
+      tag: t('problem.card3Tag'),
+      title: t('problem.card3Title'),
+      description: t('problem.card3Desc'),
     },
   ];
 
@@ -34,13 +36,13 @@ export const ProblemSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-extrabold uppercase tracking-wider">
             <AlertTriangle className="w-4 h-4" />
-            <span>El Dolor Real de las Agencias Inmobiliarias</span>
+            <span>{t('problem.badge')}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-            ¿Cuántas comisiones estás perdiendo por <span className="text-rose-600">no responder a tiempo</span>?
+            {t('problem.title')}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            La falta de respuesta inmediata y la cualificación lenta son las principales razones por las que las agencias pierden hasta el 40% de sus potenciales compradores.
+            {t('problem.subtitle')}
           </p>
         </div>
 

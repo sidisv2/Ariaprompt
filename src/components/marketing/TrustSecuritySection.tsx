@@ -1,27 +1,30 @@
 import React from 'react';
 import { ShieldCheck, Lock, Server, Key, FileCheck, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const TrustSecuritySection: React.FC = () => {
+  const { t } = useLanguage();
+
   const seals = [
     {
       icon: <ShieldCheck className="w-5 h-5 text-indigo-600" />,
-      title: 'Encriptación AES-256',
-      desc: 'Seguridad bancaria en todas las conversaciones y datos de clientes.',
+      title: t('seal.seal1Title'),
+      desc: t('seal.seal1Desc'),
     },
     {
       icon: <Lock className="w-5 h-5 text-emerald-600" />,
-      title: 'Cumplimiento RGPD / GDPR',
-      desc: 'Protección estricta de datos personales de compradores e inmuebles.',
+      title: t('seal.seal2Title'),
+      desc: t('seal.seal2Desc'),
     },
     {
       icon: <Server className="w-5 h-5 text-teal-600" />,
-      title: '99.9% Uptime SLA',
-      desc: 'Infraestructura redundante en la nube activa 24/7/365 sin caídas.',
+      title: t('seal.seal3Title'),
+      desc: t('seal.seal3Desc'),
     },
     {
       icon: <Key className="w-5 h-5 text-amber-600" />,
-      title: 'Aislamiento por Tenant',
-      desc: 'Tus credenciales y bases de datos aisladas e inaccesibles por terceros.',
+      title: t('seal.seal4Title'),
+      desc: t('seal.seal4Desc'),
     },
   ];
 
@@ -33,10 +36,10 @@ export const TrustSecuritySection: React.FC = () => {
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-extrabold uppercase tracking-wider">
             <FileCheck className="w-4 h-4" />
-            <span>Seguridad & Privacidad Nivel Enterprise</span>
+            <span>{t('seal.badge')}</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Tu información inmobiliaria protegida bajo los <span className="text-indigo-600">más altos estándares</span>
+            {t('seal.title')}
           </h2>
         </div>
 

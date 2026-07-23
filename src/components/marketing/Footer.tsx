@@ -1,8 +1,11 @@
 import React from 'react';
 import { RealtimeDot } from '../common/RealtimeDot';
-import { Building2, ShieldCheck, Heart } from 'lucide-react';
+import { Building2 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const Footer: React.FC = () => {
+  const { t } = useLanguage();
+
   return (
     <footer className="bg-slate-950 border-t border-white/10 text-slate-400 text-xs py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -17,48 +20,45 @@ export const Footer: React.FC = () => {
               <span className="font-bold text-white text-base">Aria <span className="text-emerald-400">Prop</span></span>
             </div>
             <p className="text-slate-400 text-xs leading-relaxed">
-              Plataforma SaaS B2B de Agentes Inmobiliarios con Inteligencia Artificial para Latinoamérica.
+              Plataforma SaaS B2B de Agentes Inmobiliarios con Inteligencia Artificial.
             </p>
-            <RealtimeDot label="Aria Prop en línea al 100% en LATAM" />
+            <RealtimeDot label="Aria Prop 99.9% SLA" />
           </div>
 
           <div>
             <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Aria AI</h4>
             <ul className="space-y-2">
-              <li><a href="#features" className="hover:text-emerald-400 transition-colors">Motor RAG Inmobiliario</a></li>
-              <li><a href="#features" className="hover:text-emerald-400 transition-colors">Lead Scoring Automático</a></li>
-              <li><a href="#features" className="hover:text-emerald-400 transition-colors">Conexión WhatsApp Business</a></li>
-              <li><a href="#features" className="hover:text-emerald-400 transition-colors">Widget Embebible Web</a></li>
+              <li><a href="#demo" className="hover:text-emerald-400 transition-colors">Playground Live</a></li>
+              <li><a href="#how-it-works" className="hover:text-emerald-400 transition-colors">{t('nav.howItWorks')}</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Soluciones</h4>
+            <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Plataforma</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Agencias Promotoras</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Patrimonios & Family Offices</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Fondos de Inversión Inmobiliaria</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Franquicias & Redes</a></li>
+              <li><a href="#pricing" className="hover:text-emerald-400 transition-colors">{t('nav.pricing')}</a></li>
+              <li><a href="#faq" className="hover:text-emerald-400 transition-colors">{t('nav.faq')}</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Legal & Seguridad</h4>
+            <h4 className="text-white font-bold text-xs uppercase tracking-wider mb-3">Legales</h4>
             <ul className="space-y-2">
-              <li className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> RGPD / GDPR Compliant</li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Términos de Servicio B2B</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Política de Privacidad</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">SLA 99.9% Garantizado</a></li>
+              <li><a href="#" className="hover:text-emerald-400 transition-colors">Privacidad RGPD / GDPR</a></li>
+              <li><a href="#" className="hover:text-emerald-400 transition-colors">Términos de Servicio</a></li>
+              <li><a href="#" className="hover:text-emerald-400 transition-colors">Seguridad AES-256</a></li>
             </ul>
           </div>
 
         </div>
 
-        <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© 2026 PropTech AI Agent Platform. Todos los derechos reservados.</p>
-          <p className="flex items-center gap-1">
-            Diseñado con estándar Enterprise SaaS (Vercel / Linear style)
-          </p>
+        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
+          <p>© {new Date().getFullYear()} Aria Prop Inc. {t('footer.rights')}</p>
+          <div className="flex items-center gap-4">
+            <a href="#" className="hover:text-slate-300">Twitter</a>
+            <a href="#" className="hover:text-slate-300">LinkedIn</a>
+            <a href="#" className="hover:text-slate-300">GitHub</a>
+          </div>
         </div>
 
       </div>

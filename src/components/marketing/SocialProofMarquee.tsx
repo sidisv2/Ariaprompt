@@ -1,12 +1,15 @@
 import React from 'react';
 import { Building2, Zap, Clock, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const SocialProofMarquee: React.FC = () => {
+  const { t } = useLanguage();
+
   const metrics = [
-    { icon: <TrendingUp className="w-4 h-4 text-emerald-600" />, label: '+500 Leads Calificados', sub: 'por mes por agencia' },
-    { icon: <Zap className="w-4 h-4 text-indigo-600" />, label: 'Respuesta en < 5s', sub: 'vía WhatsApp y Web' },
-    { icon: <Clock className="w-4 h-4 text-teal-600" />, label: 'Disponible 24/7', sub: 'atención fuera de horario' },
-    { icon: <CheckCircle2 className="w-4 h-4 text-amber-600" />, label: '+85% Visitas Agendadas', sub: 'directo a Google Calendar' },
+    { icon: <TrendingUp className="w-4 h-4 text-emerald-600" />, label: t('proof.metric1'), sub: t('proof.sub1') },
+    { icon: <Zap className="w-4 h-4 text-indigo-600" />, label: t('proof.metric2'), sub: t('proof.sub2') },
+    { icon: <Clock className="w-4 h-4 text-teal-600" />, label: t('proof.metric3'), sub: t('proof.sub3') },
+    { icon: <CheckCircle2 className="w-4 h-4 text-amber-600" />, label: t('proof.metric4'), sub: t('proof.sub4') },
   ];
 
   const agencies = [
@@ -44,7 +47,7 @@ export const SocialProofMarquee: React.FC = () => {
         {/* Agency Marquee */}
         <div className="relative pt-2">
           <p className="text-center text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-4">
-            Confían más de <span className="text-indigo-600 font-black">120+ Agencias Inmobiliarias Líderes</span> en España y LATAM
+            {t('proof.agencies')}
           </p>
 
           <div className="relative flex overflow-x-hidden">

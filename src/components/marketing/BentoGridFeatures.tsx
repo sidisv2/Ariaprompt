@@ -1,20 +1,13 @@
 import React from 'react';
 import { 
   FileText, 
-  Zap, 
-  Flame, 
-  ThermometerSnowflake, 
-  ThermometerSun, 
-  MessageSquare, 
-  Layers, 
-  Bot, 
-  ShieldCheck, 
   Sparkles,
-  Search,
-  CheckCircle2
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const BentoGridFeatures: React.FC = () => {
+  const { lang } = useLanguage();
+
   return (
     <section className="py-20 bg-slate-950 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -23,14 +16,18 @@ export const BentoGridFeatures: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Arquitectura B2B Enterprise</span>
+            <span>{lang === 'es' ? 'Arquitectura B2B Enterprise' : 'B2B Enterprise Architecture'}</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Diseñado para Convertir Visitas Web en <br />
-            <span className="text-emerald-400">Contratos Firmados</span>
+            {lang === 'es' ? 'Diseñado para Convertir Visitas Web en' : 'Designed to Convert Web Visits into'}{' '}
+            <span className="text-emerald-400">
+              {lang === 'es' ? 'Contratos Firmados' : 'Signed Deals'}
+            </span>
           </h2>
           <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-            Tu fuerza de ventas impulsada por inteligencia artificial generativa con acceso instantáneo a planos, catálogos y dossieres de calidades.
+            {lang === 'es'
+              ? 'Tu fuerza de ventas impulsada por inteligencia artificial generativa con acceso instantáneo a planos, catálogos y dossieres de calidades.'
+              : 'Your sales force driven by generative AI with instant access to floor plans, catalogs, and specifications.'}
           </p>
         </div>
 

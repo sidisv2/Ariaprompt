@@ -1,7 +1,10 @@
 import React from 'react';
 import { Layers, CheckCircle2, Cpu, Globe2, Calendar, MessageSquare, Database, Zap } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const IntegrationsSection: React.FC = () => {
+  const { t } = useLanguage();
+
   const integrations = [
     { name: 'WhatsApp Business API', icon: <MessageSquare className="w-5 h-5 text-emerald-600" />, type: 'Mensajería 24/7' },
     { name: 'Google & Outlook Calendar', icon: <Calendar className="w-5 h-5 text-teal-600" />, type: 'Agendado Automático' },
@@ -19,13 +22,13 @@ export const IntegrationsSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-extrabold uppercase tracking-wider">
             <Layers className="w-4 h-4" />
-            <span>Ecosistema de Integraciones Nativas</span>
+            <span>{t('integ.badge')}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Se conecta directamente con las <span className="text-indigo-600">herramientas que ya utilizas</span>
+            {t('integ.title')}
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-            Sin cambiar tu flujo de trabajo. Aria Prop se integra en minutos con tus portales, WhatsApp y CRM inmobiliario.
+            {t('integ.subtitle')}
           </p>
         </div>
 

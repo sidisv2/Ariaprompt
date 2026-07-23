@@ -1,8 +1,9 @@
 import React from 'react';
 import { AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { RealtimeDot } from '../common/RealtimeDot';
-import { Building2, Sparkles, Sliders, LogOut, LogIn, ChevronRight } from 'lucide-react';
+import { Building2, Sparkles, Sliders, LogOut, LogIn, ChevronRight, Globe } from 'lucide-react';
 
 interface MobileHeaderProps {
   currentRoute: AppRoute;
@@ -16,6 +17,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   agencyName = 'Aria Prop LATAM',
 }) => {
   const { user, openAuthModal, signOut } = useAuth();
+  const { lang, toggleLang } = useLanguage();
   const isDashboard = currentRoute.startsWith('dashboard');
 
   return (
@@ -43,8 +45,18 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Status & Auth Action */}
+        {/* Right Status & Language Toggle */}
         <div className="flex items-center gap-2">
+          {/* Mobile Language Switcher */}
+          <button
+            onClick={toggleLang}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-900 border border-white/10 text-[10px] text-slate-200 font-extrabold cursor-pointer active:scale-95 transition-all shadow-xs"
+            title="Cambiar idioma"
+          >
+            <Globe className="w-3 h-3 text-emerald-400" />
+            <span className="uppercase">{lang}</span>
+          </button>
+
           <RealtimeDot />
 
           {isDashboard && (

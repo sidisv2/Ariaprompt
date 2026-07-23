@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Play, Sparkles, MessageSquare, CheckCircle2, Volume2, ShieldCheck, Zap } from 'lucide-react';
+import { Play, Sparkles } from 'lucide-react';
 import { Playground } from '../playground/Playground';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const InteractiveDemoSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'live' | 'video'>('live');
+  const { t } = useLanguage();
 
   return (
     <section id="demo" className="py-20 bg-slate-900 text-white relative overflow-hidden text-left border-t border-white/10">
@@ -17,13 +19,13 @@ export const InteractiveDemoSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
             <Sparkles className="w-4 h-4 fill-current" />
-            <span>Demostración Interactiva en Vivo</span>
+            <span>{t('demo.badge')}</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            Prueba a <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400 bg-clip-text text-transparent">Aria Prop en tiempo real</span>
+            {t('demo.title')}
           </h2>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-            Experimenta exactamente cómo interactúa el agente de IA con un comprador interesado en tus inmuebles.
+            {t('demo.subtitle')}
           </p>
 
           {/* Toggle Tabs */}
@@ -36,7 +38,7 @@ export const InteractiveDemoSection: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Simulador Interactivo
+              {t('demo.tab1')}
             </button>
             <button
               onClick={() => setActiveTab('video')}
@@ -46,7 +48,7 @@ export const InteractiveDemoSection: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Video Demo (1 min)
+              {t('demo.tab2')}
             </button>
           </div>
         </div>
@@ -64,9 +66,9 @@ export const InteractiveDemoSection: React.FC = () => {
               <div className="w-20 h-20 rounded-full bg-indigo-600/90 hover:bg-indigo-500 border border-indigo-400/50 flex items-center justify-center text-white mx-auto shadow-2xl cursor-pointer transition-all hover:scale-110">
                 <Play className="w-8 h-8 fill-current ml-1" />
               </div>
-              <h3 className="text-xl font-black text-white">Ver a Aria Prop Agendando una Visita en WhatsApp</h3>
+              <h3 className="text-xl font-black text-white">{t('demo.videoTitle')}</h3>
               <p className="text-xs text-slate-300 max-w-md mx-auto">
-                Demostración de 60 segundos de un flujo completo: desde el saludo nocturno hasta la confirmación en Google Calendar.
+                {t('demo.videoDesc')}
               </p>
             </div>
           </div>

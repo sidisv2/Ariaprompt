@@ -1,19 +1,9 @@
 import React, { useState } from 'react';
-import { Send, Sparkles, User, Bot, CheckCircle2, Calendar, Phone, ArrowRight, MessageSquare } from 'lucide-react';
-
-interface QuickChip {
-  id: string;
-  label: string;
-  icon: string;
-  userPrompt: string;
-  aiResponse: {
-    text: string;
-    metrics?: string;
-    details?: { label: string; value: string }[];
-  };
-}
+import { Send, Sparkles, User, Bot } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ onStartDemo }) => {
+  const { t } = useLanguage();
   const [inputText, setInputText] = useState('');
   const [activeChat, setActiveChat] = useState<{
     userText: string;
@@ -23,10 +13,10 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
       details?: { label: string; value: string }[];
     };
   } | null>({
-    userText: 'Hola, busco departamento de 2 dormitorios en Belgrano con presupuesto de $180.000 USD',
+    userText: t('prompt.userDefault'),
     aiResponse: {
-      text: '¡Hola! Excelente elección. Tengo 2 inmuebles en Belgrano que se ajustan perfecto a tu presupuesto. Calificación: Lead de Alta Intención (Score 98/100).',
-      metrics: 'Visita Agendada • Mañana 16:30 hs',
+      text: t('prompt.aiDefault'),
+      metrics: t('prompt.metricDefault'),
       details: [
         { label: 'Inmueble', value: 'Av. Cabildo 2400 (72m² • 2D)' },
         { label: 'Presupuesto OK', value: '$175.000 USD (Aprobado)' },
@@ -35,15 +25,15 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
     },
   });
 
-  const chips: QuickChip[] = [
+  const chips = [
     {
       id: 'calificar',
-      label: 'Calificar un lead',
+      label: t('prompt.chip1'),
       icon: '📊',
-      userPrompt: '¿Qué presupuesto y plazo de compra tiene el lead de la Casa en Nordelta?',
+      userPrompt: t('prompt.user1'),
       aiResponse: {
-        text: 'Analizando conversación: El comprador dispone de $340.000 USD al contado, busca escriturar en 30 días y necesita cochera doble.',
-        metrics: 'Lead Aprobado (VIP)',
+        text: t('prompt.ai1'),
+        metrics: t('prompt.metric1'),
         details: [
           { label: 'Intención', value: 'Compra Inmediata (30 días)' },
           { label: 'Capacidad Pago', value: 'Contado Escribanía' },
@@ -52,12 +42,12 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
     },
     {
       id: 'agendar',
-      label: 'Agendar una visita',
+      label: t('prompt.chip2'),
       icon: '📅',
-      userPrompt: 'Quiero agendar una visita presencial para este jueves por la tarde.',
+      userPrompt: t('prompt.user2'),
       aiResponse: {
-        text: '¡Visita coordinada! He reservado el jueves a las 17:00 hs en tu Google Calendar y le envié la ubicación exacta por WhatsApp al cliente.',
-        metrics: 'Confirmado en Calendario',
+        text: t('prompt.ai2'),
+        metrics: t('prompt.metric2'),
         details: [
           { label: 'Horario', value: 'Jueves 17:00 hs (30 min)' },
           { label: 'Recordatorio SMS', value: 'Programado 2h antes' },
@@ -66,12 +56,12 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
     },
     {
       id: 'whatsapp',
-      label: 'Responder por WhatsApp',
+      label: t('prompt.chip3'),
       icon: '📱',
-      userPrompt: 'Un cliente preguntó a las 3:00 AM si el departamento acepta mascotas.',
+      userPrompt: t('prompt.user3'),
       aiResponse: {
-        text: 'Aria respondió a las 3:00:04 AM: "¡Hola Marcos! Sí, el edificio acepta mascotas de hasta 15kg. ¿Te gustaría agendar una visita para mañana?"',
-        metrics: 'Respuesta en 4 segundos ⚡',
+        text: t('prompt.ai3'),
+        metrics: t('prompt.metric3'),
         details: [
           { label: 'Estado', value: 'Atendido fuera de horario' },
           { label: 'Ficha Técnica PDF', value: 'Enviada automáticamente' },
@@ -80,12 +70,12 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
     },
     {
       id: 'seguimiento',
-      label: 'Dar seguimiento a un cliente',
+      label: t('prompt.chip4'),
       icon: '🔄',
-      userPrompt: '¿Qué pasó con el prospecto que vio el PH en Palermo la semana pasada?',
+      userPrompt: t('prompt.user4'),
       aiResponse: {
-        text: 'Re-contacté a Sofía ayer. Mantiene el interés pero solicita rebaja del 3%. ¿Quieres que te reserve cita para evaluar la contraoferta?',
-        metrics: 'Lead Re-activado',
+        text: t('prompt.ai4'),
+        metrics: t('prompt.metric4'),
         details: [
           { label: 'Última interacción', value: 'Ayer 19:15 hs' },
           { label: 'Acción sugerida', value: 'Llamada de cierre' },
@@ -132,7 +122,7 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="¿Qué necesitas que Aria resuelva hoy?"
+            placeholder={t('prompt.placeholder')}
             className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none font-medium pr-12"
           />
           <button
@@ -147,7 +137,7 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
         {/* Quick Action Chips */}
         <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 mt-3">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
-            Acciones rápidas:
+            {t('prompt.quickAction')}
           </span>
           {chips.map((chip) => (
             <button
