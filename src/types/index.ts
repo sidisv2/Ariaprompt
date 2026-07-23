@@ -117,7 +117,10 @@ export type AppRoute =
   | 'dashboard-files'
   | 'dashboard-roles'
   | 'dashboard-vault'
-  | 'embed-preview';
+  | 'embed-preview'
+  | 'comparar-manual'
+  | 'comparar-crm'
+  | 'comparar-chatbots';
 
 export type UserSubscriptionRole =
   | 'admin'

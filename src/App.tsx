@@ -16,6 +16,9 @@ const getRouteFromHash = (): AppRoute => {
   if (hash.includes('soluciones')) return 'soluciones';
   if (hash.includes('recursos')) return 'recursos';
   if (hash.includes('pricing')) return 'pricing';
+  if (hash.includes('comparar/manual')) return 'comparar-manual';
+  if (hash.includes('comparar/crm')) return 'comparar-crm';
+  if (hash.includes('comparar/chatbots')) return 'comparar-chatbots';
   if (hash.includes('dashboard/metrics')) return 'dashboard-metrics';
   if (hash.includes('dashboard/properties')) return 'dashboard-properties';
   if (hash.includes('dashboard/leads')) return 'dashboard-leads';
@@ -35,6 +38,9 @@ const getHashFromRoute = (route: AppRoute): string => {
     case 'soluciones': return '#/soluciones';
     case 'recursos': return '#/recursos';
     case 'pricing': return '#/pricing';
+    case 'comparar-manual': return '#/comparar/manual';
+    case 'comparar-crm': return '#/comparar/crm';
+    case 'comparar-chatbots': return '#/comparar/chatbots';
     case 'dashboard-metrics': return '#/dashboard/metrics';
     case 'dashboard-properties': return '#/dashboard/properties';
     case 'dashboard-leads': return '#/dashboard/leads';

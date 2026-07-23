@@ -1,21 +1,9 @@
 import React, { useState } from 'react';
-import { Send, Sparkles, User, Bot } from 'lucide-react';
+import { Send, Sparkles, User, Bot, CheckCircle2, Calendar, ShieldCheck, Zap } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
-interface QuickChip {
-  id: string;
-  label: string;
-  icon: string;
-  userPrompt: string;
-  aiResponse: {
-    text: string;
-    metrics?: string;
-    details?: { label: string; value: string }[];
-  };
-}
-
 export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ onStartDemo }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [inputText, setInputText] = useState('');
   const [activeChat, setActiveChat] = useState<{
     userText: string;
@@ -83,138 +71,165 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
     {
       id: 'seguimiento',
       label: t('prompt.chip4'),
-      icon: '🔄',
+      icon: '🎯',
       userPrompt: t('prompt.user4'),
       aiResponse: {
         text: t('prompt.ai4'),
         metrics: t('prompt.metric4'),
         details: [
-          { label: 'Última interacción', value: 'Ayer 19:15 hs' },
-          { label: 'Acción sugerida', value: 'Llamada de cierre' },
+          { label: 'Re-Contacto', value: 'Exitoso en 24h' },
+          { label: 'Estado Lead', value: 'En negociación activa' },
         ],
       },
     },
   ];
 
-  const handleChipClick = (chip: QuickChip) => {
-    setInputText(chip.userPrompt);
+  const handleChipClick = (chip: (typeof chips)[0]) => {
     setActiveChat({
       userText: chip.userPrompt,
       aiResponse: chip.aiResponse,
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
+
     setActiveChat({
       userText: inputText,
       aiResponse: {
-        text: `Aria Prop procesó tu consulta: "${inputText}". He calificado los requisitos del lead, verificado disponibilidad en inventario y preparado el resumen para tu agenda.`,
-        metrics: 'Atendido en < 3s',
+        text: `¡Excelente consulta! Analizando el inventario de la agencia... He seleccionado 2 inmuebles ideales para esa solicitud.`,
+        metrics: 'Lead Calificado • Score 95/100',
         details: [
-          { label: 'Consulta', value: inputText },
-          { label: 'Estado IA', value: 'Cualificación en proceso' },
+          { label: 'Respuesta IA', value: 'Generada en 3.8s' },
+          { label: 'Acción Siguiente', value: 'Enviar Ficha PDF por WhatsApp' },
         ],
       },
     });
+
+    setInputText('');
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-4 text-left">
+    <div className="max-w-4xl mx-auto space-y-4">
       
-      {/* Interactive Prompt Box Container (Cloudairy Style) */}
-      <div className="p-3 sm:p-4 rounded-3xl bg-white border border-indigo-100 shadow-2xl shadow-indigo-500/10 backdrop-blur-xl transition-all duration-300">
-        
-        <form onSubmit={handleSubmit} className="relative flex items-center gap-2">
-          <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600 shrink-0">
-            <Sparkles className="w-5 h-5 fill-indigo-500/20 text-indigo-600 animate-pulse" />
+      {/* 2 Pre-armados Sample Cards (Cloudairy Showcase Style) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center shrink-0 border border-emerald-200">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-extrabold text-slate-900 block">Lead Calificado en WhatsApp</span>
+              <span className="text-[11px] text-slate-500">Depto 2 amb. • Presupuesto $180k USD</span>
+            </div>
           </div>
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder={t('prompt.placeholder')}
-            className="w-full bg-transparent text-sm sm:text-base text-slate-900 placeholder-slate-400 focus:outline-none font-medium pr-12"
-          />
-          <button
-            type="submit"
-            className="p-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 transition-all cursor-pointer hover:scale-105 shrink-0"
-            title="Probar consulta"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </form>
-
-        {/* Quick Action Chips */}
-        <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 mt-3">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
-            {t('prompt.quickAction')}
+          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0">
+            Score 98/100
           </span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-200">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="font-extrabold text-slate-900 block">Visita Agendada en Google Cal</span>
+              <span className="text-[11px] text-slate-500">Jueves 16:30 hs • Confirmado 24/7</span>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black shrink-0">
+            Automático
+          </span>
+        </div>
+      </div>
+
+      {/* Main Interactive Prompt Box */}
+      <div className="relative rounded-3xl bg-slate-900 border border-indigo-500/30 p-4 sm:p-6 shadow-2xl shadow-indigo-500/10 text-white space-y-4">
+        
+        {/* Quick Action Chips */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-semibold">
+          <span className="text-slate-400 shrink-0 font-bold text-[11px] uppercase tracking-wider">{t('prompt.quickAction')}</span>
           {chips.map((chip) => (
             <button
               key={chip.id}
               onClick={() => handleChipClick(chip)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200/80 hover:border-indigo-300 text-xs font-semibold transition-all cursor-pointer active:scale-95 shadow-sm"
+              className="px-3 py-1.5 rounded-full bg-slate-800 hover:bg-indigo-600/30 text-slate-200 border border-white/10 hover:border-indigo-400/50 transition-all cursor-pointer shrink-0 flex items-center gap-1.5"
             >
               <span>{chip.icon}</span>
               <span>{chip.label}</span>
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Simulated Live Chat Response Panel */}
-      {activeChat && (
-        <div className="p-5 rounded-3xl bg-slate-900 text-white border border-indigo-500/30 shadow-2xl space-y-4 animate-fadeIn">
-          
-          {/* User Message */}
-          <div className="flex items-start gap-3 justify-end">
-            <div className="p-3.5 rounded-2xl bg-indigo-600 text-white text-xs sm:text-sm font-medium max-w-md shadow-md">
-              <p>{activeChat.userText}</p>
+        {/* Dynamic Simulated Output Display */}
+        {activeChat && (
+          <div className="p-4 rounded-2xl bg-slate-950 border border-white/10 space-y-3 animate-fadeIn">
+            
+            {/* User Bubble */}
+            <div className="flex items-start gap-2.5">
+              <div className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center shrink-0">
+                <User className="w-3.5 h-3.5" />
+              </div>
+              <p className="text-xs text-slate-200 font-medium leading-relaxed bg-slate-900 px-3 py-2 rounded-2xl border border-white/5">
+                {activeChat.userText}
+              </p>
             </div>
-            <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 shrink-0">
-              <User className="w-4 h-4" />
-            </div>
-          </div>
 
-          {/* AI Response */}
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
-              <Bot className="w-4 h-4" />
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-800/90 border border-white/10 text-slate-200 text-xs sm:text-sm space-y-3 max-w-lg shadow-md">
-              
-              <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-[11px] font-extrabold text-emerald-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 fill-current" />
-                  <span>Respuesta Aria Prop IA</span>
-                </span>
+            {/* AI Agent Response Bubble */}
+            <div className="flex items-start gap-2.5">
+              <div className="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-bold">
+                <Bot className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <p className="text-xs text-emerald-300 font-medium leading-relaxed bg-emerald-950/40 p-3 rounded-2xl border border-emerald-500/30">
+                  {activeChat.aiResponse.text}
+                </p>
+
                 {activeChat.aiResponse.metrics && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    {activeChat.aiResponse.metrics}
-                  </span>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    <span>{activeChat.aiResponse.metrics}</span>
+                  </div>
+                )}
+
+                {activeChat.aiResponse.details && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    {activeChat.aiResponse.details.map((d, i) => (
+                      <div key={i} className="p-2 rounded-xl bg-slate-900 border border-white/5 text-[10px]">
+                        <span className="text-slate-400 block">{d.label}</span>
+                        <span className="font-bold text-white block truncate">{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-
-              <p className="leading-relaxed">{activeChat.aiResponse.text}</p>
-
-              {activeChat.aiResponse.details && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                  {activeChat.aiResponse.details.map((d, i) => (
-                    <div key={i} className="p-2 rounded-xl bg-slate-950/80 border border-white/5 text-[11px]">
-                      <span className="text-slate-400 block text-[10px]">{d.label}</span>
-                      <span className="font-bold text-white">{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+
           </div>
+        )}
 
-        </div>
-      )}
+        {/* Input Form */}
+        <form onSubmit={handleCustomSubmit} className="relative flex items-center">
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={t('prompt.placeholder')}
+            className="w-full pl-4 pr-12 py-3 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+          <button
+            type="submit"
+            className="absolute right-2 p-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all cursor-pointer"
+            title="Enviar mensaje"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </form>
 
+      </div>
     </div>
   );
 };

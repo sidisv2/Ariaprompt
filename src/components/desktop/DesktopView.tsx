@@ -17,7 +17,6 @@ import { UserRolesDashboard } from '../profile/UserRolesDashboard';
 import { UserVaultPage } from '../profile/UserVaultPage';
 import { EmbedChatWidget } from '../embed/EmbedChatWidget';
 import { AuthModal } from '../auth/AuthModal';
-import { Playground } from '../playground/Playground';
 import { SolutionsGrid } from '../solutions/SolutionsGrid';
 import { FAQ } from '../FAQ/FAQ';
 import { ProductoPage } from '../pages/ProductoPage';
@@ -31,6 +30,8 @@ import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
 import { DiscountOfferModal } from '../common/DiscountOfferModal';
+import { RoiSavingsCalculatorSection } from '../marketing/RoiSavingsCalculatorSection';
+import { ComparisonPage } from '../pages/ComparisonPage';
 import { useAuth } from '../../context/AuthContext';
 import { Tag, Sparkles } from 'lucide-react';
 
@@ -66,17 +67,8 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
   const { authModalOpen, modalTab, closeAuthModal } = useAuth();
   const [showDiscountModal, setShowDiscountModal] = useState(false);
 
-  const handleApplyDiscount = (code: string) => {
-    try {
-      localStorage.setItem('aria_discount_5', 'true');
-      localStorage.setItem('aria_discount_code', code);
-    } catch {
-      // ignore
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       
       {/* 5% Discount Top Announcement Bar */}
       <div className="bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 py-1.5 px-4 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-inner animate-discount-pulse" onClick={() => setShowDiscountModal(true)}>
@@ -140,17 +132,29 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
       ) : (currentRoute === 'aria-ai' || currentRoute === 'producto') ? (
         <main className="flex-1 animate-page-fade">
           <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
-          <Footer />
+          <Footer onRouteChange={onRouteChange} />
         </main>
       ) : currentRoute === 'soluciones' ? (
         <main className="flex-1 animate-page-fade">
           <SolucionesPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
-          <Footer />
+          <Footer onRouteChange={onRouteChange} />
         </main>
       ) : currentRoute === 'recursos' ? (
         <main className="flex-1 animate-page-fade">
           <RecursosPage onRouteChange={onRouteChange} />
-          <Footer />
+          <Footer onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'comparar-manual' ? (
+        <main className="flex-1 animate-page-fade">
+          <ComparisonPage type="manual" onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'comparar-crm' ? (
+        <main className="flex-1 animate-page-fade">
+          <ComparisonPage type="crm" onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'comparar-chatbots' ? (
+        <main className="flex-1 animate-page-fade">
+          <ComparisonPage type="chatbots" onRouteChange={onRouteChange} />
         </main>
       ) : currentRoute === 'embed-preview' ? (
         <div className="flex-1 p-8 max-w-4xl mx-auto space-y-6 text-center animate-page-fade">
@@ -166,18 +170,21 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         <main className="flex-1 animate-page-fade">
           <PricingSection onRouteChange={onRouteChange} />
           <FAQ />
-          <Footer />
+          <Footer onRouteChange={onRouteChange} />
         </main>
       ) : (
         <main className="flex-1 animate-page-fade">
-          {/* Section 2: Hero con Asistente Interactivo Cloudairy */}
+          {/* Section 1: Hero con Asistente Interactivo Cloudairy */}
           <HeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
 
-          {/* Section 3: Barra de Confianza (Social Proof) */}
+          {/* Section 2: Barra de Confianza (Social Proof) */}
           <SocialProofMarquee />
 
-          {/* Section 4: Sección de Problema (Agitación de Dolor) */}
+          {/* Section 3: Sección de Problema (Agitación de Dolor) */}
           <ProblemSection />
+
+          {/* Section 4: Calculadora Interactiva de Ahorro / Pérdidas de Leads */}
+          <RoiSavingsCalculatorSection onRouteChange={onRouteChange} />
 
           {/* Section 5: Cómo Funciona (Flujo en 4 Pasos) */}
           <HowItWorksSection />
@@ -185,7 +192,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           {/* Section 6: Funcionalidades Clave (Bento Grid estilo Cloudairy) */}
           <BentoGridFeatures />
 
-          {/* Section 7: Demo Interactiva o Video Corto */}
+          {/* Section 7: Demo Interactiva */}
           <InteractiveDemoSection />
 
           {/* Section 8: Testimonios con Métricas de Resultado */}
@@ -203,11 +210,11 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           {/* Section 12: Preguntas Frecuentes (FAQ) */}
           <FAQ />
 
-          {/* Section 13: CTA Final de Cierre con Gradiente Suave */}
+          {/* Section 13: CTA Final de Cierre */}
           <FinalCtaSection />
 
           {/* Section 14: Footer Completo */}
-          <Footer />
+          <Footer onRouteChange={onRouteChange} />
         </main>
       )}
 
@@ -218,9 +225,11 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
       <DiscountOfferModal
         isOpen={showDiscountModal}
         onClose={() => setShowDiscountModal(false)}
-        onApplyDiscount={handleApplyDiscount}
+        onApplyDiscount={() => {
+          setShowDiscountModal(false);
+          onRouteChange('pricing');
+        }}
       />
-
     </div>
   );
 };
