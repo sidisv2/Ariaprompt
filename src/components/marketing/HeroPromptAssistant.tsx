@@ -2,6 +2,18 @@ import React, { useState } from 'react';
 import { Send, Sparkles, User, Bot } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
+interface QuickChip {
+  id: string;
+  label: string;
+  icon: string;
+  userPrompt: string;
+  aiResponse: {
+    text: string;
+    metrics?: string;
+    details?: { label: string; value: string }[];
+  };
+}
+
 export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ onStartDemo }) => {
   const { t } = useLanguage();
   const [inputText, setInputText] = useState('');

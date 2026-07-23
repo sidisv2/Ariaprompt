@@ -12,6 +12,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRouteChange, agencyName = 'Aria Prop' }) => {
   const { user, openAuthModal, signOut } = useAuth();
+  const { t, lang, toggleLang } = useLanguage();
   const [activeDropdown, setActiveDropdown] = useState<'producto' | 'soluciones' | 'recursos' | null>(null);
 
   const navigateTo = (route: AppRoute) => {

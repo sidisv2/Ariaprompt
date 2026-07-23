@@ -2,6 +2,13 @@ import React from 'react';
 import { 
   FileText, 
   Sparkles,
+  Bot,
+  Flame,
+  ThermometerSun,
+  ThermometerSnowflake,
+  Zap,
+  CheckCircle2,
+  MessageSquare
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 

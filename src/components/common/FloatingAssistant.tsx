@@ -2,17 +2,26 @@ import React from 'react';
 import { MessageSquare, Sparkles } from 'lucide-react';
 
 interface FloatingAssistantProps {
-  onClick: () => void;
+  onClick?: () => void;
+  onOpenPrompt?: (prompt: string) => void;
   isOpen?: boolean;
 }
 
-export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({ onClick, isOpen }) => {
+export const FloatingAssistant: React.FC<FloatingAssistantProps> = ({ onClick, onOpenPrompt, isOpen }) => {
   if (isOpen) return null;
+
+  const handleClick = () => {
+    if (onOpenPrompt) {
+      onOpenPrompt('¡Hola Aria! Quisiera información sobre propiedades en venta y cálculo de rentabilidad.');
+    } else if (onClick) {
+      onClick();
+    }
+  };
 
   return (
     <div className="fixed bottom-6 right-6 z-40">
       <button
-        onClick={onClick}
+        onClick={handleClick}
         aria-label="Abrir asistente de IA Aria Prop"
         className="group relative flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 font-bold text-xs shadow-2xl shadow-emerald-500/40 hover:scale-105 transition-all duration-300 cursor-pointer border border-emerald-300/40 ring-4 ring-slate-950/60"
       >

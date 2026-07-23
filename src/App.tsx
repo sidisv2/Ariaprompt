@@ -173,6 +173,8 @@ export default function App() {
     handleRouteChange('dashboard-leads');
   };
 
+  const effectiveDevice = forcedDevice || (isMobile ? 'mobile' : 'desktop');
+
   const handleNavigate = (route: AppRoute) => {
     handleRouteChange(route);
   };
@@ -187,6 +189,12 @@ export default function App() {
             properties={properties}
             leads={leads}
             botConfig={botConfig}
+            selectedLeadForChat={selectedLeadForChat}
+            onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
+            onInterveneLead={handleInterveneLead}
+            onAddProperty={handleAddProperty}
+            onUpdateLeadStatus={handleUpdateLeadStatus}
+            onUpdateBotConfig={handleUpdateBotConfig}
           />
         ) : (
           <DesktopView
@@ -195,6 +203,12 @@ export default function App() {
             properties={properties}
             leads={leads}
             botConfig={botConfig}
+            selectedLeadForChat={selectedLeadForChat}
+            onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
+            onInterveneLead={handleInterveneLead}
+            onAddProperty={handleAddProperty}
+            onUpdateLeadStatus={handleUpdateLeadStatus}
+            onUpdateBotConfig={handleUpdateBotConfig}
             onOpenPrompt={handleOpenPrompt}
           />
         )}
