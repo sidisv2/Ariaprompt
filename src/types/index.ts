@@ -130,6 +130,7 @@ export type AppRoute =
   | 'dashboard-files'
   | 'dashboard-roles'
   | 'dashboard-vault'
+  | 'dashboard-integrations'
   | 'embed-preview'
   | 'comparar-manual'
   | 'comparar-crm'

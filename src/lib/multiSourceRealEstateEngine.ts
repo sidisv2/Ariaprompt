@@ -1,5 +1,6 @@
 import { Property } from '../types';
 import { INITIAL_PROPERTIES } from '../data/mockData';
+import { getSyncedPartnerProperties, PartnerProperty } from '../services/crmIntegrationService';
 
 export interface SearchCriteria {
   rawQuery: string;
@@ -366,8 +367,8 @@ export function parseQueryCriteria(query: string): SearchCriteria {
 
   // 5. Dynamic Location Extraction
   const knownLocations = [
-    'san rafael', 'mendoza', 'buenos aires', 'puerto madero', 'palermo', 'belgrano',
-    'polanco', 'condesa', 'roma norte', 'ciudad de méxico', 'cdmx',
+    'san rafael', 'mendoza', 'buenos aires', 'puerto madero', 'palermo', 'belgrano', 'recoleta',
+    'polanco', 'condesa', 'roma norte', 'ciudad de méxico', 'cdmx', 'lomas de chapultepec',
     'medellín', 'medellin', 'el poblado', 'envigado', 'lima', 'san isidro', 'miraflores',
     'córdoba', 'cordoba', 'rosario', 'bariloche', 'salta', 'mar del plata', 'tigre', 'pilar',
     'nordelta', 'madrid', 'barcelona', 'miami', 'santiago', 'bogota', 'bogotá',
@@ -396,7 +397,10 @@ export function parseQueryCriteria(query: string): SearchCriteria {
 
 export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
   const criteria = parseQueryCriteria(query);
-  const catalog = MARKET_REAL_ESTATE_DATABASE;
+
+  // Combine Internal Agency Database with Synced Partner CRM Properties (Tokko & EasyBroker)
+  const syncedPartnerProperties = getSyncedPartnerProperties();
+  const catalog = [...MARKET_REAL_ESTATE_DATABASE, ...syncedPartnerProperties];
 
   const matches = catalog.filter((p) => {
     const city = p.location.city.toLowerCase();
@@ -415,8 +419,8 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
         country.includes(loc) ||
         title.includes(loc) ||
         (loc.includes('mendoza') && (city.includes('mendoza') || province.includes('mendoza'))) ||
-        (loc.includes('buenos aires') && (city.includes('buenos aires') || zone.includes('puerto madero') || zone.includes('palermo'))) ||
-        (loc.includes('cdmx') && city.includes('méxico'));
+        (loc.includes('buenos aires') && (city.includes('buenos aires') || zone.includes('puerto madero') || zone.includes('palermo') || zone.includes('recoleta'))) ||
+        (loc.includes('cdmx') && (city.includes('méxico') || zone.includes('polanco') || zone.includes('lomas')));
     }
 
     let operationMatch = true;
@@ -471,14 +475,14 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
 
   if (matches.length === 0) {
     if (criteria.location && !hasLocationInCatalog) {
-      explanationNote = `Actualmente no contamos con publicaciones verificadas en **${criteria.location.toUpperCase()}** dentro del catálogo directo de la agencia.`;
+      explanationNote = `Actualmente ninguna de nuestras inmobiliarias partners conectadas a la red cuenta con publicaciones verificadas activas en **${criteria.location.toUpperCase()}**.`;
     } else if (criteria.operation === 'rent') {
       closestMatches = catalog.filter((p) => p.price < 5000 || p.title.toLowerCase().includes('alquiler'));
-      explanationNote = `No encontramos publicaciones de alquiler en esa zona específica dentro del catálogo directo, pero te mostramos opciones de alquiler disponibles en el catálogo.`;
+      explanationNote = `No encontramos publicaciones de alquiler en esa zona específica dentro del inventario partner, pero te mostramos opciones de alquiler disponibles en el catálogo.`;
     } else if (criteria.maxPriceUsd) {
       closestMatches = catalog.filter((p) => p.price >= 5000);
       const minAvailablePrice = Math.min(...closestMatches.map((c) => c.price));
-      explanationNote = `No encontramos opciones de compra por debajo de $${criteria.maxPriceUsd.toLocaleString('en-US')} USD en esa zona, las opciones disponibles en el catálogo directo comienzan en $${minAvailablePrice.toLocaleString('en-US')} USD.`;
+      explanationNote = `No encontramos opciones de compra por debajo de $${criteria.maxPriceUsd.toLocaleString('en-US')} USD en esa zona, las opciones disponibles en el catálogo partner comienzan en $${minAvailablePrice.toLocaleString('en-US')} USD.`;
     }
   }
 

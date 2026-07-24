@@ -9,7 +9,8 @@ import {
   FolderKey,
   ExternalLink,
   ShieldCheck,
-  Globe2
+  Globe2,
+  Link2
 } from 'lucide-react';
 
 interface DashboardSidebarProps {
@@ -37,6 +38,12 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       label: 'Catálogo Propiedades',
       icon: Building2,
       count: propertiesCount,
+    },
+    {
+      id: 'dashboard-integrations' as AppRoute,
+      label: 'Conexión CRM Partners',
+      icon: Link2,
+      badge: 'Tokko/EasyBroker',
     },
     {
       id: 'dashboard-leads' as AppRoute,

@@ -12,6 +12,7 @@ import { PropertiesView } from '../dashboard/PropertiesView';
 import { LeadsView } from '../dashboard/LeadsView';
 import { BotConfigView } from '../dashboard/BotConfigView';
 import { CheckoutView } from '../dashboard/CheckoutView';
+import { IntegrationsView } from '../dashboard/IntegrationsView';
 import { UserProfileDashboard } from '../profile/UserProfileDashboard';
 import { UserRolesDashboard } from '../profile/UserRolesDashboard';
 import { UserVaultPage } from '../profile/UserVaultPage';
@@ -114,6 +115,9 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
             )}
             {currentRoute === 'dashboard-checkout' && (
               <CheckoutView onRouteChange={onRouteChange} />
+            )}
+            {currentRoute === 'dashboard-integrations' && (
+              <IntegrationsView />
             )}
             {currentRoute === 'dashboard-roles' && (
               <UserRolesDashboard onRouteChange={onRouteChange} />
