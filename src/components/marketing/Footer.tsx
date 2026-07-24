@@ -1,14 +1,14 @@
 import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { AppRoute } from '../../types';
-import { ShieldCheck, Lock, CheckCircle2, Globe, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, CheckCircle2 } from 'lucide-react';
 
 interface FooterProps {
   onRouteChange?: (route: AppRoute) => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
 
   const handleNav = (route: AppRoute) => {
     if (onRouteChange) onRouteChange(route);
@@ -41,15 +41,15 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             <div className="pt-2 space-y-1.5 border-t border-white/5">
               <div className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-bold">
                 <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                <span>Cumplimiento RGPD & Privacy</span>
+                <span>{t('footer.rgpd')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-medium">
                 <Lock className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                <span>Cifrado SSL de 256 bits</span>
+                <span>{t('footer.ssl')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-slate-300 font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-teal-400" />
-                <span>Disponibilidad 99.9% Garantizada</span>
+                <span>{t('footer.uptime')}</span>
               </div>
             </div>
           </div>
@@ -83,25 +83,25 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             </ul>
           </div>
 
-          {/* Column 3: Comparar / Alternativas (New) */}
+          {/* Column 3: Comparar / Alternativas */}
           <div className="space-y-3">
             <h4 className="text-white font-extrabold text-xs uppercase tracking-wider">
-              {lang === 'es' ? 'Comparar / Alternativas' : 'Compare / Alternatives'}
+              {t('footer.col_compare')}
             </h4>
             <ul className="space-y-2 text-slate-400 text-[11px]">
               <li>
                 <button onClick={() => handleNav('comparar-manual')} className="hover:text-emerald-400 transition-colors text-left">
-                  {lang === 'es' ? 'vs. Atención Manual de Leads' : 'vs. Manual Lead Engagement'}
+                  {t('footer.vs_manual')}
                 </button>
               </li>
               <li>
                 <button onClick={() => handleNav('comparar-crm')} className="hover:text-emerald-400 transition-colors text-left">
-                  {lang === 'es' ? 'vs. CRM Tradicional' : 'vs. Traditional CRM'}
+                  {t('footer.vs_crm')}
                 </button>
               </li>
               <li>
                 <button onClick={() => handleNav('comparar-chatbots')} className="hover:text-emerald-400 transition-colors text-left">
-                  {lang === 'es' ? 'vs. Chatbots de Reglas' : 'vs. Rule-Based Chatbots'}
+                  {t('footer.vs_chatbots')}
                 </button>
               </li>
             </ul>
@@ -115,17 +115,17 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             <ul className="space-y-2 text-slate-400 text-[11px]">
               <li>
                 <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors">
-                  {lang === 'es' ? 'Para Agencias Inmobiliarias' : 'For Real Estate Agencies'}
+                  {t('footer.for_agencies')}
                 </button>
               </li>
               <li>
                 <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors">
-                  {lang === 'es' ? 'Para Desarrolladores' : 'For Developers'}
+                  {t('footer.for_developers')}
                 </button>
               </li>
               <li>
                 <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors">
-                  {lang === 'es' ? 'Para Inversionistas' : 'For Investors'}
+                  {t('footer.for_investors')}
                 </button>
               </li>
             </ul>
@@ -139,17 +139,17 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             <ul className="space-y-2 text-slate-400 text-[11px]">
               <li>
                 <button onClick={() => handleNav('recursos')} className="hover:text-emerald-400 transition-colors">
-                  {lang === 'es' ? 'Política de Privacidad' : 'Privacy Policy'}
+                  {t('footer.privacy')}
                 </button>
               </li>
               <li>
                 <button onClick={() => handleNav('recursos')} className="hover:text-emerald-400 transition-colors">
-                  {lang === 'es' ? 'Términos del Servicio' : 'Terms of Service'}
+                  {t('footer.terms')}
                 </button>
               </li>
               <li>
                 <button onClick={() => handleNav('recursos')} className="hover:text-emerald-400 transition-colors">
-                  {lang === 'es' ? 'Seguridad & Protección Datos' : 'Security & Data Protection'}
+                  {t('footer.security')}
                 </button>
               </li>
             </ul>

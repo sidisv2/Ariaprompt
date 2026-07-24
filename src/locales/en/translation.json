@@ -1,15 +1,68 @@
 {
-  "header": {
-    "marketing": "Home",
+  "nav": {
+    "home": "Home",
     "product": "Product",
     "solutions": "Solutions",
     "resources": "Resources",
     "pricing": "Pricing",
-    "demo": "Try AI",
-    "dashboard": "Dashboard",
+    "demo": "Aria AI",
+    "howItWorks": "How it works",
+    "faq": "FAQ",
     "login": "Log In",
     "signup": "Sign Up",
-    "badge_discount": "Extra 5% Off Discount!"
+    "panel": "My Dashboard",
+    "logout": "Log out",
+    "account": "Account",
+    "guest": "Guest",
+    "forBuyers": "For Buyers",
+    "forInvestorsAgents": "For Investors & Agents",
+    "playgroundLive": "Playground Aria AI Live",
+    "ariaEngine": "Aria AI Engine",
+    "ragDocs": "RAG Documentation",
+    "workspaceSubtitle": "Real Estate AI Workspace"
+  },
+  "sidebar": {
+    "controlPanel": "Control Panel",
+    "metrics": "Metrics & Live Stream",
+    "properties": "Property Catalog",
+    "integrations": "Partner CRM Connections",
+    "leads": "Lead CRM & Chat",
+    "botConfig": "Aria Prop Configurator",
+    "files": "My Files & Profile",
+    "vault": "Private PDF Vault",
+    "checkout": "Plans & Payments LATAM",
+    "activeAgency": "Enterprise Agency LATAM",
+    "activeQuota": "Pro LATAM Active",
+    "quotaSubtitle": "Aria Prop AI 24/7 online",
+    "managePayments": "Manage Payments"
+  },
+  "mobile_nav": {
+    "home": "Home",
+    "pricing": "Pricing",
+    "metrics": "Metrics",
+    "properties": "Properties",
+    "files": "Files",
+    "login": "Log In"
+  },
+  "footer": {
+    "description": "The leading artificial intelligence platform for real estate agencies across America.",
+    "rgpd": "GDPR & Privacy Compliance",
+    "ssl": "256-bit SSL Encryption",
+    "uptime": "99.9% Guaranteed Uptime",
+    "col1": "Product",
+    "col_compare": "Compare / Alternatives",
+    "col2": "Solutions",
+    "col4": "Resources & Legal",
+    "vs_manual": "vs. Manual Lead Engagement",
+    "vs_crm": "vs. Traditional CRM",
+    "vs_chatbots": "vs. Rule-Based Chatbots",
+    "for_agencies": "For Real Estate Agencies",
+    "for_developers": "For Developers",
+    "for_investors": "For Investors",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "security": "Security & Data Protection",
+    "rights": "All rights reserved."
   },
   "hero": {
     "title_main": "The 24/7 Virtual Assistant",
@@ -17,98 +70,12 @@
     "subtitle": "Capture, qualify, and schedule property visits with buyers and investors in real-time from MercadoLibre, WhatsApp, and your website.",
     "social_proof": "+500 active agencies | 4.8/5 stars across LATAM",
     "cta_primary": "Start 7-Day Free Trial",
-    "cta_secondary": "Watch Live Demo",
-    "interactive_label": "Try the Aria Promp comparator engine live:"
-  },
-  "problem": {
-    "badge": "The Real Estate Challenge",
-    "title": "Losing leads due to slow response times costs thousands of USD",
-    "subtitle": "70% of buyers contact another agency if they do not receive a response in less than 5 minutes."
-  },
-  "how_it_works": {
-    "badge": "4 Simple Steps",
-    "title": "How Aria Prop transforms your agency",
-    "step_1_title": "Connect Your Sources",
-    "step_1_desc": "Link your CRM (Tokko, EasyBroker), PDF dossiers, or MercadoLibre in minutes.",
-    "step_2_title": "24/7 Assistance",
-    "step_2_desc": "Answer inquiries in real-time via web chat and WhatsApp without human delay.",
-    "step_3_title": "Automatic Qualification",
-    "step_3_desc": "Filter by budget, location, property type, and purchase intent.",
-    "step_4_title": "Scheduling & Closing",
-    "step_4_desc": "Sync visits directly to your agents' Google Calendar."
-  },
-  "features": {
-    "badge": "Technological Power",
-    "title": "Everything you need to scale your inventory",
-    "feature_1_title": "Real Estate Function Calling",
-    "feature_1_desc": "Search and compare only verified physical properties.",
-    "feature_2_title": "Private Document Vault",
-    "feature_2_desc": "Index floor plans, dossiers, and PDF specifications.",
-    "feature_3_title": "Smart Lead CRM",
-    "feature_3_desc": "Categorize leads into Hot, Warm, and Cold with AI scoring."
-  },
-  "pricing": {
-    "badge": "Transparent Plans",
-    "title": "Invest in automation that drives actual sales",
-    "billing_monthly": "Monthly Billing",
-    "billing_annual": "Annual Billing (Save 20%)",
-    "plan_starter_name": "Starter Agent",
-    "plan_starter_price": "$49",
-    "plan_pro_name": "Pro Agency",
-    "plan_pro_price": "$129",
-    "plan_enterprise_name": "Custom Enterprise",
-    "plan_enterprise_price": "Custom",
-    "cta_choose": "Select Plan",
-    "guarantee": "14-day money-back guarantee, no questions asked."
-  },
-  "integrations": {
-    "badge": "Connected Ecosystem",
-    "title": "Seamless integration with top CRMs",
-    "subtitle": "Connect Tokko Broker, EasyBroker, MercadoLibre Real Estate, and Google Calendar."
-  },
-  "dashboard": {
-    "nav_metrics": "Metrics & Live Stream",
-    "nav_properties": "Property Catalog",
-    "nav_integrations": "Partner CRM Connections",
-    "nav_leads": "Lead CRM & Chat",
-    "nav_config": "Aria Prop Configurator",
-    "nav_files": "My Files & Profile",
-    "nav_vault": "Private PDF Vault",
-    "nav_checkout": "Plans & Payments LATAM",
-    "title_integrations": "Partner CRM Connection (Tokko Broker & EasyBroker)",
-    "subtitle_integrations": "Sync your real agency inventory live using official API keys."
-  },
-  "chat": {
-    "engine_name": "Aria Promp Engine",
-    "placeholder": "Type your query about buying, renting, or investing...",
-    "disclaimer": "Responses based exclusively on verified catalog data.",
-    "button_send": "Send"
-  },
-  "auth": {
-    "title_login": "Log In to Aria Prop",
-    "title_signup": "Create Agency Account",
-    "google_button": "Continue with Google",
-    "logout_modal_title": "Do you want to log out?",
-    "logout_modal_desc": "Your active session will be ended on this device.",
-    "logout_confirm": "Log Out",
-    "logout_cancel": "Stay Connected"
-  },
-  "footer": {
-    "tagline": "The leading artificial intelligence platform for real estate agencies across America.",
-    "col_product": "Product",
-    "col_solutions": "Solutions",
-    "col_legal": "Legal & Security",
-    "privacy": "Privacy Policy",
-    "terms": "Terms of Service",
-    "copyright": "© 2026 Aria Prop Tech Inc. All rights reserved."
+    "cta_secondary": "Watch Live Demo"
   },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
-    "loading": "Loading...",
-    "view_maps": "View on Google Maps",
-    "official_api": "Official API",
-    "error_generic": "An unexpected error occurred. Please try again."
+    "loading": "Loading..."
   }
 }

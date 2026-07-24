@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   Home,
   Tag,
@@ -8,8 +9,6 @@ import {
   Building2,
   UserCheck,
   LogIn,
-  Sparkles,
-  Layers
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -26,6 +25,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   leadsCount = 0,
 }) => {
   const { user, openAuthModal } = useAuth();
+  const { t } = useLanguage();
 
   const isRouteActive = (route: AppRoute) => currentRoute === route;
   const isDashboard = currentRoute.startsWith('dashboard');
@@ -44,7 +44,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <Home className={`w-5 h-5 ${isRouteActive('marketing') ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-          <span className="text-[10px] mt-1 tracking-tight">Inicio</span>
+          <span className="text-[10px] mt-1 tracking-tight">{t('mobile_nav.home')}</span>
         </button>
 
         {/* Tab 2: Precios */}
@@ -57,7 +57,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <Tag className={`w-5 h-5 ${isRouteActive('pricing') ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-          <span className="text-[10px] mt-1 tracking-tight">Precios</span>
+          <span className="text-[10px] mt-1 tracking-tight">{t('mobile_nav.pricing')}</span>
         </button>
 
         {/* Tab 3: Dashboard / Leads */}
@@ -70,7 +70,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <BarChart3 className={`w-5 h-5 ${isDashboard ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-          <span className="text-[10px] mt-1 tracking-tight">Métricas</span>
+          <span className="text-[10px] mt-1 tracking-tight">{t('mobile_nav.metrics')}</span>
           {leadsCount > 0 && (
             <span className="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-slate-950 animate-pulse" />
           )}
@@ -86,7 +86,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           }`}
         >
           <Building2 className={`w-5 h-5 ${currentRoute === 'dashboard-properties' ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-          <span className="text-[10px] mt-1 tracking-tight">Inmuebles</span>
+          <span className="text-[10px] mt-1 tracking-tight">{t('mobile_nav.properties')}</span>
           {propertiesCount > 0 && (
             <span className="absolute top-1 right-2.5 text-[9px] font-bold text-slate-950 bg-teal-400 px-1 rounded-full">
               {propertiesCount}
@@ -125,7 +125,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <LogIn className="w-5 h-5" />
           )}
           <span className="text-[10px] mt-1 tracking-tight">
-            {user ? 'Archivos' : 'Ingresar'}
+            {user ? t('mobile_nav.files') : t('mobile_nav.login')}
           </span>
         </button>
 

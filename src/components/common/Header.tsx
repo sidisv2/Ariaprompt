@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { Sparkles, Globe, ChevronDown, User, LogOut, LayoutDashboard, Bot, FileText, HelpCircle, Building } from 'lucide-react';
+import { Sparkles, Globe, ChevronDown, User, LogOut, LayoutDashboard, Bot, FileText, Building } from 'lucide-react';
 
 interface HeaderProps {
   currentRoute?: AppRoute;
@@ -44,32 +44,32 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
 
             {/* Subtitle */}
             <span className="hidden lg:block text-[11px] text-slate-400 font-medium whitespace-nowrap">
-              AI Workspace for Real Estate
+              {t('nav.workspaceSubtitle')}
             </span>
 
             {/* Account / Profile Pill on Left */}
             <div
               onClick={() => navigateTo('dashboard-profile')}
               className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 border border-emerald-400/50 hover:bg-slate-700/80 text-xs font-bold text-white cursor-pointer transition-all hover:scale-105 shadow-sm"
-              title="Perfil de Usuario y Suscripción"
+              title={user ? user.nombre : t('nav.account')}
             >
               <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-bold text-[9px]">
                 <User className="w-2.5 h-2.5 stroke-[3]" />
               </div>
               <span className="hidden sm:inline-block truncate max-w-[70px] text-white font-bold">
-                {user ? user.nombre.split(' ')[0] : 'Cuenta'}
+                {user ? user.nombre.split(' ')[0] : t('nav.account')}
               </span>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-400 text-slate-950 text-[9px] font-black uppercase">
-                {user ? 'Pro' : 'Guest'}
+                {user ? 'Pro' : t('nav.guest')}
               </span>
             </div>
 
           </div>
 
-          {/* Cloudairy Central Dropdown Navigation Links */}
+          {/* Central Navigation Links */}
           <nav className="hidden md:flex items-center gap-5 text-xs font-bold text-slate-300 relative">
             
-            {/* Producto Dropdown with Hover Bridge */}
+            {/* Producto Dropdown */}
             <div
               className="relative py-3"
               onMouseEnter={() => setActiveDropdown('producto')}
@@ -81,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                   currentRoute === 'aria-ai' || currentRoute === 'producto' ? 'text-emerald-400 font-extrabold' : ''
                 }`}
               >
-                <span>Aria AI</span>
+                <span>{t('nav.product')}</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
@@ -93,21 +93,21 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                       className="w-full px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left text-xs font-semibold text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Bot className="w-4 h-4 text-emerald-400" />
-                      <span>Playground Aria AI Live</span>
+                      <span>{t('nav.playgroundLive')}</span>
                     </button>
                     <button
                       onClick={() => navigateTo('aria-ai')}
                       className="w-full px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left text-xs font-semibold text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Sparkles className="w-4 h-4 text-teal-300" />
-                      <span>Aria AI Engine</span>
+                      <span>{t('nav.ariaEngine')}</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Soluciones Dropdown with Hover Bridge */}
+            {/* Soluciones Dropdown */}
             <div
               className="relative py-3"
               onMouseEnter={() => setActiveDropdown('soluciones')}
@@ -119,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                   currentRoute === 'soluciones' ? 'text-emerald-400 font-extrabold' : ''
                 }`}
               >
-                <span>Soluciones</span>
+                <span>{t('nav.solutions')}</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
@@ -131,30 +131,30 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                       className="w-full px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left text-xs font-semibold text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <User className="w-4 h-4 text-emerald-400" />
-                      <span>Para Compradores</span>
+                      <span>{t('nav.forBuyers')}</span>
                     </button>
                     <button
                       onClick={() => navigateTo('soluciones')}
                       className="w-full px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left text-xs font-semibold text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <Building className="w-4 h-4 text-teal-300" />
-                      <span>Para Inversionistas & Agentes</span>
+                      <span>{t('nav.forInvestorsAgents')}</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Aria AI Button */}
+            {/* Aria AI Direct Button */}
             <button
               onClick={() => navigateTo('producto')}
               className="hover:text-emerald-300 text-emerald-400 font-extrabold transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <span>Aria AI</span>
+              <span>{t('nav.demo')}</span>
               <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             </button>
 
-            {/* Recursos Dropdown with Hover Bridge */}
+            {/* Recursos Dropdown */}
             <div
               className="relative py-3"
               onMouseEnter={() => setActiveDropdown('recursos')}
@@ -166,7 +166,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                   currentRoute === 'recursos' ? 'text-emerald-400 font-extrabold' : ''
                 }`}
               >
-                <span>Recursos</span>
+                <span>{t('nav.resources')}</span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
 
@@ -178,12 +178,13 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                       className="w-full px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left text-xs font-semibold text-slate-200 hover:text-emerald-300 flex items-center gap-2 transition-colors cursor-pointer"
                     >
                       <FileText className="w-4 h-4 text-emerald-400" />
-                      <span>Documentación RAG</span>
+                      <span>{t('nav.ragDocs')}</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
+
             {/* Cómo funciona */}
             <button
               onClick={() => {
@@ -219,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
             </button>
           </nav>
 
-          {/* Right CTAs */}
+          {/* Right CTAs & Language Switcher */}
           <div className="flex items-center gap-2.5">
             {/* Interactive Language Selector Toggle */}
             <button
@@ -229,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
             >
               <Globe className="w-3.5 h-3.5 text-emerald-400" />
               <span className="uppercase">{lang}</span>
-              <span className="text-[9px] text-slate-400 font-normal">({lang === 'es' ? 'EN' : 'ES'})</span>
+              <span className="text-[9px] text-slate-400 font-normal">({lang === 'es' ? 'EN' : lang === 'en' ? 'PT' : 'ES'})</span>
             </button>
 
             {user ? (
@@ -244,7 +245,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
                 <button
                   onClick={() => requestSignOut ? requestSignOut() : signOut()}
                   className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
-                  title="Cerrar sesión"
+                  title={t('nav.logout')}
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
