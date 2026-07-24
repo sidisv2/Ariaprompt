@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './styles/responsive.css';
+import './i18n';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Global error handlers to avoid the app being a white screen on runtime errors
