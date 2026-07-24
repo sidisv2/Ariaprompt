@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { LanguageSelector } from './LanguageSelector';
 import { Sparkles, Globe, ChevronDown, User, LogOut, LayoutDashboard, Bot, FileText, Building } from 'lucide-react';
 
 interface HeaderProps {
@@ -222,16 +223,8 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
 
           {/* Right CTAs & Language Switcher */}
           <div className="flex items-center gap-2.5">
-            {/* Interactive Language Selector Toggle */}
-            <button
-              onClick={toggleLang}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 border border-white/10 hover:border-emerald-500/40 text-xs text-slate-200 font-extrabold cursor-pointer transition-all active:scale-95 shadow-sm"
-              title="Cambiar idioma / Switch language"
-            >
-              <Globe className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="uppercase">{lang}</span>
-              <span className="text-[9px] text-slate-400 font-normal">({lang === 'es' ? 'EN' : lang === 'en' ? 'PT' : 'ES'})</span>
-            </button>
+            {/* Interactive Language Selector Dropdown */}
+            <LanguageSelector variant="desktop" />
 
             {user ? (
               <div className="flex items-center gap-2">
