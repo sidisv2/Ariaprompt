@@ -150,6 +150,24 @@
     "freeTrial": "Teste Grátis: {{count}}/2 mensagens usadas",
     "apiNotice": "⚠️ Aviso de API: Erro na chamada ao modelo Gemini. Mostrando resposta de contingência do catálogo direto:"
   },
+  "tabs": {
+    "summary": "Visão Geral",
+    "general": "Agente Comercial",
+    "finance": "Finanças e ROI",
+    "rag": "Busca RAG",
+    "files": "Enviar PDFs"
+  },
+  "dashboard": {
+    "welcomeTitle": "Bem-vindo de volta",
+    "welcomeSub": "Monitore o atendimento em tempo real dos seus leads, visitas agendadas e métricas da sua agência.",
+    "metricLeadsToday": "Leads de Hoje",
+    "metricToursScheduled": "Visitas Agendadas",
+    "metricActiveChats": "Chats Ativos",
+    "metricAvgRoi": "ROI Médio",
+    "quickActionsTitle": "Ferramentas do Agente Imobiliário",
+    "goTool": "Ir para Ferramenta",
+    "recentActivityTitle": "Atividade Recente de Leads"
+  },
   "common": {
     "save": "Salvar",
     "cancel": "Cancelar",

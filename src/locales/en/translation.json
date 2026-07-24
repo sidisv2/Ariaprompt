@@ -150,6 +150,24 @@
     "freeTrial": "Free Trial: {{count}}/2 messages used",
     "apiNotice": "⚠️ API Notice: Error calling Gemini model. Showing contingency fallback from direct catalog:"
   },
+  "tabs": {
+    "summary": "Overview",
+    "general": "Sales Agent",
+    "finance": "Finance & ROI",
+    "rag": "RAG Search",
+    "files": "Upload PDFs"
+  },
+  "dashboard": {
+    "welcomeTitle": "Welcome back",
+    "welcomeSub": "Monitor real-time lead inquiries, scheduled property tours, and key metrics for your agency.",
+    "metricLeadsToday": "Leads Today",
+    "metricToursScheduled": "Tours Scheduled",
+    "metricActiveChats": "Active Chats",
+    "metricAvgRoi": "Average ROI",
+    "quickActionsTitle": "Real Estate Agent Tools",
+    "goTool": "Open Tool",
+    "recentActivityTitle": "Recent Lead Activity"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
