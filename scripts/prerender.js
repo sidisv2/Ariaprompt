@@ -38,12 +38,12 @@ const PUBLIC_ROUTES = [
     `,
   },
   {
-    path: '/producto',
-    title: 'Producto & IA Inmobiliaria - Aria Prop Engine',
+    path: '/app',
+    title: 'Workspace Aria AI & Motor Inmobiliario | Aria Prop',
     description: 'Conoce cómo funciona el motor RAG de Aria Prop: lectura de dossieres PDF, cálculo automático de ROI y atención omnicanal en WhatsApp.',
     ogTitle: 'Tecnología RAG & IA Inmobiliaria 24/7 | Aria Prop',
     ogDescription: 'Explora el motor atómico de inteligencia inmobiliaria para cualificar prospectos y analizar estados de inversión.',
-    ogImage: `${BASE_URL}/assets/og-producto.jpg`,
+    ogImage: `${BASE_URL}/assets/og-app.jpg`,
     contentHtml: `
       <main class="static-seo-prerender">
         <header>

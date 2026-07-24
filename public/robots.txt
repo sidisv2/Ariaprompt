@@ -1,7 +1,7 @@
 # robots.txt for Aria Prop (https://ariaprompt.vercel.app)
 User-agent: *
 Allow: /
-Allow: /producto
+Allow: /app
 Allow: /soluciones
 Allow: /pricing
 Allow: /recursos

@@ -133,7 +133,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
             )}
           </main>
         </div>
-      ) : (currentRoute === 'aria-ai' || currentRoute === 'producto') ? (
+      ) : (currentRoute === 'aria-ai' || currentRoute === 'producto' || currentRoute === 'app') ? (
         <main className="flex-1 animate-page-fade">
           <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
           <Footer onRouteChange={onRouteChange} />

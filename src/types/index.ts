@@ -117,6 +117,7 @@ export interface ChatMessage {
 export type AppRoute =
   | 'marketing'
   | 'aria-ai'
+  | 'app'
   | 'producto'
   | 'soluciones'
   | 'recursos'

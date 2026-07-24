@@ -128,7 +128,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </div>
         )}
 
-        {(currentRoute === 'aria-ai' || currentRoute === 'producto') && (
+        {(currentRoute === 'aria-ai' || currentRoute === 'producto' || currentRoute === 'app') && (
           <div>
             <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
             <Footer />

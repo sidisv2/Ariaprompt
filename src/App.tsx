@@ -13,7 +13,7 @@ import { ChatSlideOver } from './components/chat/ChatSlideOver';
 const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
   const path = (window.location.pathname + window.location.hash).toLowerCase();
-  if (path.includes('producto')) return 'producto';
+  if (path.includes('app') || path.includes('producto')) return 'app';
   if (path.includes('soluciones')) return 'soluciones';
   if (path.includes('recursos')) return 'recursos';
   if (path.includes('pricing')) return 'pricing';
@@ -35,7 +35,8 @@ const getRouteFromPath = (): AppRoute => {
 
 const getPathFromRoute = (route: AppRoute): string => {
   switch (route) {
-    case 'producto': return '/producto';
+    case 'app':
+    case 'producto': return '/app';
     case 'soluciones': return '/soluciones';
     case 'recursos': return '/recursos';
     case 'pricing': return '/pricing';

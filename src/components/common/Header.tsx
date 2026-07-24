@@ -148,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
 
             {/* Aria AI Direct Button */}
             <button
-              onClick={() => navigateTo('producto')}
+              onClick={() => navigateTo('app')}
               className="hover:text-emerald-300 text-emerald-400 font-extrabold transition-colors flex items-center gap-1 cursor-pointer"
             >
               <span>{t('nav.demo')}</span>
