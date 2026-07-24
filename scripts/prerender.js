@@ -17,24 +17,29 @@ const PUBLIC_ROUTES = [
     ogDescription: 'Responde a tus prospectos en menos de 5 segundos, califica presupuesto y coordina citas directo en Google Calendar.',
     ogImage: `${BASE_URL}/assets/og-home.jpg`,
     contentHtml: `
-      <main class="static-seo-prerender">
-        <header>
-          <h1>Aria Prop: El Asistente Virtual 24/7 para Agencias Inmobiliarias</h1>
-          <p>Captura, cualifica y agenda visitas con compradores e inversionistas en tiempo real sin perder prospectos fuera de horario.</p>
-        </header>
-        <section>
-          <h2>Atención Inmobiliaria Inmediata en América</h2>
-          <ul>
-            <li><strong>Respuesta en &lt; 5 segundos:</strong> Calificación instantánea de presupuesto y tipo de inmueble.</li>
-            <li><strong>Sincronización RAG:</strong> Conexión con catálogo directo de propiedades y memorias técnicas PDF.</li>
-            <li><strong>Integraciones CRM:</strong> Tokko Broker, EasyBroker, WhatsApp API y Google Calendar.</li>
-          </ul>
-        </section>
-        <section>
-          <h2>Confían más de 500+ Agencias Inmobiliarias en LATAM</h2>
-          <p>Aumenta un +85% las visitas agendadas y reduce el tiempo de respuesta de horas a segundos.</p>
-        </section>
-      </main>
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+          <header class="space-y-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">IA Inmobiliaria 24/7 en América</span>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Aria Prop: El Asistente Virtual 24/7 para Agencias Inmobiliarias</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Captura, cualifica y agenda visitas con compradores e inversionistas en tiempo real sin perder prospectos fuera de horario.</p>
+          </header>
+          <section class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+            <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+              <h2 class="text-base font-bold text-emerald-400">Atención Inmobiliaria Inmediata en América</h2>
+              <ul class="space-y-1.5 text-slate-300">
+                <li>• <strong>Respuesta en &lt; 5 segundos:</strong> Calificación instantánea de presupuesto y tipo de inmueble.</li>
+                <li>• <strong>Sincronización RAG:</strong> Conexión con catálogo directo de propiedades y memorias técnicas PDF.</li>
+                <li>• <strong>Integraciones CRM:</strong> Tokko Broker, EasyBroker, WhatsApp API y Google Calendar.</li>
+              </ul>
+            </div>
+            <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+              <h2 class="text-base font-bold text-emerald-400">Confían más de 500+ Agencias en LATAM</h2>
+              <p class="text-slate-300">Aumenta un +85% las visitas agendadas y reduce el tiempo de respuesta de horas a segundos.</p>
+            </div>
+          </section>
+        </main>
+      </div>
     `,
   },
   {
@@ -45,20 +50,23 @@ const PUBLIC_ROUTES = [
     ogDescription: 'Explora el motor atómico de inteligencia inmobiliaria para cualificar prospectos y analizar estados de inversión.',
     ogImage: `${BASE_URL}/assets/og-app.jpg`,
     contentHtml: `
-      <main class="static-seo-prerender">
-        <header>
-          <h1>Motor RAG e Inteligencia Artificial Inmobiliaria</h1>
-          <p>Aria Prop analiza catálogos complejos, documentos técnicos y responde a compradores con máxima precisión.</p>
-        </header>
-        <section>
-          <h2>Capacidades del Sistema Aria AI</h2>
-          <ul>
-            <li><strong>Cualificación Automática de Leads:</strong> Score de 0 a 100 basado en presupuesto, plazo de compra y urgencia.</li>
-            <li><strong>Cálculo de ROI y Cap Rate:</strong> Estimación de rentabilidad anual y proyección de flujo de caja a 5 años.</li>
-            <li><strong>Búsqueda RAG de Memorias Técnicas:</strong> Extracción de metrajes, acabados y planos desde dossieres PDF.</li>
-          </ul>
-        </section>
-      </main>
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+          <header class="space-y-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Suite Interactiva IA</span>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Motor RAG e Inteligencia Artificial Inmobiliaria</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Aria Prop analiza catálogos complejos, documentos técnicos y responde a compradores con máxima precisión.</p>
+          </header>
+          <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
+            <h2 class="text-lg font-bold text-emerald-400">Capacidades del Sistema Aria AI</h2>
+            <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Cualificación Automática:</strong> Score de 0 a 100 basado en presupuesto y urgencia.</li>
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Cálculo de ROI & Cap Rate:</strong> Estimación de rentabilidad anual a 5 años.</li>
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Búsqueda RAG PDF:</strong> Extracción de metrajes y planos de planta.</li>
+            </ul>
+          </section>
+        </main>
+      </div>
     `,
   },
   {
@@ -69,20 +77,29 @@ const PUBLIC_ROUTES = [
     ogDescription: 'Automatiza la cualificación de compradores para inmobiliarias, comercializadoras y fondos de inversión.',
     ogImage: `${BASE_URL}/assets/og-soluciones.jpg`,
     contentHtml: `
-      <main class="static-seo-prerender">
-        <header>
-          <h1>Soluciones de IA para el Sector Inmobiliario</h1>
-          <p>Aumenta tus conversiones y brinda atención personalizada a cada perfil de comprador.</p>
-        </header>
-        <section>
-          <h2>Para Agencias de Corretaje</h2>
-          <p>Atención 24/7 en WhatsApp y sitios web. Filtra curiosos y deriva solo compradores calificados a tu equipo humano.</p>
-          <h2>Para Desarrolladores & Promotoras</h2>
-          <p>Presentación interactiva de planos, renders y memorias de calidades de nuevos desarrollos.</p>
-          <h2>Para Inversionistas</h2>
-          <p>Análisis ejecutivo de plusvalía, Cap Rate y comparativas de mercado en tiempo real.</p>
-        </section>
-      </main>
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+          <header class="space-y-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Soluciones por Perfil</span>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Soluciones de IA para el Sector Inmobiliario</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Aumenta tus conversiones y brinda atención personalizada a cada perfil de comprador.</p>
+          </header>
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
+            <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+              <h2 class="text-base font-bold text-emerald-400">Para Agencias de Corretaje</h2>
+              <p class="text-slate-300">Atención 24/7 en WhatsApp y sitios web. Filtra curiosos y deriva solo compradores calificados a tu equipo humano.</p>
+            </div>
+            <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+              <h2 class="text-base font-bold text-emerald-400">Para Desarrolladores & Promotoras</h2>
+              <p class="text-slate-300">Presentación interactiva de planos, renders y memorias de calidades de nuevos desarrollos.</p>
+            </div>
+            <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+              <h2 class="text-base font-bold text-emerald-400">Para Inversionistas</h2>
+              <p class="text-slate-300">Análisis ejecutivo de plusvalía, Cap Rate y comparativas de mercado en tiempo real.</p>
+            </div>
+          </section>
+        </main>
+      </div>
     `,
   },
   {
@@ -93,21 +110,24 @@ const PUBLIC_ROUTES = [
     ogDescription: 'Comienza gratis con 7 días de prueba. Elige la licencia perfecta para potenciar las ventas de tu agencia.',
     ogImage: `${BASE_URL}/assets/og-pricing.jpg`,
     contentHtml: `
-      <main class="static-seo-prerender">
-        <header>
-          <h1>Planes y Precios Transparentes</h1>
-          <p>Sin tarjeta obligatoria. Configura tu agente inteligente en menos de 3 minutos.</p>
-        </header>
-        <section>
-          <h2>Licencia Pro LATAM & Agencias</h2>
-          <ul>
-            <li>Atención 24/7 en WhatsApp y Web.</li>
-            <li>Leads ilimitados y cualificación automática.</li>
-            <li>Sincronización con Tokko Broker y EasyBroker.</li>
-            <li>Integración con Google Calendar.</li>
-          </ul>
-        </section>
-      </main>
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+          <header class="space-y-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Tarifas Transparentes</span>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Planes y Precios Transparentes</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Sin tarjeta obligatoria. Configura tu agente inteligente en menos de 3 minutos.</p>
+          </header>
+          <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-3 text-xs sm:text-sm">
+            <h2 class="text-base font-bold text-emerald-400">Licencia Pro LATAM & Agencias</h2>
+            <ul class="space-y-1.5 text-slate-300">
+              <li>• Atención 24/7 en WhatsApp y Web.</li>
+              <li>• Leads ilimitados y cualificación automática.</li>
+              <li>• Sincronización con Tokko Broker y EasyBroker.</li>
+              <li>• Integración con Google Calendar.</li>
+            </ul>
+          </section>
+        </main>
+      </div>
     `,
   },
   {
@@ -118,19 +138,24 @@ const PUBLIC_ROUTES = [
     ogDescription: 'Aprende a integrar tu CRM, cargar memorias técnicas PDF y maximizar la cualificación de tus prospectos.',
     ogImage: `${BASE_URL}/assets/og-recursos.jpg`,
     contentHtml: `
-      <main class="static-seo-prerender">
-        <header>
-          <h1>Recursos y Preguntas Frecuentes</h1>
-          <p>Todo lo que necesitas saber para escalar la atención de tu agencia con inteligencia artificial.</p>
-        </header>
-        <section>
-          <h2>Preguntas Frecuentes (FAQ)</h2>
-          <h3>¿Cómo se conecta Aria Prop a mi CRM?</h3>
-          <p>Se integra de forma directa mediante API Keys oficiales con Tokko Broker, EasyBroker o vía Webhooks.</p>
-          <h3>¿Es seguro el manejo de datos?</h3>
-          <p>Cuenta con cifrado SSL de 256 bits y pleno cumplimiento de normativas RGPD y protección de datos personal.</p>
-        </section>
-      </main>
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+          <header class="space-y-4">
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Centro de Conocimiento</span>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Recursos y Preguntas Frecuentes</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Todo lo que necesitas saber para escalar la atención de tu agencia con inteligencia artificial.</p>
+          </header>
+          <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-3 text-xs sm:text-sm">
+            <h2 class="text-base font-bold text-emerald-400">Preguntas Frecuentes (FAQ)</h2>
+            <div class="space-y-2 text-slate-300">
+              <h3 class="font-bold text-white">¿Cómo se conecta Aria Prop a mi CRM?</h3>
+              <p>Se integra de forma directa mediante API Keys oficiales con Tokko Broker, EasyBroker o vía Webhooks.</p>
+              <h3 class="font-bold text-white">¿Es seguro el manejo de datos?</h3>
+              <p>Cuenta con cifrado SSL de 256 bits y pleno cumplimiento de normativas RGPD.</p>
+            </div>
+          </section>
+        </main>
+      </div>
     `,
   },
 ];
