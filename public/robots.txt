@@ -1,0 +1,14 @@
+# robots.txt for Aria Prop (https://ariaprompt.vercel.app)
+User-agent: *
+Allow: /
+Allow: /producto
+Allow: /soluciones
+Allow: /pricing
+Allow: /recursos
+
+# Disallow private user workspace & API endpoints from search engine indexing
+Disallow: /dashboard/
+Disallow: /user/
+Disallow: /api/
+
+Sitemap: https://ariaprompt.vercel.app/sitemap.xml
