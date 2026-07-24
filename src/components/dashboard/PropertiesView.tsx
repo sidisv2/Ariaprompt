@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Property } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 import { 
   Building2, 
   Plus, 
@@ -23,6 +24,7 @@ interface PropertiesViewProps {
 }
 
 export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAddProperty }) => {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -102,10 +104,10 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
             <Building2 className="w-6 h-6 text-emerald-400" />
-            Gestor de Catálogo de Propiedades
+            {t('properties.title')}
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Gestión de inmuebles y carga de documentos RAG para alimentarse en tiempo real por la IA.
+            {t('properties.subtitle')}
           </p>
         </div>
 
@@ -116,7 +118,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
             className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/10 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
           >
             <Sparkles className={`w-4 h-4 text-emerald-400 ${isSyncingAI ? 'animate-spin' : ''}`} />
-            <span>{isSyncingAI ? 'Sincronizando...' : 'Sincronizar con IA'}</span>
+            <span>{isSyncingAI ? t('properties.syncing') : t('properties.syncAI')}</span>
           </button>
 
           <button
@@ -124,7 +126,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Añadir Nueva Propiedad</span>
+            <span>{t('properties.addProperty')}</span>
           </button>
         </div>
       </div>
@@ -137,23 +139,31 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por título, código o zona..."
+            placeholder={t('properties.searchPlaceholder')}
             className="w-full bg-black/30 border border-white/5 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-          {['all', 'chalet', 'penthouse', 'villa', 'apartment'].map((t) => (
+          {['all', 'chalet', 'penthouse', 'villa', 'apartment'].map((tType) => (
             <button
-              key={t}
-              onClick={() => setSelectedType(t)}
+              key={tType}
+              onClick={() => setSelectedType(tType)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-all ${
-                selectedType === t
+                selectedType === tType
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'text-slate-400 hover:text-white bg-white/5'
               }`}
             >
-              {t === 'all' ? 'Todas' : t}
+              {tType === 'all'
+                ? t('properties.allTypes')
+                : tType === 'apartment'
+                ? t('properties.typeApartment')
+                : tType === 'chalet' || tType === 'villa'
+                ? t('properties.typeHouse')
+                : tType === 'penthouse'
+                ? t('properties.typePenthouse')
+                : tType}
             </button>
           ))}
         </div>
@@ -195,7 +205,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
                   {prop.code}
                 </div>
                 <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                  {prop.price.toLocaleString('es-ES')} €
+                  ${prop.price.toLocaleString('en-US')} USD {prop.price < 5000 ? t('properties.perMonth') : ''}
                 </div>
               </div>
 
@@ -212,15 +222,15 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
                 <div className="grid grid-cols-3 gap-2 py-2 border-y border-white/5 text-slate-300 text-xs">
                   <div className="flex items-center gap-1.5">
                     <Bed className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{prop.features.bedrooms} hab</span>
+                    <span>{prop.features.bedrooms} {t('properties.bedrooms')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Bath className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{prop.features.bathrooms} baños</span>
+                    <span>{prop.features.bathrooms} {t('properties.bathrooms')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Maximize className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{prop.features.areaM2} m²</span>
+                    <span>{prop.features.areaM2} {t('properties.area')}</span>
                   </div>
                 </div>
 
@@ -234,10 +244,10 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
             <div className="p-4 bg-black/30 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
               <div className="flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{prop.documents.length} Documentos RAG en IA</span>
+                <span>{prop.documents.length} RAG PDF Docs</span>
               </div>
               <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                Sincronizado
+                AI Synced
               </span>
             </div>
 
