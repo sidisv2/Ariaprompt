@@ -1,68 +1,62 @@
 import React from 'react';
-import { Building2, Zap, Clock, TrendingUp, CheckCircle2 } from 'lucide-react';
-import { useLanguage } from '../../context/LanguageContext';
+import { Zap, Clock, ShieldCheck, CheckCircle2, Cpu, Calendar, MessageSquare, Database } from 'lucide-react';
 
 export const SocialProofMarquee: React.FC = () => {
-  const { t } = useLanguage();
-
   const metrics = [
-    { icon: <TrendingUp className="w-4 h-4 text-emerald-600" />, label: t('proof.metric1'), sub: t('proof.sub1') },
-    { icon: <Zap className="w-4 h-4 text-indigo-600" />, label: t('proof.metric2'), sub: t('proof.sub2') },
-    { icon: <Clock className="w-4 h-4 text-teal-600" />, label: t('proof.metric3'), sub: t('proof.sub3') },
-    { icon: <CheckCircle2 className="w-4 h-4 text-amber-600" />, label: t('proof.metric4'), sub: t('proof.sub4') },
+    { icon: <Zap className="w-4 h-4 text-emerald-400" />, label: 'Respuesta < 5s', sub: 'Atención Inmediata 24/7' },
+    { icon: <Clock className="w-4 h-4 text-teal-400" />, label: '100% Automatizado', sub: 'Sin Guardias Manuales' },
+    { icon: <Calendar className="w-4 h-4 text-cyan-400" />, label: 'Google Calendar', sub: 'Citas Directas' },
+    { icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, label: 'Cifrado SSL 256-bit', sub: 'Normativa RGPD' },
   ];
 
-  const agencies = [
-    { name: 'Engel & Völkers', city: 'Madrid & Marbella' },
-    { name: 'Gilmar Real Estate', city: 'Costa del Sol' },
-    { name: 'Lucas Fox Luxury', city: 'Barcelona & Sitges' },
-    { name: 'Knight Frank', city: 'Salamanca & Moraleja' },
-    { name: 'Sotheby’s Realty', city: 'Baleares & Costa Brava' },
-    { name: 'Barnes International', city: 'Valencia & Alicante' },
+  const integrations = [
+    { name: 'Tokko Broker CRM', desc: 'API Key Directa' },
+    { name: 'EasyBroker CRM', desc: 'Sincronización Nativa' },
+    { name: 'WhatsApp Business', desc: 'Atención Omnicanal' },
+    { name: 'Google Calendar', desc: 'Agendamiento Real-Time' },
+    { name: 'Bóveda RAG PDF', desc: 'Extracción de Planos' },
+    { name: 'MercadoLibre Connect', desc: 'Captura de Leads' },
   ];
 
   return (
-    <section className="py-12 bg-white border-b border-slate-200/80 overflow-hidden text-slate-900">
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <section className="py-10 bg-slate-900 border-b border-white/10 text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         
         {/* Metric Cards Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {metrics.map((m, idx) => (
             <div
               key={idx}
-              className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex items-center gap-3 text-left"
+              className="p-4 rounded-2xl bg-slate-950/80 border border-white/10 shadow-sm hover:border-emerald-500/30 transition-all flex items-center gap-3 text-left"
             >
-              <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-sm shrink-0">
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-white/10 text-emerald-400 shrink-0">
                 {m.icon}
               </div>
               <div>
-                <h4 className="text-xs font-black text-slate-900 leading-tight">{m.label}</h4>
-                <p className="text-[10px] text-slate-500 font-medium">{m.sub}</p>
+                <h4 className="text-xs font-black text-white leading-tight">{m.label}</h4>
+                <p className="text-[10px] text-slate-400 font-medium">{m.sub}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Agency Marquee */}
-        <div className="relative pt-2">
-          <p className="text-center text-[11px] font-extrabold uppercase tracking-widest text-slate-400 mb-4">
-            {t('proof.agencies')}
+        {/* Integration Badges Row */}
+        <div className="pt-2 text-center space-y-3">
+          <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-400">
+            Integrado al Ecosistema Inmobiliario
           </p>
 
-          <div className="relative flex overflow-x-hidden">
-            <div className="py-1 animate-marquee flex whitespace-nowrap gap-6 items-center">
-              {[...agencies, ...agencies].map((agency, idx) => (
-                <div
-                  key={idx}
-                  className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 font-semibold text-xs hover:border-indigo-300 transition-all shrink-0 shadow-xs"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>{agency.name}</span>
-                  <span className="text-[10px] text-slate-400 font-normal">({agency.city})</span>
-                </div>
-              ))}
-            </div>
+          <div className="flex flex-wrap justify-center items-center gap-3">
+            {integrations.map((item, idx) => (
+              <div
+                key={idx}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950 border border-white/10 text-slate-300 text-xs font-medium"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="font-bold text-white">{item.name}</span>
+                <span className="text-[10px] text-slate-400">({item.desc})</span>
+              </div>
+            ))}
           </div>
         </div>
 

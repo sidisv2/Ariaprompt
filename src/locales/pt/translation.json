@@ -45,16 +45,16 @@
     "login": "Entrar"
   },
   "hero": {
-    "badge": "IA Imobiliária 24/7 na América",
-    "title1": "O Assistente Virtual 24/7",
-    "title2": "para Agências Imobiliárias",
-    "subtitle": "Capture, qualifique e agende visitas com compradores e investidores em tempo real do Mercado Livre, WhatsApp e seu site.",
-    "socialProof": "+500 agências ativas | 4.8/5 estrelas na América Latina",
-    "ctaPrimary": "Começar Teste Grátis de 7 Dias",
+    "badge": "Atendimento Imobiliário 24/7 no WhatsApp e Web",
+    "title1": "Nunca perca outro lead imobiliário",
+    "title2": "por demorar para responder",
+    "subtitle": "O Aria Prop atende seus clientes em potencial instantaneamente, responde a dúvidas sobre seus imóveis, qualifica o orçamento e agenda visitas diretamente no seu calendário 24 horas por dia.",
+    "socialProof": "Resposta imediata em < 5s • Agendamento no Google Calendar • Integração CRM",
+    "ctaPrimary": "Iniciar Teste Grátis de 7 Dias",
     "ctaSecondary": "Ver Demonstração Ao Vivo",
-    "trust1": "Sem cartão obrigatório",
-    "trust2": "Configuração em 3 minutos",
-    "trust3": "Integração Tokko & EasyBroker"
+    "trust1": "Sem cartão de crédito obrigatório",
+    "trust2": "Configuração em menos de 3 minutos",
+    "trust3": "Integrado com Tokko e EasyBroker"
   },
   "prompt": {
     "userDefault": "Procuro apartamento de 2 quartos para alugar no Bairro Bombal, orçamento $450 USD.",

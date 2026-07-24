@@ -27,6 +27,7 @@ import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
 import { TestimonialsSection } from '../marketing/TestimonialsSection';
+import { TechStackSection } from '../marketing/TechStackSection';
 import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
@@ -211,7 +212,10 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           {/* Section 11: Precios / Cotización */}
           <PricingSection onRouteChange={onRouteChange} />
 
-          {/* Section 12: Preguntas Frecuentes (FAQ) */}
+          {/* Section 12: Arquitectura y Stack Técnico (Sección Secundaria) */}
+          <TechStackSection />
+
+          {/* Section 13: Preguntas Frecuentes (FAQ) */}
           <FAQ />
 
           {/* Section 13: CTA Final de Cierre */}

@@ -45,16 +45,16 @@
     "login": "Ingresar"
   },
   "hero": {
-    "badge": "IA Inmobiliaria 24/7 en América",
-    "title1": "El Asistente Virtual 24/7",
-    "title2": "para Agencias Inmobiliarias",
-    "subtitle": "Captura, cualifica y agenda visitas con compradores e inversionistas en tiempo real desde MercadoLibre, WhatsApp y tu sitio web.",
-    "socialProof": "+500 agencias activas | 4.8/5 estrellas en LATAM",
+    "badge": "Atención Inmobiliaria 24/7 en WhatsApp y Web",
+    "title1": "Nunca pierdas otro lead inmobiliario",
+    "title2": "por tardar en responder",
+    "subtitle": "Aria Prop atiende a tus prospectos al instante, responde consultas sobre tus inmuebles, cualifica su presupuesto y agenda visitas directamente en tu calendario las 24 horas del día.",
+    "socialProof": "Respuesta inmediata en < 5s • Coordinación en Google Calendar • Integración CRM",
     "ctaPrimary": "Empieza Gratis 7 Días",
     "ctaSecondary": "Ver Demostración en Vivo",
-    "trust1": "Sin tarjeta obligatoria",
-    "trust2": "Configuración en 3 minutos",
-    "trust3": "Integración Tokko & EasyBroker"
+    "trust1": "Sin tarjeta de crédito obligatoria",
+    "trust2": "Configuración en menos de 3 minutos",
+    "trust3": "Integrado a Tokko Broker y EasyBroker"
   },
   "prompt": {
     "userDefault": "Busco departamento de 2 ambientes en alquiler en Barrio Bombal, presupuesto $450 USD.",
