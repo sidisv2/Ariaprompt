@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { INITIAL_BOT_CONFIG } from '../data/mockData';
+import { useLanguage } from '../context/LanguageContext';
 import {
   searchMultiSourceRealEstate,
   SearchEngineResult,
@@ -82,6 +83,7 @@ export interface ChatMessage {
 }
 
 export function useChat(options?: { initialContext?: string }) {
+  const { lang } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-1',
@@ -128,7 +130,7 @@ export function useChat(options?: { initialContext?: string }) {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history, context: ctx }),
+        body: JSON.stringify({ message: text, history, context: ctx, lang }),
       });
 
       if (!response.ok || !response.body) {

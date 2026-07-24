@@ -141,6 +141,15 @@
     "security": "Segurança e Proteção de Dados",
     "rights": "Todos os direitos reservados."
   },
+  "chat": {
+    "title": "Aria — Assistente IA 24/7",
+    "typing": "Aria está respondendo...",
+    "placeholder": "Digite sua mensagem ou consulta RAG...",
+    "welcomeDefault": "Olá! Sou Aria. Como posso ajudar você hoje com a busca, ROI ou visitas para seus imóveis?",
+    "devAdmin": "Dev Admin (Mensagens Ilimitadas)",
+    "freeTrial": "Teste Grátis: {{count}}/2 mensagens usadas",
+    "apiNotice": "⚠️ Aviso de API: Erro na chamada ao modelo Gemini. Mostrando resposta de contingência do catálogo direto:"
+  },
   "common": {
     "save": "Salvar",
     "cancel": "Cancelar",

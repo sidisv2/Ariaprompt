@@ -19,6 +19,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const currentLang = (i18n.language?.slice(0, 2) as Language) || 'es';
   const validLang: Language = ['es', 'en', 'pt'].includes(currentLang) ? currentLang : 'es';
 
+  React.useEffect(() => {
+    document.documentElement.lang = validLang;
+    const titles: Record<Language, string> = {
+      es: 'Aria Prop - Agente de IA Inmobiliario 24/7',
+      en: 'Aria Prop - 24/7 Real Estate AI Agent',
+      pt: 'Aria Prop - Agente de IA Imobiliário 24/7',
+    };
+    document.title = titles[validLang] || titles.es;
+  }, [validLang]);
+
   const setLang = (newLang: Language) => {
     i18n.changeLanguage(newLang);
     localStorage.setItem('aria_user_language', newLang);

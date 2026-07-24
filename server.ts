@@ -91,11 +91,18 @@ async function startServer() {
 
   // Streaming AI Chat Endpoint (RAG Injection with Gemini)
   app.post('/api/chat', async (req, res) => {
-    const { message, history = [], context = 'general', apiKey } = req.body;
+    const { message, history = [], context = 'general', apiKey, lang = 'es' } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
+
+    const langNames: Record<string, string> = {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+    };
+    const targetLangName = langNames[lang] || 'Español';
 
     const trimmedMsg = message.trim().toLowerCase();
     const ai = getGeminiClient(apiKey);
@@ -117,10 +124,13 @@ async function startServer() {
 
     const systemPrompt = `
 Eres "${botConfig.agentName}", ${contextSpecificRole} para la agencia "${botConfig.agencyName}" en Latinoamérica.
-Tu objetivo es brindar asesoramiento inmobiliario de ultra alto nivel para clientes, compradores e inversionistas exigentes.
+
+IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
+Debes responder SIEMPRE en este idioma (${targetLangName}) desde el primer saludo y en todas tus explicaciones.
+Excepción: Si el usuario escribe su mensaje en un idioma distinto (ej: si escribe en inglés o portugués), prioriza responder en el idioma utilizado por el usuario en su mensaje.
 
 REGLAS DE ACTUACIÓN:
-1. Responde de forma altamente profesional, elocuente, sofisticada y descriptiva en español latinoamericano.
+1. Responde de forma altamente profesional, elocuente y sofisticada en ${targetLangName}.
 2. Utiliza la siguiente lista de propiedades en catálogo como fuente de verdad para recomendar inmuebles cuando coincidan con los criterios del cliente:
 ${propertyCatalogContext}
 
@@ -129,7 +139,7 @@ ${propertyCatalogContext}
    - 💰 **Evaluación Financiera & Proyección de Rentabilidad** (Precio de adquisición en USD, estimación de canon de arrendamiento mensual, ROI Bruto % y plusvalía estimada a 5 años).
    - 📄 **Dossier Técnico & Planos** (Detalles sobre memorias de calidades, eficiencia energética y planos de planta).
    - 📅 **Coordinación de Visita Virtual o Presencial** (Invitación directa a agendar cita por WhatsApp).
-4. SÉ ALTAMENTE DESCRIPTIVO Y COMPLETO. Proporciona argumentos sólidos de inversión, comparativas de mercado y consejos de valor. Evita respuestas escuetas o secas.
+4. SÉ ALTAMENTE DESCRIPTIVO Y COMPLETO. Proporciona argumentos sólidos de inversión, comparativas de mercado y consejos de valor en ${targetLangName}. Evita respuestas escuetas.
 `;
 
     if (!ai) {

@@ -141,6 +141,15 @@
     "security": "Security & Data Protection",
     "rights": "All rights reserved."
   },
+  "chat": {
+    "title": "Aria — 24/7 AI Assistant",
+    "typing": "Aria is responding...",
+    "placeholder": "Type your message or RAG query...",
+    "welcomeDefault": "Hello! I'm Aria. How can I help you today with searching, ROI, or scheduling visits for your properties?",
+    "devAdmin": "Dev Admin (Unlimited Messages)",
+    "freeTrial": "Free Trial: {{count}}/2 messages used",
+    "apiNotice": "⚠️ API Notice: Error calling Gemini model. Showing contingency fallback from direct catalog:"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { X, Send, Sparkles, Bot, ShieldCheck } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -19,6 +20,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
   prefilledPrompt = '',
 }) => {
   const { messages, send, isTyping } = useChat({ initialContext: initialContext as any });
+  const { t } = useLanguage();
   const [input, setInput] = useState('');
   const endRef = useRef<HTMLDivElement | null>(null);
   const { user, openAuthModal } = useAuth();
@@ -97,16 +99,16 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-bold text-sm text-white">Aria — Asistente IA 24/7</h3>
+                <h3 className="font-bold text-sm text-white">{t('chat.title')}</h3>
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
               </div>
               <p className="text-[10px] text-slate-400">
                 {isAdmin ? (
                   <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 inline" /> Dev Admin (Mensajes Ilimitados)
+                    <ShieldCheck className="w-3 h-3 inline" /> {t('chat.devAdmin')}
                   </span>
                 ) : (
-                  `Prueba Gratis: ${getSentCount()}/2 mensajes utilizados`
+                  t('chat.freeTrial').replace('{{count}}', String(getSentCount()))
                 )}
               </p>
             </div>
@@ -127,7 +129,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-slate-400">
               <Bot className="w-10 h-10 text-emerald-500/50" />
               <p className="text-xs max-w-xs">
-                ¡Hola! Soy Aria. ¿En qué puedo ayudarte hoy con la búsqueda, ROI o visitas de tus inmuebles?
+                {t('chat.welcomeDefault')}
               </p>
             </div>
           ) : (
@@ -150,7 +152,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
           {isTyping && (
             <div className="flex items-center gap-2 text-slate-400 text-xs italic p-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce"></span>
-              <span>Aria está respondiendo...</span>
+              <span>{t('chat.typing')}</span>
             </div>
           )}
           <div ref={endRef} />
@@ -163,7 +165,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
             className="input flex-1 bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje o consulta RAG..."
+            placeholder={t('chat.placeholder')}
           />
           <button
             type="submit"

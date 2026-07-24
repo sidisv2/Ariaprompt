@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   };
 
   try {
-    const { message, history = [], context = 'general', apiKey } = req.body || {};
+    const { message, history = [], context = 'general', apiKey, lang = 'es' } = req.body || {};
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       sendChunk({ text: '⚠️ Por favor ingresa una consulta válida.' });
@@ -70,6 +70,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const trimmedMsg = message.trim();
     const lowerMsg = trimmedMsg.toLowerCase();
+
+    // Determine target language name
+    const langNames: Record<string, string> = {
+      es: 'Español',
+      en: 'English',
+      pt: 'Português',
+    };
+    const targetLangName = langNames[lang] || 'Español';
 
     // Multi-variable API Key Resolution with quotes stripping
     const rawKey =
@@ -102,7 +110,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ).join('\n');
 
     const systemPrompt = `
-Eres Aria Promp, el asistente virtual de una plataforma inmobiliaria. Tu función es ayudar al usuario a encontrar propiedades y responder sus dudas de forma clara, honesta y conversacional.
+Eres Aria Promp, el asistente virtual de una plataforma inmobiliaria que opera en toda América.
+
+IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
+Debes responder SIEMPRE en este idioma (${targetLangName}) desde el primer saludo y en todas tus explicaciones.
+Excepción: Si el usuario escribe su mensaje en un idioma distinto (ej: si escribe en inglés o portugués), prioriza responder en el idioma utilizado por el usuario en su mensaje.
 
 Tus objetivos, en este orden:
 1. Entender qué busca el usuario (comprar o alquilar, tipo de propiedad, zona, presupuesto, ambientes).
@@ -118,7 +130,7 @@ ${multiSourceCatalogContext}
 - SI EL USUARIO PIDE ALQUILER: Muestra exclusivamente propiedades marcadas como ALQUILER (ej. $450 USD/mes). Nunca muestres opciones de venta cuando el usuario pida alquiler.
 - SI LA CIUDAD NO ESTÁ EN FUENTE_DE_DATOS (ej. San Rafael): Decí de forma transparente que actualmente no contás con propiedades verificadas en esa ciudad específica dentro del catálogo directo de la agencia, y ofrecé conectar por WhatsApp con un asesor humano para buscar opciones en esa zona.
 
-Respondé siempre en español (o en el idioma del usuario) con mensajes cortos, amables y conversacionales (2-4 líneas).
+Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes cortos, amables y conversacionales (2-4 líneas).
 `;
 
     if (ai) {
