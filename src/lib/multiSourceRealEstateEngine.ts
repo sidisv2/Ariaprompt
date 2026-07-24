@@ -22,7 +22,7 @@ export interface SearchEngineResult {
   sourceSummary: { name: string; count: number; isOfficialApi: boolean }[];
 }
 
-// Multi-Source Normalized Real Estate Database (Sales & Rentals with Real Physical Addresses)
+// Multi-Source Normalized Real Estate Database (Internal Agency Catalog)
 export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
   // --- ALQUILERES (RENTALS) ---
   {
@@ -61,10 +61,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: true,
     createdAt: '2026-07-22',
     source: {
-      name: 'MercadoLibre Alquileres (API Oficial)',
-      url: 'https://departamento.mercadolibre.com.ar/MLA-998822-alquiler-2amb-bombal-mendoza',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
       isOfficialApi: true,
-      lastUpdated: 'Hace 2 horas',
+      lastUpdated: 'Inventario Verificado',
     },
   },
   {
@@ -100,10 +100,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: false,
     createdAt: '2026-07-21',
     source: {
-      name: 'Zonaprop Alquileres',
-      url: 'https://www.zonaprop.com.ar/propiedades/alquiler-palermo-hollywood-650usd.html',
-      isOfficialApi: false,
-      lastUpdated: 'Hace 5 horas',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
+      isOfficialApi: true,
+      lastUpdated: 'Inventario Verificado',
     },
   },
 
@@ -145,10 +145,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: true,
     createdAt: '2026-07-20',
     source: {
-      name: 'MercadoLibre Inmuebles (API Oficial)',
-      url: 'https://departamento.mercadolibre.com.ar/MLA-148920192-depto-2-amb-bombal-mendoza',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
       isOfficialApi: true,
-      lastUpdated: 'Hace 4 horas',
+      lastUpdated: 'Inventario Verificado',
     },
   },
 
@@ -189,10 +189,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: false,
     createdAt: '2026-07-21',
     source: {
-      name: 'Properati Argentina (Feed Partner)',
-      url: 'https://www.properati.com.ar/detalle/mdz-plaza-independencia-3amb-148k',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
       isOfficialApi: true,
-      lastUpdated: 'Hace 8 horas',
+      lastUpdated: 'Inventario Verificado',
     },
   },
 
@@ -231,10 +231,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: true,
     createdAt: '2026-07-19',
     source: {
-      name: 'Zonaprop (Publicación Verificada)',
-      url: 'https://www.zonaprop.com.ar/propiedades/casa-dalvian-mendoza-320000-usd.html',
-      isOfficialApi: false,
-      lastUpdated: 'Hace 12 horas',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
+      isOfficialApi: true,
+      lastUpdated: 'Inventario Verificado',
     },
   },
 
@@ -271,10 +271,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: false,
     createdAt: '2026-07-22',
     source: {
-      name: 'MercadoLibre Inmuebles (API Oficial)',
-      url: 'https://departamento.mercadolibre.com.ar/MLA-9201920-nueva-cordoba-2amb',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
       isOfficialApi: true,
-      lastUpdated: 'Hace 2 horas',
+      lastUpdated: 'Inventario Verificado',
     },
   },
 
@@ -311,10 +311,10 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     featured: false,
     createdAt: '2026-07-20',
     source: {
-      name: 'Argenprop (Feed Partner)',
-      url: 'https://www.argenprop.com/departamento-en-venta-en-rosario-2-ambientes--105000-usd',
-      isOfficialApi: false,
-      lastUpdated: 'Hace 6 horas',
+      name: 'Catálogo Directo de la Agencia',
+      url: 'https://ariaprompt.vercel.app/#/dashboard/properties',
+      isOfficialApi: true,
+      lastUpdated: 'Inventario Verificado',
     },
   },
 
@@ -325,11 +325,11 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
       ...p.location,
       googleMapsUrl: p.location.googleMapsUrl || `https://maps.google.com/?q=${encodeURIComponent(p.location.address + ', ' + p.location.city)}`,
     },
-    source: p.source || {
-      name: 'Aria Prop (Exclusivo)',
+    source: {
+      name: 'Catálogo Directo de la Agencia',
       url: `https://ariaprompt.vercel.app/#/dashboard/properties`,
       isOfficialApi: true,
-      lastUpdated: 'Directo de Agencia',
+      lastUpdated: 'Inventario Verificado',
     },
   })),
 ];
@@ -365,7 +365,6 @@ export function parseQueryCriteria(query: string): SearchCriteria {
   else if (q.includes('terreno') || q.includes('lote')) criteria.propertyType = 'land';
 
   // 5. Dynamic Location Extraction
-  // Dictionary of known cities / regions across LATAM & Spain
   const knownLocations = [
     'san rafael', 'mendoza', 'buenos aires', 'puerto madero', 'palermo', 'belgrano',
     'polanco', 'condesa', 'roma norte', 'ciudad de méxico', 'cdmx',
@@ -382,12 +381,10 @@ export function parseQueryCriteria(query: string): SearchCriteria {
     }
   }
 
-  // Generic Regex Location Matcher if not in dict (e.g. "alquilar en San Rafael")
   if (!criteria.location) {
     const locMatch = q.match(/(?:en|de|para|por|zona|ciudad|sector|barrio)\s+([a-záéíóúñ\s]{3,25})/i);
     if (locMatch) {
       const extracted = locMatch[1].trim();
-      // Ignore non-location stop words
       if (!['alquiler', 'venta', 'buen precio', 'buenos aires', 'departamento', 'casa'].includes(extracted)) {
         criteria.location = extracted;
       }
@@ -408,7 +405,6 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
     const country = (p.location.country || '').toLowerCase();
     const title = p.title.toLowerCase();
 
-    // 1. Location match
     let locationMatch = true;
     if (criteria.location) {
       const loc = criteria.location.toLowerCase();
@@ -423,7 +419,6 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
         (loc.includes('cdmx') && city.includes('méxico'));
     }
 
-    // 2. Operation match (rent vs buy)
     let operationMatch = true;
     if (criteria.operation === 'rent') {
       operationMatch = p.price < 5000 || p.title.toLowerCase().includes('alquiler') || p.id.includes('rent');
@@ -431,13 +426,11 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
       operationMatch = p.price >= 5000 && !p.title.toLowerCase().includes('alquiler');
     }
 
-    // 3. Price match
     let priceMatch = true;
     if (criteria.maxPriceUsd) {
       priceMatch = p.price <= criteria.maxPriceUsd * 1.15;
     }
 
-    // 4. Rooms match
     let roomsMatch = true;
     if (criteria.rooms) {
       const pRooms = p.features.rooms || p.features.bedrooms + 1;
@@ -460,7 +453,7 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
 
   const sourceMap: Record<string, { count: number; isOfficialApi: boolean }> = {};
   matches.forEach((m) => {
-    const sName = m.source?.name || 'Mercado Libre / Properati';
+    const sName = m.source?.name || 'Catálogo Directo de la Agencia';
     if (!sourceMap[sName]) {
       sourceMap[sName] = { count: 0, isOfficialApi: m.source?.isOfficialApi ?? true };
     }
@@ -476,17 +469,16 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
   let closestMatches: Property[] = [];
   let explanationNote: string | undefined;
 
-  // If no match found for the requested criteria
   if (matches.length === 0) {
     if (criteria.location && !hasLocationInCatalog) {
-      explanationNote = `Actualmente no contamos con publicaciones verificadas activas en **${criteria.location.toUpperCase()}** dentro de nuestro índice de datos.`;
+      explanationNote = `Actualmente no contamos con publicaciones verificadas en **${criteria.location.toUpperCase()}** dentro del catálogo directo de la agencia.`;
     } else if (criteria.operation === 'rent') {
       closestMatches = catalog.filter((p) => p.price < 5000 || p.title.toLowerCase().includes('alquiler'));
-      explanationNote = `No encontramos publicaciones de alquiler en esa zona específica, pero te mostramos opciones de alquiler disponibles en el catálogo.`;
+      explanationNote = `No encontramos publicaciones de alquiler en esa zona específica dentro del catálogo directo, pero te mostramos opciones de alquiler disponibles en el catálogo.`;
     } else if (criteria.maxPriceUsd) {
       closestMatches = catalog.filter((p) => p.price >= 5000);
       const minAvailablePrice = Math.min(...closestMatches.map((c) => c.price));
-      explanationNote = `No encontramos opciones de compra por debajo de $${criteria.maxPriceUsd.toLocaleString('en-US')} USD en esa zona, las opciones disponibles comienzan en $${minAvailablePrice.toLocaleString('en-US')} USD.`;
+      explanationNote = `No encontramos opciones de compra por debajo de $${criteria.maxPriceUsd.toLocaleString('en-US')} USD en esa zona, las opciones disponibles en el catálogo directo comienzan en $${minAvailablePrice.toLocaleString('en-US')} USD.`;
     }
   }
 

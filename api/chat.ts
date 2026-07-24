@@ -9,7 +9,7 @@ import {
 // Function Calling Tool Definition for Real Estate Search
 export const buscarPropiedadesToolDeclaration = {
   name: 'buscar_propiedades',
-  description: 'Busca y compara publicaciones de propiedades en tiempo real desde múltiples fuentes e inmobiliarias de América según ubicación, presupuesto, tipo de propiedad, ambientes y si es Venta o Alquiler.',
+  description: 'Busca y compara publicaciones de propiedades en tiempo real en la base de datos de la agencia según ubicación, presupuesto, tipo de propiedad, ambientes y si es Venta o Alquiler.',
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -98,27 +98,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Build RAG context with explicit origin URLs and sources
     const multiSourceCatalogContext = MARKET_REAL_ESTATE_DATABASE.map(
       (p) =>
-        `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en DIRECCIÓN REAL VERIFICADA: ${p.location.address}, ${p.location.zone}, ${p.location.city}, ${p.location.country || ''}. MAPA: ${p.location.googleMapsUrl || '#'}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.features.bedrooms} hab / ${p.features.rooms || p.features.bedrooms + 1} ambientes, ${p.features.areaM2} m². FUENTE ORIGINAL: ${p.source?.name} (URL: ${p.source?.url}). Descripción: ${p.description}`
+        `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en DIRECCIÓN REAL VERIFICADA: ${p.location.address}, ${p.location.zone}, ${p.location.city}, ${p.location.country || ''}. MAPA: ${p.location.googleMapsUrl || '#'}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.features.bedrooms} hab / ${p.features.rooms || p.features.bedrooms + 1} ambientes, ${p.features.areaM2} m². FUENTE: Catálogo Directo de la Agencia. Descripción: ${p.description}`
     ).join('\n');
 
     const systemPrompt = `
-Eres Aria Promp, el asistente virtual de una plataforma inmobiliaria que opera en toda América. Tu función NO es representar a una sola inmobiliaria: actuás como un comparador neutral que analiza distintas fuentes (inmobiliarias, portales y publicaciones) para ayudar al usuario a encontrar la mejor opción según lo que necesita.
+Eres Aria Promp, el asistente virtual de una plataforma inmobiliaria. Tu función es ayudar al usuario a encontrar propiedades y responder sus dudas de forma clara, honesta y conversacional.
 
 Tus objetivos, en este orden:
-1. Entender qué busca el usuario (tipo de operación: comprar o alquilar, tipo de propiedad, zona, presupuesto, país/ciudad, urgencia).
-2. Comparar las opciones disponibles en tus fuentes de datos y recomendar la que mejor se ajuste, priorizando precio y relación calidad-servicio.
-3. Facilitar el siguiente paso: contacto con la inmobiliaria/agente correspondiente o agendar una visita.
+1. Entender qué busca el usuario (comprar o alquilar, tipo de propiedad, zona, presupuesto, ambientes).
+2. Consultar únicamente los datos reales disponibles en FUENTE_DE_DATOS y recomendar las opciones que mejor se ajusten.
+3. Facilitar el contacto directo o agendar una visita.
 
-## FUENTE_DE_DATOS (Base/índice de listados verificado con DIRECCIONES REALES):
+## FUENTE_DE_DATOS (Base/índice de la agencia):
 ${multiSourceCatalogContext}
 
-## Reglas Estrictas de Veracidad y Adaptación al Usuario:
-- NUNCA inventes calles, alturas, precios ni ubicaciones falsas. Solo utiliza las direcciones reales y verificadas de FUENTE_DE_DATOS.
-- SI EL USUARIO PIDE ALQUILER ("alquilar", "renta", "arriendo"): Busca ÚNICAMENTE propiedades marcadas como ALQUILER (ej. $450 USD/mes o $650 USD/mes). Jamás ofrezcas departamentos de venta de $115,000 USD cuando pida alquilar.
-- SI EL USUARIO PIDE UNA ZONA NO EXISTENTE EN FUENTE_DE_DATOS (ej. San Rafael): Responde con total transparencia indicando que actualmente no hay listados activos en esa ciudad específica dentro del catálogo. Muestra alternativas cercanas disponibles o de Mendoza Capital, y ofrece conectar con un asesor por WhatsApp para buscar algo puntual en esa zona.
-- SI EL USUARIO ES COMPRADOR: Destaca m², comodidades, dirección y agenda de visitas.
-- SI EL USUARIO ES INVERSIONISTA: Destaca Cap Rate %, renta mensual estimada ($/mes), más apreciación y retorno.
-- SI EL USUARIO ES AGENTE O INMOBILIARIA: Explica cómo Aria Prop cualifica leads 24/7, automatiza agendamientos en Google Calendar e indexa inventario en PDF/Excel.
+## REGLAS DE ATRIBUCIÓN Y TRANSPARENCIA (ESTRICTAS):
+- NUNCA menciones ni atribuyas publicaciones a fuentes externas como "MercadoLibre", "Zonaprop", "Idealista" o "Properati", ya que las propiedades actuales pertenecen al "Catálogo Directo de la Agencia".
+- Presenta las propiedades siempre indicando como fuente: "Catálogo Directo de la Agencia" o "Inventario Verificado Aria Prop".
+- SI EL USUARIO PIDE ALQUILER: Muestra exclusivamente propiedades marcadas como ALQUILER (ej. $450 USD/mes). Nunca muestres opciones de venta cuando el usuario pida alquiler.
+- SI LA CIUDAD NO ESTÁ EN FUENTE_DE_DATOS (ej. San Rafael): Decí de forma transparente que actualmente no contás con propiedades verificadas en esa ciudad específica dentro del catálogo directo de la agencia, y ofrecé conectar por WhatsApp con un asesor humano para buscar opciones en esa zona.
 
 Respondé siempre en español (o en el idioma del usuario) con mensajes cortos, amables y conversacionales (2-4 líneas).
 `;
@@ -159,7 +157,7 @@ Respondé siempre en español (o en el idioma del usuario) con mensajes cortos, 
       } catch (geminiErr: any) {
         console.error('Gemini Stream Call Error:', geminiErr?.message || geminiErr);
         sendChunk({
-          text: `⚠️ **Aviso de API**: Error en llamada a modelo Gemini (${geminiErr?.message || 'Error de conexión'}). Mostrando respuesta comparativa de contingencia:\n\n`,
+          text: `⚠️ **Aviso de API**: Error en llamada a modelo Gemini (${geminiErr?.message || 'Error de conexión'}). Mostrando respuesta comparativa de contingencia del catálogo directo:\n\n`,
         });
       }
     }
@@ -177,14 +175,14 @@ Respondé siempre en español (o en el idioma del usuario) con mensajes cortos, 
       lowerMsg === 'hi'
     ) {
       responseText =
-        `¡Hola! Soy Aria Promp, tu comparador inmobiliario neutral para toda América.\n\n` +
-        `Analizo publicaciones reales de múltiples fuentes (MercadoLibre, Properati, Zonaprop) con direcciones físicas verificadas.\n\n` +
+        `¡Hola! Soy Aria Promp, el asistente virtual de la agencia.\n\n` +
+        `Consulto en tiempo real nuestro catálogo directo de propiedades verificadas con direcciones físicas.\n\n` +
         `Para empezar, ¿buscas comprar o alquilar, y en qué ciudad o zona estás interesado?`;
     } else if (searchResult.unmatchedLocationName) {
       const opText = searchResult.operationRequested === 'rent' ? 'de alquiler' : 'de compra';
       responseText =
-        `Revisé en mis fuentes integradas y actualmente **no contamos con publicaciones ${opText} activas** en **${searchResult.unmatchedLocationName.toUpperCase()}**.\n\n` +
-        `Cuento con opciones disponibles en **Mendoza Capital**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
+        `Revisé nuestro catálogo directo y actualmente **no contamos con publicaciones ${opText} activas** en **${searchResult.unmatchedLocationName.toUpperCase()}**.\n\n` +
+        `Contamos con opciones verificadas disponibles en **Mendoza Capital**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
         `¿Te gustaría explorar alguna de estas ciudades o prefieres que conecte tu consulta con un asesor humano por WhatsApp para buscar algo específico en ${searchResult.unmatchedLocationName}?`;
     } else if (searchResult.exactMatches.length > 0) {
       const items = searchResult.exactMatches.slice(0, 2);
@@ -192,23 +190,23 @@ Respondé siempre en español (o en el idioma del usuario) con mensajes cortos, 
       const isRent = searchResult.operationRequested === 'rent';
 
       responseText =
-        `Analizando mis fuentes, te recomiendo estas opciones principales ${isRent ? 'en ALQUILER' : 'en VENTA'} con dirección real verificada:\n\n` +
+        `Consultando nuestro catálogo directo, te recomiendo estas opciones principales ${isRent ? 'en ALQUILER' : 'en VENTA'}:\n\n` +
         items
           .map((p, idx) => (
             `**Opción ${idx + 1}**: ${p.title}\n` +
             `• 📍 **Dirección Real**: ${p.location.address}, ${p.location.zone}, ${p.location.city}, ${p.location.country || ''} ([Ver en Google Maps](${p.location.googleMapsUrl}))\n` +
             `• 💰 **Precio**: **$${p.price.toLocaleString('en-US')} USD${p.price < 5000 ? '/mes' : ''}** | ${p.features.bedrooms} hab (${p.features.areaM2} m²)\n` +
-            `• 🌐 **Fuente**: ${p.source?.name} - [Ver publicación original](${p.source?.url})\n`
+            `• 🌐 **Fuente**: Catálogo Directo de la Agencia\n`
           ))
           .join('\n') +
-        `\n¿Te interesa agendar una visita o coordinar contacto directo con la inmobiliaria?`;
+        `\n¿Te interesa agendar una visita o coordinar contacto directo con un asesor de la agencia?`;
     } else if (searchResult.explanationNote) {
       responseText =
         `ℹ️ **Resultado de búsqueda**: ${searchResult.explanationNote}\n\n` +
-        `¿Te gustaría ajustar el presupuesto o buscar en otra zona cercana?`;
+        `¿Te gustaría ajustar el presupuesto o buscar en otra zona cercana dentro del catálogo directo?`;
     } else {
       responseText =
-        `¡Hola! Soy Aria Promp, tu comparador inmobiliario neutral.\n\n` +
+        `¡Hola! Soy Aria Promp, el asistente virtual de la agencia.\n\n` +
         `¿Podrías decirme qué tipo de propiedad buscas (depto, casa), si es para compra o alquiler, y en qué ciudad?`;
     }
 
@@ -222,7 +220,7 @@ Respondé siempre en español (o en el idioma del usuario) con mensajes cortos, 
   } catch (globalErr: any) {
     console.error('API Chat Global Error:', globalErr);
     sendChunk({
-      text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro motor comparador de contingencia.',
+      text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
     });
     sendChunk({ done: true });
     return res.end();
