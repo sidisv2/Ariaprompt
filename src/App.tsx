@@ -10,71 +10,86 @@ import { DeviceSwitcherBadge } from './components/common/DeviceSwitcherBadge';
 import { FloatingAssistant } from './components/common/FloatingAssistant';
 import { ChatSlideOver } from './components/chat/ChatSlideOver';
 
-const getRouteFromHash = (): AppRoute => {
-  const hash = window.location.hash.toLowerCase();
-  if (hash.includes('producto')) return 'producto';
-  if (hash.includes('soluciones')) return 'soluciones';
-  if (hash.includes('recursos')) return 'recursos';
-  if (hash.includes('pricing')) return 'pricing';
-  if (hash.includes('comparar/manual')) return 'comparar-manual';
-  if (hash.includes('comparar/crm')) return 'comparar-crm';
-  if (hash.includes('comparar/chatbots')) return 'comparar-chatbots';
-  if (hash.includes('dashboard/metrics')) return 'dashboard-metrics';
-  if (hash.includes('dashboard/properties')) return 'dashboard-properties';
-  if (hash.includes('dashboard/leads')) return 'dashboard-leads';
-  if (hash.includes('dashboard/bot-config')) return 'dashboard-bot-config';
-  if (hash.includes('dashboard/checkout')) return 'dashboard-checkout';
-  if (hash.includes('dashboard/profile')) return 'dashboard-profile';
-  if (hash.includes('dashboard/files')) return 'dashboard-files';
-  if (hash.includes('dashboard/roles')) return 'dashboard-roles';
-  if (hash.includes('vault') || hash.includes('user/')) return 'dashboard-vault';
-  if (hash.includes('embed-preview')) return 'embed-preview';
+const getRouteFromPath = (): AppRoute => {
+  // Check pathname first, fallback to legacy hash if user comes from old bookmark
+  const path = (window.location.pathname + window.location.hash).toLowerCase();
+  if (path.includes('producto')) return 'producto';
+  if (path.includes('soluciones')) return 'soluciones';
+  if (path.includes('recursos')) return 'recursos';
+  if (path.includes('pricing')) return 'pricing';
+  if (path.includes('comparar/manual')) return 'comparar-manual';
+  if (path.includes('comparar/crm')) return 'comparar-crm';
+  if (path.includes('comparar/chatbots')) return 'comparar-chatbots';
+  if (path.includes('dashboard/metrics')) return 'dashboard-metrics';
+  if (path.includes('dashboard/properties')) return 'dashboard-properties';
+  if (path.includes('dashboard/leads')) return 'dashboard-leads';
+  if (path.includes('dashboard/bot-config')) return 'dashboard-bot-config';
+  if (path.includes('dashboard/checkout')) return 'dashboard-checkout';
+  if (path.includes('dashboard/profile')) return 'dashboard-profile';
+  if (path.includes('dashboard/files')) return 'dashboard-files';
+  if (path.includes('dashboard/roles')) return 'dashboard-roles';
+  if (path.includes('vault') || path.includes('user/')) return 'dashboard-vault';
+  if (path.includes('embed-preview')) return 'embed-preview';
   return 'marketing';
 };
 
-const getHashFromRoute = (route: AppRoute): string => {
+const getPathFromRoute = (route: AppRoute): string => {
   switch (route) {
-    case 'producto': return '#/producto';
-    case 'soluciones': return '#/soluciones';
-    case 'recursos': return '#/recursos';
-    case 'pricing': return '#/pricing';
-    case 'comparar-manual': return '#/comparar/manual';
-    case 'comparar-crm': return '#/comparar/crm';
-    case 'comparar-chatbots': return '#/comparar/chatbots';
-    case 'dashboard-metrics': return '#/dashboard/metrics';
-    case 'dashboard-properties': return '#/dashboard/properties';
-    case 'dashboard-leads': return '#/dashboard/leads';
-    case 'dashboard-bot-config': return '#/dashboard/bot-config';
-    case 'dashboard-checkout': return '#/dashboard/checkout';
-    case 'dashboard-profile': return '#/dashboard/profile';
-    case 'dashboard-files': return '#/dashboard/files';
-    case 'dashboard-roles': return '#/dashboard/roles';
-    case 'dashboard-vault': return '#/user/vault';
-    case 'embed-preview': return '#/embed-preview';
-    default: return '#/';
+    case 'producto': return '/producto';
+    case 'soluciones': return '/soluciones';
+    case 'recursos': return '/recursos';
+    case 'pricing': return '/pricing';
+    case 'comparar-manual': return '/comparar/manual';
+    case 'comparar-crm': return '/comparar/crm';
+    case 'comparar-chatbots': return '/comparar/chatbots';
+    case 'dashboard-metrics': return '/dashboard/metrics';
+    case 'dashboard-properties': return '/dashboard/properties';
+    case 'dashboard-leads': return '/dashboard/leads';
+    case 'dashboard-bot-config': return '/dashboard/bot-config';
+    case 'dashboard-checkout': return '/dashboard/checkout';
+    case 'dashboard-profile': return '/dashboard/profile';
+    case 'dashboard-files': return '/dashboard/files';
+    case 'dashboard-roles': return '/dashboard/roles';
+    case 'dashboard-vault': return '/user/vault';
+    case 'embed-preview': return '/embed-preview';
+    default: return '/';
   }
 };
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => getRouteFromHash());
+  const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => getRouteFromPath());
   const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
   const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
   const [botConfig, setBotConfig] = useState<BotConfig>(INITIAL_BOT_CONFIG);
   const [selectedLeadForChat, setSelectedLeadForChat] = useState<string | undefined>(undefined);
 
-  // Sync hash routing
+  // Sync HTML5 BrowserRouter (pathname & pushState)
   const handleRouteChange = (route: AppRoute) => {
-    window.location.hash = getHashFromRoute(route);
+    const targetPath = getPathFromRoute(route);
+    if (window.location.pathname !== targetPath || window.location.hash) {
+      window.history.pushState({}, '', targetPath);
+    }
     setCurrentRoute(route);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setCurrentRoute(getRouteFromHash());
+    // If user loaded with legacy hash (e.g. /#/soluciones), convert to clean pathname (/soluciones)
+    if (window.location.hash) {
+      const initialRoute = getRouteFromPath();
+      const cleanPath = getPathFromRoute(initialRoute);
+      window.history.replaceState({}, '', cleanPath);
+    }
+
+    const handlePopState = () => {
+      setCurrentRoute(getRouteFromPath());
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handlePopState);
+    };
   }, []);
 
   // Global Slide-Over Assistant State

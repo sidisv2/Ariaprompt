@@ -78,7 +78,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
 
           {/* Subdirectory Breadcrumb Pill */}
           <div className="px-4 py-2 rounded-2xl bg-slate-950 border border-emerald-500/40 text-xs font-mono text-emerald-300 font-bold shrink-0">
-            Path: <span className="text-white">/#/user/{usernameSlug}/vault</span>
+            Path: <span className="text-white">/user/{usernameSlug}/vault</span>
           </div>
         </div>
       </div>
