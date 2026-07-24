@@ -219,9 +219,6 @@ export default function App() {
           />
         )}
 
-        {/* Floating Quick Assistant Trigger */}
-        <FloatingAssistant onOpenPrompt={handleOpenPrompt} />
-
         {/* Slide-over Right Drawer Assistant */}
         <ChatSlideOver
           isOpen={slideOverOpen}
