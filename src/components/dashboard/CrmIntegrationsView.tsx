@@ -41,9 +41,10 @@ const getAgencyId = (userId?: string | null): string => {
 };
 
 export const CrmIntegrationsView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { t } = useLanguage();
 
+  const [loadingIntegrations, setLoadingIntegrations] = useState(true);
   const [integrations, setIntegrations] = useState<Record<string, CrmIntegrationState>>({
     tokko: { provider: 'tokko', status: 'not_connected', syncedCount: 0 },
     easybroker: { provider: 'easybroker', status: 'not_connected', syncedCount: 0 },
@@ -56,13 +57,15 @@ export const CrmIntegrationsView: React.FC = () => {
   const [validationSuccess, setValidationSuccess] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
-  // Fetch initial integrations from backend or localStorage
+  // Fetch initial integrations ONLY after auth session is fully loaded
   useEffect(() => {
+    if (authLoading) return;
     fetchIntegrations();
-  }, [user]);
+  }, [user, authLoading]);
 
   const fetchIntegrations = async () => {
-    const agencyId = getAgencyId(user?.id);
+    setLoadingIntegrations(true);
+    const agencyId = user?.id || 'demo-agency';
     try {
       const res = await fetch(`/api/crm-credentials?agency_id=${agencyId}`);
       if (res.ok) {
@@ -84,6 +87,7 @@ export const CrmIntegrationsView: React.FC = () => {
             }
           });
           setIntegrations(map);
+          setLoadingIntegrations(false);
           return;
         }
       }
@@ -91,14 +95,15 @@ export const CrmIntegrationsView: React.FC = () => {
       console.warn('CRM credentials fetch fallback:', err);
     }
 
-    // Fallback to localStorage for smooth offline access
-    const savedTokko = localStorage.getItem(`crm_tokko_${agencyId}`) || localStorage.getItem('crm_tokko_global');
-    const savedEasy = localStorage.getItem(`crm_easybroker_${agencyId}`) || localStorage.getItem('crm_easybroker_global');
+    // Fallback strictly scoped to agencyId (Multi-Tenant Isolated)
+    const savedTokko = localStorage.getItem(`crm_tokko_${agencyId}`);
+    const savedEasy = localStorage.getItem(`crm_easybroker_${agencyId}`);
 
     setIntegrations({
       tokko: savedTokko ? JSON.parse(savedTokko) : { provider: 'tokko', status: 'not_connected', syncedCount: 0 },
       easybroker: savedEasy ? JSON.parse(savedEasy) : { provider: 'easybroker', status: 'not_connected', syncedCount: 0 },
     });
+    setLoadingIntegrations(false);
   };
 
   const handleOpenConnectModal = (provider: 'tokko' | 'easybroker') => {
@@ -155,9 +160,8 @@ export const CrmIntegrationsView: React.FC = () => {
         syncedCount: json.data?.synced_count ?? json.totalCount ?? 0,
       };
 
-      // Save locally (both agency-scoped and global fallback key for instant reload)
+      // Save strictly scoped by agencyId for multi-tenant isolation
       localStorage.setItem(`crm_${selectedModalProvider}_${agencyId}`, JSON.stringify(updatedState));
-      localStorage.setItem(`crm_${selectedModalProvider}_global`, JSON.stringify(updatedState));
       localStorage.setItem('aria_has_connected_crm', 'true');
 
       setIntegrations((prev) => ({
@@ -285,7 +289,12 @@ export const CrmIntegrationsView: React.FC = () => {
               </div>
 
               {/* Status Badge */}
-              {integrations.tokko.status === 'connected' ? (
+              {(authLoading || loadingIntegrations) ? (
+                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                  <span>Cargando...</span>
+                </span>
+              ) : integrations.tokko.status === 'connected' ? (
                 <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Conectado</span>
@@ -378,7 +387,12 @@ export const CrmIntegrationsView: React.FC = () => {
               </div>
 
               {/* Status Badge */}
-              {integrations.easybroker.status === 'connected' ? (
+              {(authLoading || loadingIntegrations) ? (
+                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                  <span>Cargando...</span>
+                </span>
+              ) : integrations.easybroker.status === 'connected' ? (
                 <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Conectado</span>

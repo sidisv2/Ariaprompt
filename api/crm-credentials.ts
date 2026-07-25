@@ -103,29 +103,20 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'GET') {
       const agencyId = (req.query?.agency_id as string) || (req.headers?.['x-agency-id'] as string);
 
-      if (supabase) {
+      if (!agencyId) {
+        return res.status(400).json({ success: false, error: 'agency_id es requerido.' });
+      }
+
+      if (supabase && isValidUuid(agencyId)) {
         try {
-          if (agencyId && isValidUuid(agencyId)) {
-            const { data, error } = await supabase
-              .from('crm_integrations')
-              .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
-              .eq('agency_id', agencyId);
-
-            if (!error && data && data.length > 0) {
-              return res.status(200).json({ success: true, data, source: 'supabase_exact' });
-            }
-          }
-
-          // Fallback: search for active connected integrations across agency records
-          const { data: fallbackData, error: fbErr } = await supabase
+          // Strictly filter by agency_id (Multi-Tenant Isolation)
+          const { data, error } = await supabase
             .from('crm_integrations')
             .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
-            .eq('status', 'connected')
-            .order('updated_at', { ascending: false })
-            .limit(5);
+            .eq('agency_id', agencyId);
 
-          if (!fbErr && fallbackData && fallbackData.length > 0) {
-            return res.status(200).json({ success: true, data: fallbackData, source: 'supabase_fallback' });
+          if (!error && data) {
+            return res.status(200).json({ success: true, data, source: 'supabase' });
           }
         } catch (err: any) {
           console.warn('Error querying crm_integrations Supabase table:', err);
@@ -165,7 +156,7 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // 3. Persist in Supabase Postgres
+      // 3. Persist in Supabase Postgres strictly filtered by agency_id
       if (supabase && isValidUuid(agencyId)) {
         try {
           // Ensure profile exists in profiles table so Foreign Key on agency_id never fails
@@ -180,7 +171,7 @@ export default async function handler(req: any, res: any) {
             console.warn('Profile auto-create fallback:', e);
           }
 
-          // Check if record exists
+          // Check if record exists for this specific agency_id and provider
           const { data: existing } = await supabase
             .from('crm_integrations')
             .select('id')
@@ -202,6 +193,7 @@ export default async function handler(req: any, res: any) {
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existing.id)
+              .eq('agency_id', agencyId)
               .select()
               .single();
 
