@@ -116,7 +116,16 @@ export const CrmIntegrationsView: React.FC = () => {
         }),
       });
 
-      const json = await res.json();
+      const rawText = await res.text();
+      let json: any = {};
+      try {
+        json = JSON.parse(rawText);
+      } catch (parseErr) {
+        console.error('Non-JSON server response:', rawText);
+        setValidationError('Respuesta no estructurada del servidor. Por favor intenta nuevamente.');
+        setIsValidating(false);
+        return;
+      }
 
       if (!res.ok || !json.success) {
         const errorMsg = json.error || json.message || `API Key de ${selectedModalProvider === 'tokko' ? 'Tokko Broker' : 'EasyBroker'} inválida o no autorizada.`;
