@@ -65,6 +65,12 @@ async function runDualLayerSecurityTest() {
       global: { headers: { Authorization: `Bearer ${sessionB.session?.access_token}` } }
     });
 
+    // Insert profile records for foreign key constraint
+    await adminClient?.from('profiles').insert([
+      { id: userAId, email: emailA, nombre: 'Agencia A' },
+      { id: userBId, email: emailB, nombre: 'Agencia B' }
+    ]);
+
     // 3. INSERTAR LEADS PERTENECIENTES A CADA AGENCIA
     console.log('\n🔹 3. Insertando Lead Válido para Agencia B...');
     const { data: leadB, error: errLeadB } = await clientUserB.from('leads').insert([{
