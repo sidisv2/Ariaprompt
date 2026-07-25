@@ -295,3 +295,24 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'user-files' AND (storage.foldername(name))[1] = auth.uid()::text);
 `;
+
+/**
+ * SQL instructions for database tables (leads, propiedades, profiles) Multi-Tenant RLS Policies
+ */
+export const SUPABASE_MULTI_TENANT_RLS_SQL = `-- HABILITAR RLS EN TABLAS DE BASE DE DATOS
+ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.propiedades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- POLÍTICAS RLS TABLA 'leads' (4 cláusulas separadas)
+CREATE POLICY "Leads_Select_Policy" ON public.leads FOR SELECT TO authenticated USING (auth.uid() = agency_id);
+CREATE POLICY "Leads_Insert_Policy" ON public.leads FOR INSERT TO authenticated WITH CHECK (auth.uid() = agency_id);
+CREATE POLICY "Leads_Update_Policy" ON public.leads FOR UPDATE TO authenticated USING (auth.uid() = agency_id) WITH CHECK (auth.uid() = agency_id);
+CREATE POLICY "Leads_Delete_Policy" ON public.leads FOR DELETE TO authenticated USING (auth.uid() = agency_id);
+
+-- POLÍTICAS RLS TABLA 'propiedades' (4 cláusulas separadas)
+CREATE POLICY "Propiedades_Select_Policy" ON public.propiedades FOR SELECT TO authenticated USING (auth.uid() = agency_id);
+CREATE POLICY "Propiedades_Insert_Policy" ON public.propiedades FOR INSERT TO authenticated WITH CHECK (auth.uid() = agency_id);
+CREATE POLICY "Propiedades_Update_Policy" ON public.propiedades FOR UPDATE TO authenticated USING (auth.uid() = agency_id) WITH CHECK (auth.uid() = agency_id);
+CREATE POLICY "Propiedades_Delete_Policy" ON public.propiedades FOR DELETE TO authenticated USING (auth.uid() = agency_id);
+`;
