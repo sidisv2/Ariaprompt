@@ -10,13 +10,13 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     id: 'solo_agent',
     name: 'Solo Agent',
     maxLeadsPerMonth: 100,
-    maxProperties: 5,
+    maxProperties: 20,
   },
   agency_pro: {
     id: 'agency_pro',
     name: 'Agency Pro',
     maxLeadsPerMonth: 500,
-    maxProperties: 20,
+    maxProperties: 100,
   },
   enterprise: {
     id: 'enterprise',
