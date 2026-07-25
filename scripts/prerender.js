@@ -60,25 +60,25 @@ const PUBLIC_ROUTES = [
   },
   {
     path: '/app',
-    title: 'Workspace Aria AI & Motor Inmobiliario | Aria Prop',
-    description: 'Conoce cómo funciona el motor RAG de Aria Prop: lectura de dossieres PDF, cálculo automático de ROI y atención omnicanal en WhatsApp.',
-    ogTitle: 'Tecnología RAG & IA Inmobiliaria 24/7 | Aria Prop',
-    ogDescription: 'Explora el motor atómico de inteligencia inmobiliaria para cualificar prospectos y analizar estados de inversión.',
+    title: 'Asistente IA 24/7 & Workspace Inmobiliario | Aria Prop',
+    description: 'Atiende a tus prospectos las 24 horas del día, responde sus dudas sobre tus inmuebles y agenda visitas en tu calendario automáticamente con el Asistente IA 24/7 de Aria Prop.',
+    ogTitle: 'Asistente IA 24/7 & Atención Inmobiliaria | Aria Prop',
+    ogDescription: 'Responde a tus prospectos al instante en WhatsApp y Web, cualifica su presupuesto y coordino visitas en tu calendario.',
     ogImage: `${BASE_URL}/assets/og-app.jpg`,
     contentHtml: `
       <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
         <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
           <header class="space-y-4">
-            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Suite Interactiva IA</span>
-            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Motor RAG e Inteligencia Artificial Inmobiliaria</h1>
-            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Aria Prop analiza catálogos complejos, documentos técnicos y responde a compradores con máxima precisión.</p>
+            <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Asistente IA 24/7 en Vivo</span>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Atención Inmobiliaria Inmediata y Respuesta a Leads 24/7</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Aria Prop atiende a tus prospectos las 24 horas del día, responde sus dudas sobre tus inmuebles y agenda visitas en tu calendario para que vos te enfoques en cerrar operaciones.</p>
           </header>
           <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
-            <h2 class="text-lg font-bold text-emerald-400">Capacidades del Sistema Aria AI</h2>
+            <h2 class="text-lg font-bold text-emerald-400">Atención Comercial & Cualificación Inmediata</h2>
             <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
-              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Cualificación Automática:</strong> Score de 0 a 100 basado en presupuesto y urgencia.</li>
-              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Cálculo de ROI & Cap Rate:</strong> Estimación de rentabilidad anual a 5 años.</li>
-              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Búsqueda RAG PDF:</strong> Extracción de metrajes y planos de planta.</li>
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Respuesta en &lt; 5 segundos:</strong> Atención al instante en WhatsApp y Web sin hacer esperar a los prospectos.</li>
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Agendamiento Automático:</strong> Coordinación de visitas guiadas directo en Google Calendar.</li>
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Cualificación de Leads:</strong> Filtro inteligente de presupuesto, urgencia y tipo de inmueble.</li>
             </ul>
           </section>
         </main>
