@@ -1,11 +1,82 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBackendSupabaseClient } from '../src/lib/backendSupabase';
-import { validateTokkoApiKey, validateEasyBrokerApiKey } from '../src/lib/crmClients';
+import { createClient } from '@supabase/supabase-js';
+
+function getBackendSupabaseClient() {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
+    return null;
+  }
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    return null;
+  }
+}
 
 function isValidUuid(str?: string): boolean {
   if (!str) return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
+}
+
+async function validateTokkoApiKey(apiKey: string) {
+  const cleanKey = apiKey.trim();
+  if (!cleanKey) {
+    return { success: false, message: 'La clave de API de Tokko Broker no puede estar vacía.' };
+  }
+  try {
+    const url = `https://tokkobroker.com/api/v1/property/?key=${cleanKey}&format=json&limit=1`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, message: 'API Key de Tokko Broker inválida o sin permisos (HTTP 401/403).' };
+      }
+      return { success: false, message: `Error al conectar con Tokko Broker (HTTP ${res.status}).` };
+    }
+    const data = await res.json();
+    const count = data.meta?.total_count ?? data.objects?.length ?? 0;
+    return {
+      success: true,
+      message: `Conexión a Tokko Broker exitosa. Se detectaron ${count} inmuebles en catálogo.`,
+      totalCount: count,
+    };
+  } catch (err: any) {
+    return { success: false, message: `Error de red al conectar con Tokko Broker: ${err?.message || 'Falló la petición'}` };
+  }
+}
+
+async function validateEasyBrokerApiKey(apiKey: string) {
+  const cleanKey = apiKey.trim();
+  if (!cleanKey) {
+    return { success: false, message: 'La clave de API de EasyBroker no puede estar vacía.' };
+  }
+  try {
+    const url = 'https://api.easybroker.com/v1/properties?page=1&limit=1';
+    const res = await fetch(url, {
+      headers: {
+        'X-Authorization': cleanKey,
+        'accept': 'application/json',
+      },
+    });
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, message: 'API Key de EasyBroker inválida o caducada (HTTP 401/403).' };
+      }
+      return { success: false, message: `Error al conectar con EasyBroker (HTTP ${res.status}).` };
+    }
+    const data = await res.json();
+    const count = data.pagination?.total ?? data.content?.length ?? 0;
+    return {
+      success: true,
+      message: `Conexión a EasyBroker exitosa. Se detectaron ${count} inmuebles en catálogo.`,
+      totalCount: count,
+    };
+  } catch (err: any) {
+    return { success: false, message: `Error de red al conectar con EasyBroker: ${err?.message || 'Falló la petición'}` };
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -19,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const supabase = getBackendSupabaseClient();
 
-    // 1. Safe Body Parsing (handles stringified JSON, null, or pre-parsed objects)
+    // Safe Body Parsing
     let body = req.body || {};
     if (typeof body === 'string') {
       try {
@@ -108,8 +179,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               data,
               source: 'supabase',
             });
-          } else if (error) {
-            console.warn('Supabase upsert warning (falling back to memory response):', error.message);
           }
         } catch (err: any) {
           console.warn('Supabase insert exception:', err);
