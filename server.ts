@@ -38,18 +38,48 @@ async function startServer() {
     });
   }
 
+  // Optional Supabase DB initialization if credentials exist
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  let supabaseClient: any = null;
+
+  if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder')) {
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      supabaseClient = createClient(supabaseUrl, supabaseKey);
+      console.log('✅ Supabase Client initialized in server.ts');
+    } catch (e) {
+      console.warn('⚠️ Supabase initialization skipped:', e);
+    }
+  }
+
   // --- API ROUTES ---
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'PropTech AI Agent Platform', timestamp: new Date().toISOString() });
+    res.json({ 
+      status: 'ok', 
+      service: 'PropTech AI Agent Platform', 
+      supabaseConnected: !!supabaseClient,
+      timestamp: new Date().toISOString() 
+    });
   });
 
-  // Get Properties
-  app.get('/api/properties', (req, res) => {
-    res.json({ success: true, data: properties });
+  // Get Properties (Fetch from Supabase DB if connected, fallback to in-memory)
+  app.get('/api/properties', async (req, res) => {
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient.from('propiedades').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          return res.json({ success: true, data, source: 'supabase' });
+        }
+      } catch (err) {
+        console.warn('Supabase fetch properties fallback:', err);
+      }
+    }
+    res.json({ success: true, data: properties, source: 'memory' });
   });
 
   // Create Property
-  app.post('/api/properties', (req, res) => {
+  app.post('/api/properties', async (req, res) => {
     const newProperty = {
       id: `prop-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
@@ -58,22 +88,59 @@ async function startServer() {
       status: 'available' as const,
       ...req.body,
     };
+
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient.from('propiedades').insert([newProperty]).select().single();
+        if (!error && data) {
+          properties.unshift(data);
+          return res.json({ success: true, data, source: 'supabase' });
+        }
+      } catch (err) {
+        console.warn('Supabase insert property fallback:', err);
+      }
+    }
+
     properties.unshift(newProperty);
-    res.json({ success: true, data: newProperty });
+    res.json({ success: true, data: newProperty, source: 'memory' });
   });
 
   // Get Leads
-  app.get('/api/leads', (req, res) => {
-    res.json({ success: true, data: leads });
+  app.get('/api/leads', async (req, res) => {
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
+        if (!error && data && data.length > 0) {
+          return res.json({ success: true, data, source: 'supabase' });
+        }
+      } catch (err) {
+        console.warn('Supabase fetch leads fallback:', err);
+      }
+    }
+    res.json({ success: true, data: leads, source: 'memory' });
   });
 
   // Update Lead Status / Temperature
-  app.patch('/api/leads/:id', (req, res) => {
+  app.patch('/api/leads/:id', async (req, res) => {
     const { id } = req.params;
+
+    if (supabaseClient) {
+      try {
+        const { data, error } = await supabaseClient.from('leads').update(req.body).eq('id', id).select().single();
+        if (!error && data) {
+          const idx = leads.findIndex((l) => l.id === id);
+          if (idx !== -1) leads[idx] = { ...leads[idx], ...data };
+          return res.json({ success: true, data, source: 'supabase' });
+        }
+      } catch (err) {
+        console.warn('Supabase update lead fallback:', err);
+      }
+    }
+
     const leadIndex = leads.findIndex((l) => l.id === id);
     if (leadIndex !== -1) {
       leads[leadIndex] = { ...leads[leadIndex], ...req.body };
-      res.json({ success: true, data: leads[leadIndex] });
+      res.json({ success: true, data: leads[leadIndex], source: 'memory' });
     } else {
       res.status(404).json({ error: 'Lead not found' });
     }
