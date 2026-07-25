@@ -57,13 +57,13 @@ export const TestimonialsSection: React.FC = () => {
             <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
               <Lock className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold text-white">Seguridad RGPD & Cifrado SSL</h3>
+            <h3 className="text-xl font-bold text-white">Conexión Segura vía HTTPS / TLS</h3>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Tus datos de propiedades y los contactos de tus prospectos están protegidos bajo cifrado SSL de 256 bits y estrictas normas de privacidad.
+              Tus datos de propiedades y la información de tus prospectos están resguardados con cifrado en tránsito SSL/TLS y acceso exclusivo de tu agencia.
             </p>
             <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-cyan-400">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Protección Total de Datos</span>
+              <span>Privacidad Total Garantizada</span>
             </div>
           </div>
         </div>

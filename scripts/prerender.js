@@ -133,7 +133,7 @@ const PUBLIC_ROUTES = [
   {
     path: '/recursos',
     title: 'Recursos, Documentación RAG & Preguntas Frecuentes | Aria Prop',
-    description: 'Guías completas de integración, preguntas frecuentes sobre seguridad RGPD y optimización de flujos con IA.',
+    description: 'Guías completas de integración, preguntas frecuentes sobre seguridad y privacidad de datos.',
     ogTitle: 'Recursos & Centro de Ayuda | Aria Prop',
     ogDescription: 'Aprende a integrar tu CRM, cargar memorias técnicas PDF y maximizar la cualificación de tus prospectos.',
     ogImage: `${BASE_URL}/assets/og-recursos.jpg`,
@@ -151,7 +151,7 @@ const PUBLIC_ROUTES = [
               <h3 class="font-bold text-white">¿Cómo se conecta Aria Prop a mi CRM?</h3>
               <p>Se integra de forma directa mediante API Keys oficiales con Tokko Broker, EasyBroker o vía Webhooks.</p>
               <h3 class="font-bold text-white">¿Es seguro el manejo de datos?</h3>
-              <p>Cuenta con cifrado SSL de 256 bits y pleno cumplimiento de normativas RGPD.</p>
+              <p>Cuenta con cifrado HTTPS / TLS en tránsito y resguardo privado de los datos de tu agencia.</p>
             </div>
           </section>
         </main>

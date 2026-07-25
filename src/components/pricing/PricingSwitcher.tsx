@@ -55,8 +55,9 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       id: 'custom',
       name: 'Enterprise / Desarrolladores',
       tagline: 'Para desarrolladoras, promotoras y redes inmobiliarias multi-sucursal.',
-      monthlyPrice: 189,
-      annualPrice: 149,
+      isCustom: true,
+      monthlyPrice: 0,
+      annualPrice: 0,
       features: [
         'Agentes & Sucursales Ilimitadas',
         'Infraestructura RAG Dedicada',
@@ -66,7 +67,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       ],
       popular: false,
       badge: 'Solución a Medida',
-      buttonText: 'Contactar un Asesor',
+      buttonText: 'Contactar Ventas',
       color: 'border-cyan-500/30 bg-slate-900/60',
     },
   ];
@@ -151,26 +152,31 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
 
                 {/* Price Display with Animated Transition */}
                 <div className="mb-6 pb-6 border-b border-white/10">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
-                      ${price}
-                    </span>
-                    {hasDiscount5 && (
-                      <span className="line-through text-xs text-slate-400 font-mono ml-1">${rawPrice}</span>
-                    )}
-                    <span className="text-sm font-semibold text-slate-300">/ mes</span>
-                  </div>
-                  <p className="text-[11px] text-emerald-400 mt-1 font-mono flex items-center gap-1.5 flex-wrap">
-                    {hasDiscount5 && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-400 text-slate-950 font-black text-[10px] shadow-sm">
-                        -5% OFERTA
+                  {plan.isCustom ? (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                        A Medida
                       </span>
-                    )}
-                    <span className="text-emerald-300 font-semibold">
-                      {billingCycle === 'annual'
-                        ? `Facturado anualmente ($${price * 12}/año)`
-                        : 'Facturado mensualmente'}
-                    </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
+                        ${price}
+                      </span>
+                      {hasDiscount5 && (
+                        <span className="line-through text-xs text-slate-400 font-mono ml-1">${rawPrice}</span>
+                      )}
+                      <span className="text-xs text-slate-400 font-medium ml-1">
+                        USD / mes
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    {plan.isCustom
+                      ? 'Cotización personalizada por volumen de sucursales'
+                      : billingCycle === 'annual'
+                      ? 'Facturado anualmente (-20% ahorro)'
+                      : 'Facturado mensualmente'}
                   </p>
                 </div>
 
