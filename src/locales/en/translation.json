@@ -148,7 +148,15 @@
     "welcomeDefault": "Hello! I'm Aria. How can I help you today with searching, ROI, or scheduling visits for your properties?",
     "devAdmin": "Dev Admin (Unlimited Messages)",
     "freeTrial": "Free Trial: {{count}}/2 messages used",
-    "apiNotice": "⚠️ API Notice: Error calling Gemini model. Showing contingency fallback from direct catalog:"
+    "apiNotice": "⚠️ API Notice: Error calling Gemini model. Showing contingency fallback from direct catalog:",
+    "dragDrop": "Drag & drop your PDF property spec sheets",
+    "dragSub": "Process building dossiers, floor plans, and pricing instantly",
+    "processingDoc": "Processing PDF document...",
+    "indexedDocs": "Documents Indexed in RAG",
+    "readyRAG": "RAG Engine Ready for Queries",
+    "inputPlaceholder": "Type your message or property inquiry...",
+    "sending": "Sending...",
+    "sendBtn": "Send"
   },
   "tabs": {
     "summary": "Overview",
@@ -167,6 +175,80 @@
     "quickActionsTitle": "Real Estate Agent Tools",
     "goTool": "Open Tool",
     "recentActivityTitle": "Recent Lead Activity"
+  },
+  "logout": {
+    "title": "Log Out",
+    "subtitle": "Are you sure you want to exit your agency workspace?",
+    "cancel": "Cancel",
+    "confirm": "Yes, Log Out"
+  },
+  "cta": {
+    "badge": "Real Estate Digital Transformation",
+    "title1": "Ready to multiply your agency's property sales",
+    "title2": "with Artificial Intelligence",
+    "subtitle": "Automate buyer inquiry responses on WhatsApp & Web in under 5 seconds. Start your no-commitment trial today.",
+    "primary": "Start 7-Day Free Trial",
+    "secondary": "Talk to a Specialist",
+    "trust1": "No credit card required",
+    "trust2": "Assisted setup in 3 minutes",
+    "trust3": "Direct CRM integration"
+  },
+  "how": {
+    "badge": "Step by Step",
+    "title": "How does Aria Prop work for your agency?",
+    "subtitle": "Four simple steps to turn property inquiries into scheduled tours and closed deals.",
+    "step1Title": "Catalog & CRM Sync",
+    "step1Desc": "Sync your listings from Tokko Broker, EasyBroker, or via direct PDF upload with specification sheets.",
+    "step2Title": "24/7 Instant Engagement",
+    "step2Desc": "Aria responds to prospects in under 5 seconds on WhatsApp and Web, clarifying specs and pricing.",
+    "step3Title": "Budget Qualification",
+    "step3Desc": "The AI agent analyzes budget, buying timeline, and desired zone, filtering tire-kickers automatically.",
+    "step4Title": "Calendar Scheduling",
+    "step4Desc": "Qualified leads coordinate in-person property tours directly on Google Calendar with the assigned broker.",
+    "cta": "See RAG Engine in Action"
+  },
+  "integ": {
+    "badge": "Connected Ecosystem",
+    "title": "Integrated with your daily real estate tools",
+    "subtitle": "Connect Aria Prop with your real estate CRM, business calendar, and favorite messaging channels.",
+    "compliance": "Secure connection encrypted via HTTPS / TLS API with tenant data isolation."
+  },
+  "demo": {
+    "badge": "Interactive Demo",
+    "title": "Experience the speed of the RAG Assistant",
+    "subtitle": "Interact live with our real estate playground and test automated lead qualification.",
+    "tab1": "Live Playground",
+    "tab2": "Video Walkthrough",
+    "videoTitle": "Aria Prop Engine Video Demo",
+    "videoDesc": "Watch how Aria parses PDF spec sheets and coordinates viewings in under 2 minutes."
+  },
+  "problem": {
+    "badge": "The Real Estate Challenge",
+    "title": "Why do real estate agencies lose up to 60% of their leads?",
+    "subtitle": "Modern buyers demand immediate responses. Manual and after-hours support leads to massive prospect drop-off.",
+    "card1Tag": "After-Hours Delays",
+    "card1Title": "Slow responses that cool down buyer interest",
+    "card1Desc": "A prospect inquiring at night or on weekends will hire another agency if they don't get immediate WhatsApp support.",
+    "card2Tag": "Lost Conversions",
+    "card2Title": "Unqualified leads wasting agent time",
+    "card2Desc": "Agents spend hours answering basic questions about price or location instead of closing high-intent viewings.",
+    "card3Tag": "Disconnected Systems",
+    "card3Title": "Lack of real-time follow-up",
+    "card3Desc": "Inquiry data remains scattered across personal chats instead of centralized in your CRM.",
+    "cta": "Solve My Agency's Response Time"
+  },
+  "seal": {
+    "badge": "Infrastructure & Compliance",
+    "title": "Security Guarantees & Verified Performance",
+    "verified": "Verified",
+    "seal1Title": "Total Data Privacy",
+    "seal1Desc": "Your leads and listings belong exclusively to your agency with strict tenant isolation.",
+    "seal2Title": "HTTPS & TLS 1.3 Encryption",
+    "seal2Desc": "All communications between prospects, WhatsApp, and AI travel 100% encrypted.",
+    "seal3Title": "99.9% SLA Availability",
+    "seal3Desc": "Redundant cloud infrastructure ensuring uninterrupted 24/7 engagement.",
+    "seal4Title": "Role-Based Access Control",
+    "seal4Desc": "Individual permission assignments for agents, managers, and agency directors."
   },
   "common": {
     "save": "Save",

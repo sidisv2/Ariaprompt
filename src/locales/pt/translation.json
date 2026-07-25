@@ -148,7 +148,15 @@
     "welcomeDefault": "Olá! Sou Aria. Como posso ajudar você hoje com a busca, ROI ou visitas para seus imóveis?",
     "devAdmin": "Dev Admin (Mensagens Ilimitadas)",
     "freeTrial": "Teste Grátis: {{count}}/2 mensagens usadas",
-    "apiNotice": "⚠️ Aviso de API: Erro na chamada ao modelo Gemini. Mostrando resposta de contingência do catálogo direto:"
+    "apiNotice": "⚠️ Aviso de API: Erro na chamada ao modelo Gemini. Mostrando resposta de contingência do catálogo direto:",
+    "dragDrop": "Arraste ou envie seus memoriais descritivos em PDF",
+    "dragSub": "Processe dossiês de edifícios, plantas e condições comerciais instantaneamente",
+    "processingDoc": "Processando documento PDF...",
+    "indexedDocs": "Documentos Indexados no RAG",
+    "readyRAG": "Motor RAG Pronto para Consultas",
+    "inputPlaceholder": "Digite sua mensagem ou consulta sobre imóveis...",
+    "sending": "Enviando...",
+    "sendBtn": "Enviar"
   },
   "tabs": {
     "summary": "Visão Geral",
@@ -167,6 +175,80 @@
     "quickActionsTitle": "Ferramentas do Agente Imobiliário",
     "goTool": "Ir para Ferramenta",
     "recentActivityTitle": "Atividade Recente de Leads"
+  },
+  "logout": {
+    "title": "Encerrar Sessão",
+    "subtitle": "Tem certeza que deseja sair do seu painel de agência?",
+    "cancel": "Cancelar",
+    "confirm": "Sim, Encerrar Sessão"
+  },
+  "cta": {
+    "badge": "Transformação Digital Imobiliária",
+    "title1": "Pronto para multiplicar as vendas da sua agência",
+    "title2": "com Inteligência Artificial",
+    "subtitle": "Automatize a resposta aos compradores no WhatsApp e Web em menos de 5 segundos. Comece hoje seu teste sem compromisso.",
+    "primary": "Iniciar Teste Grátis de 7 Dias",
+    "secondary": "Falar com um Especialista",
+    "trust1": "Sem cartão de crédito obrigatório",
+    "trust2": "Configuração assistida em 3 minutos",
+    "trust3": "Conexão direta com seu CRM"
+  },
+  "how": {
+    "badge": "Passo a Passo",
+    "title": "Como o Aria Prop funciona na sua agência?",
+    "subtitle": "Quatro passos simples para transformar visitantes em visitas agendadas e vendas fechadas.",
+    "step1Title": "Conexão de Catálogo e CRM",
+    "step1Desc": "Sincronize seus imóveis a partir do Tokko Broker, EasyBroker ou envio direto de PDFs.",
+    "step2Title": "Atendimento Instantâneo 24/7",
+    "step2Desc": "Aria responde aos clientes em menos de 5 segundos no WhatsApp e Web, esclarecendo detalhes e preços.",
+    "step3Title": "Qualificação de Orçamento",
+    "step3Desc": "O agente IA analisa o orçamento, urgência de compra e localização, filtrando curiosos automaticamente.",
+    "step4Title": "Agendamento no Calendário",
+    "step4Desc": "Leads qualificados agendam visitas presenciais diretamente no Google Calendar com o corretor responsável.",
+    "cta": "Ver o Motor RAG em Ação"
+  },
+  "integ": {
+    "badge": "Ecossistema Conectado",
+    "title": "Integrado com suas ferramentas de trabalho diário",
+    "subtitle": "Conecte o Aria Prop com seu CRM imobiliário, calendário e canais de mensagem favoritos.",
+    "compliance": "Conexão segura criptografada via API HTTPS / TLS e isolamento privado por agência."
+  },
+  "demo": {
+    "badge": "Demonstração Interativa",
+    "title": "Experimente a velocidade do Assistente RAG",
+    "subtitle": "Interaja ao vivo com nosso playground imobiliário e comprove a qualificação automática de leads.",
+    "tab1": "Playground Ao Vivo",
+    "tab2": "Vídeo de Apresentação",
+    "videoTitle": "Demonstração em Vídeo do Motor Aria Prop",
+    "videoDesc": "Veja como Aria analisa memoriais descritivos PDF e coordena visitas em menos de 2 minutos."
+  },
+  "problem": {
+    "badge": "O Desafío Imobiliário",
+    "title": "Por que as imobiliárias perdem até 60% dos seus leads?",
+    "subtitle": "O comprador moderno exige resposta imediata. O atendimento manual e fora do expediente gera perda massiva de clientes.",
+    "card1Tag": "Atraso Fora do Expediente",
+    "card1Title": "Respostas lentas que esfriam a compra",
+    "card1Desc": "Um cliente que consulta à noite ou no fim de semana costuma contratar outra agência se não receber atendimento imediato.",
+    "card2Tag": "Perda de Oportunidades",
+    "card2Title": "Leads não qualificados ocupando tempo humano",
+    "card2Desc": "Os corretores perdem horas respondendo perguntas básicas sobre preço ou localização em vez de fechar visitas.",
+    "card3Tag": "Sistemas Desconectados",
+    "card3Title": "Falta de acompanhamento em tempo real",
+    "card3Desc": "Os dados de consultas ficam dispersos em chats pessoais em vez de centralizados no seu CRM.",
+    "cta": "Resolver o Atendimento da Minha Agência"
+  },
+  "seal": {
+    "badge": "Infraestrutura & Conformidade",
+    "title": "Garantias de Segurança e Desempenho Verificado",
+    "verified": "Verificado",
+    "seal1Title": "Privacidade Total de Dados",
+    "seal1Desc": "Seus leads e catálogo são de uso exclusivo da sua agência com isolamento estrito.",
+    "seal2Title": "Criptografia HTTPS & TLS 1.3",
+    "seal2Desc": "Todas as comunicações entre clientes, WhatsApp e a IA trafegam 100% criptografadas.",
+    "seal3Title": "Disponibilidade SLA 99.9%",
+    "seal3Desc": "Infraestrutura em nuvem redundante para garantir atendimento ininterrupto 24/7.",
+    "seal4Title": "Controle de Acesso por Função",
+    "seal4Desc": "Atribuição de permissões individuais para corretores, administradores e diretores."
   },
   "common": {
     "save": "Salvar",
