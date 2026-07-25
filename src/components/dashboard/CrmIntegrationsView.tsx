@@ -139,7 +139,7 @@ export const CrmIntegrationsView: React.FC = () => {
         status: 'connected',
         apiKey: inputApiKey.trim(),
         lastSyncAt: new Date().toISOString(),
-        syncedCount: json.data?.synced_count ?? json.totalCount ?? 15,
+        syncedCount: json.data?.synced_count ?? json.totalCount ?? 0,
       };
 
       // Save locally
@@ -183,13 +183,14 @@ export const CrmIntegrationsView: React.FC = () => {
       });
 
       const json = await res.json();
+      const realCount = json.totalSynced ?? 0;
       
       const updatedState: CrmIntegrationState = {
         ...integrations[provider],
         status: json.success ? 'connected' : 'error',
         lastSyncAt: new Date().toISOString(),
         lastError: json.success ? undefined : json.error,
-        syncedCount: json.totalSynced ?? (integrations[provider].syncedCount || 15),
+        syncedCount: realCount,
       };
 
       localStorage.setItem(`crm_${provider}_${agencyId}`, JSON.stringify(updatedState));
