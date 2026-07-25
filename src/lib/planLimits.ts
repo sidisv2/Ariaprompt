@@ -1,0 +1,63 @@
+export interface PlanLimits {
+  id: string;
+  name: string;
+  maxLeadsPerMonth: number;
+  maxProperties: number;
+}
+
+export const PLAN_LIMITS: Record<string, PlanLimits> = {
+  solo_agent: {
+    id: 'solo_agent',
+    name: 'Solo Agent',
+    maxLeadsPerMonth: 100,
+    maxProperties: 5,
+  },
+  agency_pro: {
+    id: 'agency_pro',
+    name: 'Agency Pro',
+    maxLeadsPerMonth: 500,
+    maxProperties: 20,
+  },
+  enterprise: {
+    id: 'enterprise',
+    name: 'Enterprise',
+    maxLeadsPerMonth: 999999,
+    maxProperties: 999999,
+  },
+};
+
+export function getPlanLimits(planId?: string | null): PlanLimits {
+  if (!planId) return PLAN_LIMITS.solo_agent;
+  const normalized = planId.toLowerCase().trim();
+  if (normalized.includes('pro')) return PLAN_LIMITS.agency_pro;
+  if (normalized.includes('enterprise')) return PLAN_LIMITS.enterprise;
+  return PLAN_LIMITS.solo_agent;
+}
+
+export function getCurrentPeriod(date: Date = new Date()): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+export function checkLeadLimit(planId: string | null | undefined, currentLeadsCount: number): { allowed: boolean; error?: string } {
+  const plan = getPlanLimits(planId);
+  if (currentLeadsCount >= plan.maxLeadsPerMonth) {
+    return {
+      allowed: false,
+      error: `Alcanzaste el límite de ${plan.maxLeadsPerMonth} leads este mes en tu plan ${plan.name}. Actualizá tu plan para seguir recibiendo leads.`,
+    };
+  }
+  return { allowed: true };
+}
+
+export function checkPropertyLimit(planId: string | null | undefined, currentPropertiesCount: number): { allowed: boolean; error?: string } {
+  const plan = getPlanLimits(planId);
+  if (currentPropertiesCount >= plan.maxProperties) {
+    return {
+      allowed: false,
+      error: `Alcanzaste el límite de ${plan.maxProperties} propiedades activas en tu plan ${plan.name}. Actualizá tu plan a Agency Pro para publicar hasta 20 propiedades.`,
+    };
+  }
+  return { allowed: true };
+}

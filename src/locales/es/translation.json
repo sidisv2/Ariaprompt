@@ -149,6 +149,15 @@
     "devAdmin": "Dev Admin (Mensajes Ilimitados)",
     "freeTrial": "Prueba Gratis: {{count}}/2 mensajes utilizados",
     "apiNotice": "⚠️ Aviso de API: Error en llamada a modelo Gemini. Mostrando respuesta comparativa de contingencia del catálogo directo:",
+    "usage": {
+      "leadsTitle": "Consumo de Leads Mensuales",
+      "propertiesTitle": "Propiedades Activas en Catálogo",
+      "warningLeads": "¡Atención! Has alcanzado más del 90% de tu límite mensual de leads.",
+      "limitReachedLeads": "Alcanzaste el límite mensual de leads de tu plan. Actualizá tu plan para seguir recibiendo prospectos.",
+      "warningProperties": "¡Atención! Has alcanzado más del 90% del límite de propiedades de tu plan.",
+      "limitReachedProperties": "Alcanzaste el límite de propiedades de tu plan. Actualizá tu plan para publicar más inmuebles.",
+      "upgradeCta": "Actualizar Plan"
+    },
     "dragDrop": "Arrastra o sube tus memorias técnicas PDF",
     "dragSub": "Procesa dossieres de edificios, planos y condiciones comerciales al instante",
     "processingDoc": "Procesando documento PDF...",

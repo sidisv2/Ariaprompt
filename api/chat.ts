@@ -228,16 +228,36 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
     if (supabase && (lowerMsg.includes('@') || lowerMsg.includes('comprar') || lowerMsg.includes('alquilar') || lowerMsg.includes('agendar') || lowerMsg.includes('visita'))) {
       try {
         const agencyId = req.body?.agency_id || req.headers['x-agency-id'];
-        await supabase.from('leads').insert([{
-          name: `Prospecto Web (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`,
-          notes: trimmedMsg,
-          chat_summary: responseText.slice(0, 300),
-          status: lowerMsg.includes('agendar') ? 'agendado' : 'nuevo',
-          temperature: lowerMsg.includes('comprar') || lowerMsg.includes('agendar') ? 'hot' : 'warm',
-          score: lowerMsg.includes('agendar') ? 90 : 70,
-          channel: 'web_widget',
-          ...(agencyId ? { agency_id: agencyId } : {}),
-        }]);
+        if (agencyId) {
+          const { checkLeadLimit, getCurrentPeriod } = await import('../src/lib/planLimits');
+          const period = getCurrentPeriod();
+
+          const { data: profile } = await supabase.from('profiles').select('plan_id').eq('id', agencyId).single();
+          const { data: usageRec } = await supabase.from('usage_records').select('leads_count').eq('agency_id', agencyId).eq('period', period).single();
+
+          const currentCount = usageRec?.leads_count || 0;
+          const checkResult = checkLeadLimit(profile?.plan_id, currentCount);
+
+          if (checkResult.allowed) {
+            await supabase.from('leads').insert([{
+              agency_id: agencyId,
+              name: `Prospecto Web (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`,
+              notes: trimmedMsg,
+              chat_summary: responseText.slice(0, 300),
+              status: lowerMsg.includes('agendar') ? 'agendado' : 'nuevo',
+              temperature: lowerMsg.includes('comprar') || lowerMsg.includes('agendar') ? 'hot' : 'warm',
+              score: lowerMsg.includes('agendar') ? 90 : 70,
+              channel: 'web_widget',
+            }]);
+
+            await supabase.rpc('increment_lead_usage', {
+              p_agency_id: agencyId,
+              p_period: period,
+            });
+          } else {
+            console.warn('Lead limit exceeded for agency in chat.ts:', agencyId);
+          }
+        }
       } catch (dbErr) {
         console.warn('Supabase DB Lead Persistence warning:', dbErr);
       }

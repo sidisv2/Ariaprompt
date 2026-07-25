@@ -33,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'POST') {
+    const agencyId = (req.body.agency_id as string) || (req.headers['x-agency-id'] as string);
     const newProperty = {
       id: req.body.id || `prop-${Date.now()}`,
       created_at: new Date().toISOString(),
@@ -42,8 +43,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...req.body,
     };
 
-    if (supabase) {
+    if (supabase && agencyId) {
       try {
+        const { getPlanLimits, checkPropertyLimit } = await import('../src/lib/planLimits');
+
+        // 1. Fetch profile plan_id
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('plan_id')
+          .eq('id', agencyId)
+          .single();
+
+        // 2. Count active properties
+        const { count: activePropsCount } = await supabase
+          .from('propiedades')
+          .select('id', { count: 'exact', head: true })
+          .eq('agency_id', agencyId);
+
+        const currentCount = activePropsCount || 0;
+        const checkResult = checkPropertyLimit(profile?.plan_id, currentCount);
+
+        if (!checkResult.allowed) {
+          return res.status(403).json({
+            error: 'LIMIT_EXCEEDED',
+            code: 403,
+            message: checkResult.error,
+          });
+        }
+
+        // 3. Insert property
         const { data, error } = await supabase.from('propiedades').insert([newProperty]).select().single();
         if (!error && data) {
           return res.status(200).json({ success: true, data, source: 'supabase' });

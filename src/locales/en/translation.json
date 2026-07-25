@@ -148,7 +148,15 @@
     "welcomeDefault": "Hello! I'm Aria. How can I help you today with searching, ROI, or scheduling visits for your properties?",
     "devAdmin": "Dev Admin (Unlimited Messages)",
     "freeTrial": "Free Trial: {{count}}/2 messages used",
-    "apiNotice": "⚠️ API Notice: Error calling Gemini model. Showing contingency fallback from direct catalog:",
+    "usage": {
+      "leadsTitle": "Monthly Leads Usage",
+      "propertiesTitle": "Active Catalog Properties",
+      "warningLeads": "Warning! You have reached over 90% of your monthly lead limit.",
+      "limitReachedLeads": "You have reached your monthly lead limit. Upgrade your plan to continue capturing leads.",
+      "warningProperties": "Warning! You have reached over 90% of your active property limit.",
+      "limitReachedProperties": "You have reached your active property limit. Upgrade to Agency Pro to list more properties.",
+      "upgradeCta": "Upgrade Plan"
+    },
     "dragDrop": "Drag & drop your PDF property spec sheets",
     "dragSub": "Process building dossiers, floor plans, and pricing instantly",
     "processingDoc": "Processing PDF document...",

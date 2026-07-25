@@ -33,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === 'POST') {
+    const agencyId = (req.body.agency_id as string) || (req.headers['x-agency-id'] as string);
     const newLead = {
       id: req.body.id || `lead-${Date.now()}`,
       created_at: new Date().toISOString(),
@@ -42,10 +43,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...req.body,
     };
 
-    if (supabase) {
+    if (supabase && agencyId) {
       try {
+        const { getPlanLimits, getCurrentPeriod, checkLeadLimit } = await import('../src/lib/planLimits');
+        const period = getCurrentPeriod();
+
+        // 1. Fetch agency profile to check plan
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('plan_id')
+          .eq('id', agencyId)
+          .single();
+
+        // 2. Fetch current month lead usage
+        const { data: usageRec } = await supabase
+          .from('usage_records')
+          .select('leads_count')
+          .eq('agency_id', agencyId)
+          .eq('period', period)
+          .single();
+
+        const currentLeadsCount = usageRec?.leads_count || 0;
+        const checkResult = checkLeadLimit(profile?.plan_id, currentLeadsCount);
+
+        if (!checkResult.allowed) {
+          return res.status(403).json({
+            error: 'LIMIT_EXCEEDED',
+            code: 403,
+            message: checkResult.error,
+          });
+        }
+
+        // 3. Insert lead
         const { data, error } = await supabase.from('leads').insert([newLead]).select().single();
         if (!error && data) {
+          // 4. Increment usage atomically via RPC or upsert
+          await supabase.rpc('increment_lead_usage', {
+            p_agency_id: agencyId,
+            p_period: period,
+          });
+
           return res.status(200).json({ success: true, data, source: 'supabase' });
         }
       } catch (err) {

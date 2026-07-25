@@ -148,7 +148,15 @@
     "welcomeDefault": "Olá! Sou Aria. Como posso ajudar você hoje com a busca, ROI ou visitas para seus imóveis?",
     "devAdmin": "Dev Admin (Mensagens Ilimitadas)",
     "freeTrial": "Teste Grátis: {{count}}/2 mensagens usadas",
-    "apiNotice": "⚠️ Aviso de API: Erro na chamada ao modelo Gemini. Mostrando resposta de contingência do catálogo direto:",
+    "usage": {
+      "leadsTitle": "Consumo Mensal de Leads",
+      "propertiesTitle": "Imóveis Ativos no Catálogo",
+      "warningLeads": "Atenção! Você atingiu mais de 90% do seu limite mensal de leads.",
+      "limitReachedLeads": "Você atingiu o limite mensal de leads do seu plano. Atualize seu plano para continuar recebendo clientes.",
+      "warningProperties": "Atenção! Você atingiu mais de 90% do limite de imóveis do seu plano.",
+      "limitReachedProperties": "Você atingiu o limite de imóveis do seu plano. Atualize para o plano Agency Pro para publicar mais imóveis.",
+      "upgradeCta": "Atualizar Plano"
+    },
     "dragDrop": "Arraste ou envie seus memoriais descritivos em PDF",
     "dragSub": "Processe dossiês de edifícios, plantas e condições comerciais instantaneamente",
     "processingDoc": "Processando documento PDF...",
