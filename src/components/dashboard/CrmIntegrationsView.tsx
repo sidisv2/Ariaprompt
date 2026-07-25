@@ -137,6 +137,7 @@ export const CrmIntegrationsView: React.FC = () => {
 
       // Save locally
       localStorage.setItem(`crm_${selectedModalProvider}_${agencyId}`, JSON.stringify(updatedState));
+      localStorage.setItem('aria_has_connected_crm', 'true');
 
       setIntegrations((prev) => ({
         ...prev,

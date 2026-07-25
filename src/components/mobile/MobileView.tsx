@@ -16,7 +16,8 @@ import { PropertiesView } from '../dashboard/PropertiesView';
 import { LeadsView } from '../dashboard/LeadsView';
 import { BotConfigView } from '../dashboard/BotConfigView';
 import { CheckoutView } from '../dashboard/CheckoutView';
-import { IntegrationsView } from '../dashboard/IntegrationsView';
+import { CrmIntegrationsView } from '../dashboard/CrmIntegrationsView';
+import { SummaryDashboardView } from '../dashboard/SummaryDashboardView';
 import { UserProfileDashboard } from '../profile/UserProfileDashboard';
 import { UserRolesDashboard } from '../profile/UserRolesDashboard';
 import { EmbedChatWidget } from '../embed/EmbedChatWidget';
@@ -73,9 +74,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
       {/* Main Content Flow */}
       <main className="flex-1 overflow-x-hidden animate-page-fade">
-        {currentRoute === 'dashboard-metrics' && (
+        {(currentRoute === 'dashboard-metrics' || currentRoute === 'app') && (
           <div className="p-2 sm:p-4">
-            <MetricsView leads={leads} onInterveneLead={onInterveneLead} />
+            <SummaryDashboardView leads={leads} onRouteChange={onRouteChange} />
           </div>
         )}
 
@@ -110,7 +111,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
         {currentRoute === 'dashboard-integrations' && (
           <div className="p-2 sm:p-4">
-            <IntegrationsView />
+            <CrmIntegrationsView />
           </div>
         )}
 
@@ -129,7 +130,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </div>
         )}
 
-        {(currentRoute === 'aria-ai' || currentRoute === 'producto' || currentRoute === 'app') && (
+        {(currentRoute === 'aria-ai' || currentRoute === 'producto') && (
           <div>
             <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
             <Footer />

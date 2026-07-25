@@ -13,14 +13,15 @@ import { ChatSlideOver } from './components/chat/ChatSlideOver';
 const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
   const path = (window.location.pathname + window.location.hash).toLowerCase();
-  if (path.includes('app') || path.includes('producto')) return 'app';
+  if (path.includes('dashboard/integrations') || path.includes('integraciones')) return 'dashboard-integrations';
+  if (path.includes('app') || path.includes('dashboard/metrics') || path.includes('panel')) return 'dashboard-metrics';
+  if (path.includes('producto')) return 'producto';
   if (path.includes('soluciones')) return 'soluciones';
   if (path.includes('recursos')) return 'recursos';
   if (path.includes('pricing')) return 'pricing';
   if (path.includes('comparar/manual')) return 'comparar-manual';
   if (path.includes('comparar/crm')) return 'comparar-crm';
   if (path.includes('comparar/chatbots')) return 'comparar-chatbots';
-  if (path.includes('dashboard/metrics')) return 'dashboard-metrics';
   if (path.includes('dashboard/properties')) return 'dashboard-properties';
   if (path.includes('dashboard/leads')) return 'dashboard-leads';
   if (path.includes('dashboard/bot-config')) return 'dashboard-bot-config';
@@ -35,15 +36,16 @@ const getRouteFromPath = (): AppRoute => {
 
 const getPathFromRoute = (route: AppRoute): string => {
   switch (route) {
-    case 'app':
-    case 'producto': return '/app';
+    case 'dashboard-metrics':
+    case 'app': return '/app';
+    case 'dashboard-integrations': return '/dashboard/integrations';
+    case 'producto': return '/producto';
     case 'soluciones': return '/soluciones';
     case 'recursos': return '/recursos';
     case 'pricing': return '/pricing';
     case 'comparar-manual': return '/comparar/manual';
     case 'comparar-crm': return '/comparar/crm';
     case 'comparar-chatbots': return '/comparar/chatbots';
-    case 'dashboard-metrics': return '/dashboard/metrics';
     case 'dashboard-properties': return '/dashboard/properties';
     case 'dashboard-leads': return '/dashboard/leads';
     case 'dashboard-bot-config': return '/dashboard/bot-config';

@@ -12,7 +12,7 @@ import { PropertiesView } from '../dashboard/PropertiesView';
 import { LeadsView } from '../dashboard/LeadsView';
 import { BotConfigView } from '../dashboard/BotConfigView';
 import { CheckoutView } from '../dashboard/CheckoutView';
-import { IntegrationsView } from '../dashboard/IntegrationsView';
+import { CrmIntegrationsView } from '../dashboard/CrmIntegrationsView';
 import { UserProfileDashboard } from '../profile/UserProfileDashboard';
 import { UserRolesDashboard } from '../profile/UserRolesDashboard';
 import { UserVaultPage } from '../profile/UserVaultPage';
@@ -118,7 +118,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
               <CheckoutView onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-integrations' && (
-              <IntegrationsView />
+              <CrmIntegrationsView />
             )}
             {currentRoute === 'dashboard-roles' && (
               <UserRolesDashboard onRouteChange={onRouteChange} />
@@ -134,7 +134,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
             )}
           </main>
         </div>
-      ) : (currentRoute === 'aria-ai' || currentRoute === 'producto' || currentRoute === 'app') ? (
+      ) : (currentRoute === 'aria-ai' || currentRoute === 'producto') ? (
         <main className="flex-1 animate-page-fade">
           <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
           <Footer onRouteChange={onRouteChange} />

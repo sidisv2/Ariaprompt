@@ -37,10 +37,18 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
 
   // Check if agency has connected any CRM or has manual properties
   const hasConnectedCrm = React.useMemo(() => {
-    const userId = user?.id || 'demo-agency';
-    const tokko = localStorage.getItem(`crm_tokko_${userId}`);
-    const easy = localStorage.getItem(`crm_easybroker_${userId}`);
-    return Boolean(tokko || easy);
+    try {
+      if (localStorage.getItem('aria_has_connected_crm') === 'true') return true;
+      const userId = user?.id || 'demo-agency';
+      const tokko = localStorage.getItem(`crm_tokko_${userId}`);
+      const easy = localStorage.getItem(`crm_easybroker_${userId}`);
+      if (tokko || easy) return true;
+
+      const keys = Object.keys(localStorage);
+      return keys.some((k) => (k.startsWith('crm_tokko_') || k.startsWith('crm_easybroker_')));
+    } catch {
+      return false;
+    }
   }, [user]);
 
   const activeLeadsCount = leads.filter((l) => l.status === 'new' || l.status === 'contacted').length;

@@ -32,6 +32,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   // Check if CRM is connected
   const hasConnectedCrm = React.useMemo(() => {
     try {
+      if (localStorage.getItem('aria_has_connected_crm') === 'true') return true;
       const keys = Object.keys(localStorage);
       return keys.some((k) => k.startsWith('crm_tokko_') || k.startsWith('crm_easybroker_'));
     } catch {
