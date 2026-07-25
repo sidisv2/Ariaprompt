@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 function getBackendSupabaseClient() {
@@ -79,7 +78,7 @@ async function validateEasyBrokerApiKey(apiKey: string) {
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-agency-id');
@@ -101,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'GET') {
-      const agencyId = (req.query.agency_id as string) || (req.headers['x-agency-id'] as string);
+      const agencyId = (req.query?.agency_id as string) || (req.headers?.['x-agency-id'] as string);
       if (!agencyId) {
         return res.status(400).json({ success: false, error: 'agency_id es requerido.' });
       }
@@ -124,8 +123,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const agencyId = (body.agency_id as string) || (req.headers['x-agency-id'] as string) || (req.query.agency_id as string);
-      const provider = body.provider || req.query.provider;
+      const agencyId = (body.agency_id as string) || (req.headers?.['x-agency-id'] as string) || (req.query?.agency_id as string);
+      const provider = body.provider || req.query?.provider;
       const apiKey = body.apiKey || body.api_key;
 
       if (!agencyId || !provider || !apiKey) {
@@ -200,8 +199,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'DELETE') {
-      const agencyId = (body.agency_id as string) || (req.query.agency_id as string) || (req.headers['x-agency-id'] as string);
-      const provider = body.provider || req.query.provider;
+      const agencyId = (body.agency_id as string) || (req.query?.agency_id as string) || (req.headers?.['x-agency-id'] as string);
+      const provider = body.provider || req.query?.provider;
 
       if (!agencyId || !provider) {
         return res.status(400).json({ success: false, error: 'agency_id y provider son requeridos para desvincular.' });

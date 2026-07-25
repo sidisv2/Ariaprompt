@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 function getBackendSupabaseClient() {
@@ -109,7 +108,7 @@ async function fetchEasyBrokerProperties(apiKey: string) {
   });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-agency-id');
@@ -124,7 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try { body = JSON.parse(body); } catch (e) { body = {}; }
     }
 
-    const agencyId = (body.agency_id as string) || (req.headers['x-agency-id'] as string);
+    const agencyId = (body.agency_id as string) || (req.headers?.['x-agency-id'] as string);
     const targetProvider = body.provider as ('tokko' | 'easybroker' | undefined);
 
     if (!agencyId) {
