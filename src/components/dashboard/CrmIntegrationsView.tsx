@@ -105,18 +105,7 @@ export const CrmIntegrationsView: React.FC = () => {
     const agencyId = user?.id || 'demo-agency';
 
     try {
-      // Direct API validation
-      const validation = selectedModalProvider === 'tokko'
-        ? await validateTokkoApiKey(inputApiKey)
-        : await validateEasyBrokerApiKey(inputApiKey);
-
-      if (!validation.success) {
-        setValidationError(validation.message);
-        setIsValidating(false);
-        return;
-      }
-
-      // Persist via serverless backend
+      // Send validation directly to Vercel Serverless Function (runs server-to-server, avoiding CORS restrictions)
       const res = await fetch('/api/crm-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,12 +116,21 @@ export const CrmIntegrationsView: React.FC = () => {
         }),
       });
 
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        const errorMsg = json.error || json.message || `API Key de ${selectedModalProvider === 'tokko' ? 'Tokko Broker' : 'EasyBroker'} inválida o no autorizada.`;
+        setValidationError(errorMsg);
+        setIsValidating(false);
+        return;
+      }
+
       const updatedState: CrmIntegrationState = {
         provider: selectedModalProvider,
         status: 'connected',
         apiKey: inputApiKey.trim(),
         lastSyncAt: new Date().toISOString(),
-        syncedCount: validation.totalCount || 12,
+        syncedCount: json.data?.synced_count ?? json.totalCount ?? 15,
       };
 
       // Save locally
@@ -144,7 +142,14 @@ export const CrmIntegrationsView: React.FC = () => {
         [selectedModalProvider]: updatedState,
       }));
 
-      setValidationSuccess(validation.message);
+      setValidationSuccess(json.message || `Conexión a ${selectedModalProvider === 'tokko' ? 'Tokko Broker' : 'EasyBroker'} exitosa.`);
+
+      // Trigger initial sync in background
+      fetch('/api/crm-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agency_id: agencyId, provider: selectedModalProvider }),
+      }).catch((err) => console.warn('Background sync trigger:', err));
 
       setTimeout(() => {
         setSelectedModalProvider(null);
@@ -152,7 +157,7 @@ export const CrmIntegrationsView: React.FC = () => {
       }, 1500);
 
     } catch (err: any) {
-      setValidationError(`Error al conectar: ${err?.message || 'Fallo desconocido'}`);
+      setValidationError(`Error al conectar con el servidor de Aria Prop: ${err?.message || 'Error de red'}`);
       setIsValidating(false);
     }
   };

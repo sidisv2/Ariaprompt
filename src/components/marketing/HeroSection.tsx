@@ -25,7 +25,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
   };
 
   return (
-    <section className="relative pt-24 sm:pt-28 lg:pt-32 pb-20 overflow-hidden bg-slate-50 text-slate-900 border-b border-slate-200/80">
+    <section className="relative pt-24 sm:pt-28 lg:pt-32 pb-20 overflow-hidden bg-slate-950 text-white border-b border-white/10">
       
       {/* Light subtle background glow & grid */}
       <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
@@ -37,27 +37,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
         <div className="text-center max-w-4xl mx-auto space-y-6 mb-10">
           
           {/* Top Shiny Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-indigo-200 shadow-sm shadow-indigo-500/10">
-            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-            <span className="text-xs font-extrabold text-indigo-950">{t('hero.badge')}</span>
-            <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 shadow-sm shadow-indigo-500/10">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-xs font-extrabold text-indigo-300">{t('hero.badge')}</span>
+            <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
           </div>
 
           {/* Impact Title */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-[1.1]">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
             {t('hero.title1')} <br />
-            <span className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-teal-600 bg-clip-text text-transparent opacity-100">
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent opacity-100">
               {t('hero.title2')}
             </span>.
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base sm:text-xl text-slate-600 leading-relaxed max-w-2xl mx-auto font-normal">
+          <p className="text-base sm:text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto font-normal">
             {t('hero.subtitle')}
           </p>
 
           {/* Social Proof Rating */}
-          <div className="flex items-center justify-center gap-2 text-xs text-slate-600 font-medium pt-1">
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-400 font-medium pt-1">
             <span>{t('hero.socialProof')}</span>
             <div className="flex items-center text-amber-400">
               <Star className="w-3.5 h-3.5 fill-current" />

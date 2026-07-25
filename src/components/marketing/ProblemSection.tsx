@@ -29,19 +29,19 @@ export const ProblemSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 bg-slate-50 border-b border-slate-200/80 relative overflow-hidden text-left">
+    <section className="py-20 bg-slate-900 border-b border-white/10 relative overflow-hidden text-left">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-extrabold uppercase tracking-wider">
-            <AlertTriangle className="w-4 h-4" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-extrabold uppercase tracking-wider">
+            <AlertTriangle className="w-4 h-4 text-rose-400" />
             <span>{t('problem.badge')}</span>
           </div>
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
             {t('problem.title')}
           </h2>
-          <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
             {t('problem.subtitle')}
           </p>
         </div>
@@ -51,19 +51,19 @@ export const ProblemSection: React.FC = () => {
           {problems.map((p, idx) => (
             <div
               key={idx}
-              className="p-7 rounded-3xl bg-white border border-slate-200/80 hover:border-rose-300 transition-all duration-300 shadow-md hover:shadow-xl flex flex-col justify-between space-y-6 group hover:-translate-y-1"
+              className="p-7 rounded-3xl bg-slate-950 border border-white/10 hover:border-rose-500/40 transition-all duration-300 shadow-xl flex flex-col justify-between space-y-6 group hover:-translate-y-1"
             >
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 group-hover:bg-rose-100 transition-colors">
+                  <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 group-hover:bg-rose-500/20 transition-colors">
                     {p.icon}
                   </div>
-                  <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80">
+                  <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-slate-900 text-slate-300 border border-white/10">
                     {p.tag}
                   </span>
                 </div>
-                <h3 className="text-lg font-extrabold text-slate-900 leading-snug">{p.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{p.description}</p>
+                <h3 className="text-lg font-extrabold text-white leading-snug">{p.title}</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">{p.description}</p>
               </div>
             </div>
           ))}
