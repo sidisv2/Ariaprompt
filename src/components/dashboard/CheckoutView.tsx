@@ -59,55 +59,65 @@ interface PlanItem {
   features: string[];
 }
 
-const PLANS: PlanItem[] = [
-  {
-    id: 'starter',
-    name: PLAN_LIMITS.solo_agent.name,
-    priceUsd: PLAN_LIMITS.solo_agent.priceUsd,
-    description: PLAN_LIMITS.solo_agent.description,
-    features: [
-      '1 Agente de IA (Aria) activo',
-      `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} leads cualificados/mes`,
-      `Hasta ${PLAN_LIMITS.solo_agent.maxProperties} propiedades en catálogo`,
-      'Widget Web & WhatsApp API',
-      '7 Días de Prueba Gratis (Sin tarjeta)'
-    ]
-  },
-  {
-    id: 'pro',
-    name: PLAN_LIMITS.agency_pro.name,
-    priceUsd: PLAN_LIMITS.agency_pro.priceUsd,
-    badge: 'MÁS POPULAR',
-    description: PLAN_LIMITS.agency_pro.description,
-    features: [
-      '5 Agentes de IA configurables',
-      `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} leads cualificados/mes`,
-      `Hasta ${PLAN_LIMITS.agency_pro.maxProperties} propiedades en catálogo`,
-      'Sincronización Automática Tokko & EasyBroker',
-      'RAG Documental (PDFs, Planos)',
-      'Soporte Prioritario VIP 24/7'
-    ]
-  },
-  {
-    id: 'agency',
-    name: PLAN_LIMITS.enterprise.name,
-    priceUsd: 0,
-    badge: 'SOLUCIÓN A MEDIDA',
-    description: PLAN_LIMITS.enterprise.description,
-    features: [
-      'Agentes de IA Ilimitados',
-      'Marca Blanca 100% (Sin logo de Aria Prop)',
-      'Dominio Personalizado',
-      'Múltiples sucursales y ciudades',
-      'Gerente de Cuenta Dedicado',
-      'API Custom, Webhooks & SLA 99.9%'
-    ]
-  }
-];
+
 
 export function CheckoutView({ }: CheckoutViewProps) {
   const { requireAuthForPayment } = useAuth();
   const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
+  const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>(() => {
+    return (localStorage.getItem('aria_selected_billing_cycle') as 'annual' | 'monthly') || 'annual';
+  });
+
+  const getDynamicPlans = (): PlanItem[] => {
+    const isAnnual = billingCycle === 'annual';
+    return [
+      {
+        id: 'starter',
+        name: PLAN_LIMITS.solo_agent.name,
+        priceUsd: isAnnual ? PLAN_LIMITS.solo_agent.annualPriceUsd : PLAN_LIMITS.solo_agent.monthlyPriceUsd,
+        description: PLAN_LIMITS.solo_agent.description,
+        features: [
+          '1 Agente de IA (Aria) activo',
+          `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} leads cualificados/mes`,
+          `Hasta ${PLAN_LIMITS.solo_agent.maxProperties} propiedades en catálogo`,
+          'Widget Web & WhatsApp API',
+          '7 Días de Prueba Gratis (Sin tarjeta)'
+        ]
+      },
+      {
+        id: 'pro',
+        name: PLAN_LIMITS.agency_pro.name,
+        priceUsd: isAnnual ? PLAN_LIMITS.agency_pro.annualPriceUsd : PLAN_LIMITS.agency_pro.monthlyPriceUsd,
+        badge: 'MÁS POPULAR',
+        description: PLAN_LIMITS.agency_pro.description,
+        features: [
+          '5 Agentes de IA configurables',
+          `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} leads cualificados/mes`,
+          `Hasta ${PLAN_LIMITS.agency_pro.maxProperties} propiedades en catálogo`,
+          'Sincronización Automática Tokko & EasyBroker',
+          'RAG Documental (PDFs, Planos)',
+          'Soporte Prioritario VIP 24/7'
+        ]
+      },
+      {
+        id: 'agency',
+        name: PLAN_LIMITS.enterprise.name,
+        priceUsd: 0,
+        badge: 'SOLUCIÓN A MEDIDA',
+        description: PLAN_LIMITS.enterprise.description,
+        features: [
+          'Agentes de IA Ilimitados',
+          'Marca Blanca 100% (Sin logo de Aria Prop)',
+          'Dominio Personalizado',
+          'Múltiples sucursales y ciudades',
+          'Gerente de Cuenta Dedicado',
+          'API Custom, Webhooks & SLA 99.9%'
+        ]
+      }
+    ];
+  };
+
+  const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto'>('mercadopago');
   
@@ -182,22 +192,55 @@ export function CheckoutView({ }: CheckoutViewProps) {
           </p>
         </div>
 
-        {/* Currency Switcher Pill */}
-        <div className="bg-black/40 border border-white/10 p-1.5 rounded-2xl flex items-center gap-1 self-start md:self-auto shadow-inner">
-          {CURRENCIES.map((c) => (
+        {/* Currency & Billing Cycle Switchers */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Billing Cycle Toggle */}
+          <div className="bg-black/40 border border-white/10 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner">
             <button
-              key={c.code}
-              onClick={() => setCurrency(c.code)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-                currency === c.code
+              onClick={() => {
+                setBillingCycle('annual');
+                localStorage.setItem('aria_selected_billing_cycle', 'annual');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                billingCycle === 'annual'
                   ? 'bg-emerald-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <span>{c.flag}</span>
-              <span>{c.code}</span>
+              Facturación Anual (-20%)
             </button>
-          ))}
+            <button
+              onClick={() => {
+                setBillingCycle('monthly');
+                localStorage.setItem('aria_selected_billing_cycle', 'monthly');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                billingCycle === 'monthly'
+                  ? 'bg-slate-800 text-white font-bold border border-white/20'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              Facturación Mensual
+            </button>
+          </div>
+
+          {/* Currency Switcher Pill */}
+          <div className="bg-black/40 border border-white/10 p-1.5 rounded-2xl flex items-center gap-1 shadow-inner">
+            {CURRENCIES.map((c) => (
+              <button
+                key={c.code}
+                onClick={() => setCurrency(c.code)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  currency === c.code
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <span>{c.flag}</span>
+                <span>{c.code}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

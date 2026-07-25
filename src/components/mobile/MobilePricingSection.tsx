@@ -68,7 +68,7 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.solo_agent.priceUsd}</span>
+                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.solo_agent.annualPriceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.solo_agent.description}</p>
@@ -118,7 +118,7 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
 
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.agency_pro.priceUsd}</span>
+                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.agency_pro.annualPriceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
                 <p className="text-[11px] text-slate-300 mt-1">{PLAN_LIMITS.agency_pro.description}</p>

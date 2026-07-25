@@ -3,7 +3,8 @@ export interface PlanLimits {
   name: string;
   maxLeadsPerMonth: number;
   maxProperties: number;
-  priceUsd: number;
+  annualPriceUsd: number;
+  monthlyPriceUsd: number;
   description: string;
 }
 
@@ -13,7 +14,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     name: 'Solo Agent',
     maxLeadsPerMonth: 100,
     maxProperties: 20,
-    priceUsd: 29,
+    annualPriceUsd: 29,
+    monthlyPriceUsd: 35,
     description: 'Ideal para corredores y agentes inmobiliarios independientes.',
   },
   agency_pro: {
@@ -21,7 +23,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     name: 'Agency Pro',
     maxLeadsPerMonth: 500,
     maxProperties: 100,
-    priceUsd: 79,
+    annualPriceUsd: 79,
+    monthlyPriceUsd: 99,
     description: 'Para agencias en crecimiento con WhatsApp y sincronización CRM.',
   },
   enterprise: {
@@ -29,7 +32,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     name: 'Enterprise',
     maxLeadsPerMonth: 999999,
     maxProperties: 999999,
-    priceUsd: 0,
+    annualPriceUsd: 0,
+    monthlyPriceUsd: 0,
     description: 'Para desarrolladoras, promotoras y redes inmobiliarias multi-sucursal.',
   },
 };
