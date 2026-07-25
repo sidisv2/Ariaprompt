@@ -21,7 +21,6 @@ interface MobilePricingSectionProps {
 
 export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRouteChange }) => {
   const { requireAuthForPayment } = useAuth();
-  const [isAnnual, setIsAnnual] = useState(true);
   const [activeCardIndex, setActiveCardIndex] = useState(1); // 0: basico, 1: pro (recommended), 2: enterprise
 
   const handlePlanSelection = (planId: string) => {
@@ -46,24 +45,6 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
         <p className="text-xs text-slate-400 max-w-xs mx-auto">
           Prueba 7 días gratis. Cancela en cualquier momento sin compromisos.
         </p>
-
-        {/* Toggle Billing */}
-        <div className="pt-2 flex items-center justify-center gap-2">
-          <span className={`text-xs ${!isAnnual ? 'text-white font-bold' : 'text-slate-400'}`}>Mensual</span>
-          <button
-            onClick={() => setIsAnnual(!isAnnual)}
-            className="w-12 h-6 rounded-full bg-slate-800 p-1 border border-white/10 relative transition-colors cursor-pointer"
-          >
-            <div
-              className={`w-4 h-4 rounded-full bg-emerald-400 transition-transform ${
-                isAnnual ? 'translate-x-6' : 'translate-x-0'
-              }`}
-            />
-          </button>
-          <span className={`text-xs ${isAnnual ? 'text-emerald-400 font-bold' : 'text-slate-400'}`}>
-            Anual <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded-full text-emerald-300">-20%</span>
-          </span>
-        </div>
       </div>
 
       {/* Swipeable Horizontal Cards Container */}
@@ -87,7 +68,7 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${isAnnual ? PLAN_LIMITS.solo_agent.annualPriceUsd : PLAN_LIMITS.solo_agent.monthlyPriceUsd}</span>
+                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.solo_agent.priceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.solo_agent.description}</p>
@@ -137,7 +118,7 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
 
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${isAnnual ? PLAN_LIMITS.agency_pro.annualPriceUsd : PLAN_LIMITS.agency_pro.monthlyPriceUsd}</span>
+                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.agency_pro.priceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
                 <p className="text-[11px] text-slate-300 mt-1">{PLAN_LIMITS.agency_pro.description}</p>

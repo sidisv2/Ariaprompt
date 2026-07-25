@@ -101,12 +101,12 @@ export const FeatureComparisonMatrix: React.FC = () => {
           <div className="col-span-5 text-slate-200 uppercase tracking-wider">Funcionalidades</div>
           <div className="col-span-2 text-center text-slate-300">
             <span className="block text-sm font-extrabold text-white">{PLAN_LIMITS.solo_agent.name}</span>
-            <span className="text-[10px] text-emerald-400 font-mono">${PLAN_LIMITS.solo_agent.annualPriceUsd} / mes</span>
+            <span className="text-[10px] text-emerald-400 font-mono">${PLAN_LIMITS.solo_agent.priceUsd} / mes</span>
           </div>
           <div className="col-span-3 text-center bg-emerald-500/10 p-2 rounded-2xl border border-emerald-500/30 shadow-inner">
             <span className="text-[9px] font-black uppercase text-emerald-400 block tracking-wider">★ Más Popular</span>
             <span className="block text-sm font-black text-white">{PLAN_LIMITS.agency_pro.name}</span>
-            <span className="text-[10px] text-emerald-300 font-mono">${PLAN_LIMITS.agency_pro.annualPriceUsd} / mes</span>
+            <span className="text-[10px] text-emerald-300 font-mono">${PLAN_LIMITS.agency_pro.priceUsd} / mes</span>
           </div>
           <div className="col-span-2 text-center text-slate-300">
             <span className="block text-sm font-extrabold text-white">{PLAN_LIMITS.enterprise.name}</span>

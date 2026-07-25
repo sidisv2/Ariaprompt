@@ -45,7 +45,7 @@ export const UserRolesDashboard: React.FC<UserRolesDashboardProps> = ({ onRouteC
     {
       id: 'subscriber_starter',
       title: `Suscriptor Plan ${PLAN_LIMITS.solo_agent.name}`,
-      badge: `${PLAN_LIMITS.solo_agent.name} ($${PLAN_LIMITS.solo_agent.annualPriceUsd}/mes)`,
+      badge: `${PLAN_LIMITS.solo_agent.name} ($${PLAN_LIMITS.solo_agent.priceUsd}/mes)`,
       icon: <Zap className="w-5 h-5 text-teal-400" />,
       color: 'border-teal-500/30 bg-teal-500/5',
       description: PLAN_LIMITS.solo_agent.description,
@@ -59,7 +59,7 @@ export const UserRolesDashboard: React.FC<UserRolesDashboardProps> = ({ onRouteC
     {
       id: 'subscriber_pro',
       title: `Suscriptor Plan ${PLAN_LIMITS.agency_pro.name}`,
-      badge: `Recomendado ($${PLAN_LIMITS.agency_pro.annualPriceUsd}/mes)`,
+      badge: `Recomendado ($${PLAN_LIMITS.agency_pro.priceUsd}/mes)`,
       icon: <Crown className="w-5 h-5 text-amber-400" />,
       color: 'border-amber-500/40 bg-amber-500/10',
       description: PLAN_LIMITS.agency_pro.description,
@@ -68,7 +68,7 @@ export const UserRolesDashboard: React.FC<UserRolesDashboardProps> = ({ onRouteC
         `Búsqueda RAG sobre ${PLAN_LIMITS.agency_pro.maxProperties} Inmuebles`,
         'Integración con WhatsApp Business',
         'Exportación de Expedientes PDF',
-        'Soporte 24/7 Preferencial',
+        'Soporte VIP 24/7',
       ],
     },
     {

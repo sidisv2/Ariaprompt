@@ -20,8 +20,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       id: 'starter',
       name: PLAN_LIMITS.solo_agent.name,
       tagline: PLAN_LIMITS.solo_agent.description,
-      monthlyPrice: PLAN_LIMITS.solo_agent.monthlyPriceUsd,
-      annualPrice: PLAN_LIMITS.solo_agent.annualPriceUsd,
+      price: PLAN_LIMITS.solo_agent.priceUsd,
       features: [
         '1 Agente de IA Activo 24/7 (Web)',
         `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} Leads Cualificados / mes`,
@@ -38,8 +37,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       id: 'pro',
       name: PLAN_LIMITS.agency_pro.name,
       tagline: PLAN_LIMITS.agency_pro.description,
-      monthlyPrice: PLAN_LIMITS.agency_pro.monthlyPriceUsd,
-      annualPrice: PLAN_LIMITS.agency_pro.annualPriceUsd,
+      price: PLAN_LIMITS.agency_pro.priceUsd,
       features: [
         '5 Agentes de IA 24/7 (WhatsApp & Web)',
         `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} Leads Cualificados / mes`,
@@ -58,8 +56,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       name: `${PLAN_LIMITS.enterprise.name} / Desarrolladores`,
       tagline: PLAN_LIMITS.enterprise.description,
       isCustom: true,
-      monthlyPrice: PLAN_LIMITS.enterprise.monthlyPriceUsd,
-      annualPrice: PLAN_LIMITS.enterprise.annualPriceUsd,
+      price: 0,
       features: [
         'Agentes & Sucursales Ilimitadas',
         'Infraestructura RAG Dedicada',
@@ -89,45 +86,18 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
   return (
     <div className="space-y-10">
       
-      {/* Billing Switcher Toggle */}
-      <div className="flex flex-col items-center justify-center space-y-3">
-        <div className="inline-flex items-center p-1.5 rounded-2xl bg-slate-900 border border-white/10 shadow-inner">
-          <button
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              billingCycle === 'monthly'
-                ? 'bg-slate-800 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Facturación Mensual
-          </button>
-
-          <button
-            onClick={() => setBillingCycle('annual')}
-            className={`px-5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              billingCycle === 'annual'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <span>Facturación Anual</span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-950 text-[10px] text-emerald-300 font-extrabold border border-emerald-400/40">
-              -20%
-            </span>
-          </button>
-        </div>
-        <p className="text-xs text-slate-400 flex items-center gap-1">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Cambia o cancela tu plan en cualquier momento sin penalizaciones</span>
+      {/* Pricing Header Subtitle */}
+      <div className="flex flex-col items-center justify-center space-y-2">
+        <p className="text-xs text-slate-300 flex items-center gap-1.5 font-semibold bg-slate-900 px-4 py-2 rounded-full border border-white/10 shadow-sm">
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <span>7 días de prueba gratis en todos los planes • Cancela en cualquier momento sin penalizaciones</span>
         </p>
       </div>
 
       {/* Pricing Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
         {plans.map((plan) => {
-          const rawPrice = billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice;
-          const price = hasDiscount5 ? Math.round(rawPrice * 0.95) : rawPrice;
+          const price = hasDiscount5 && plan.price ? Math.round(plan.price * 0.95) : plan.price;
           return (
             <div
               key={plan.id}
@@ -166,7 +136,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
                         ${price}
                       </span>
                       {hasDiscount5 && (
-                        <span className="line-through text-xs text-slate-400 font-mono ml-1">${rawPrice}</span>
+                        <span className="line-through text-xs text-slate-400 font-mono ml-1">${plan.price}</span>
                       )}
                       <span className="text-xs text-slate-400 font-medium ml-1">
                         USD / mes

@@ -111,7 +111,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
               onClick={() => onRouteChange('pricing')}
               className="px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Ver Planes de Suscripción (desde ${PLAN_LIMITS.solo_agent.annualPriceUsd}/mes)</span>
+              <span>Ver Planes de Suscripción (desde ${PLAN_LIMITS.solo_agent.priceUsd}/mes)</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

@@ -63,7 +63,7 @@ const PLANS: PlanItem[] = [
   {
     id: 'starter',
     name: PLAN_LIMITS.solo_agent.name,
-    priceUsd: PLAN_LIMITS.solo_agent.annualPriceUsd,
+    priceUsd: PLAN_LIMITS.solo_agent.priceUsd,
     description: PLAN_LIMITS.solo_agent.description,
     features: [
       '1 Agente de IA (Aria) activo',
@@ -76,7 +76,7 @@ const PLANS: PlanItem[] = [
   {
     id: 'pro',
     name: PLAN_LIMITS.agency_pro.name,
-    priceUsd: PLAN_LIMITS.agency_pro.annualPriceUsd,
+    priceUsd: PLAN_LIMITS.agency_pro.priceUsd,
     badge: 'MÁS POPULAR',
     description: PLAN_LIMITS.agency_pro.description,
     features: [
