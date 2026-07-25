@@ -111,18 +111,18 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
+    <div className="w-full max-w-4xl mx-auto space-y-4 overflow-hidden">
       
       {/* 2 Pre-armados Sample Cards (Cloudairy Showcase Style) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-between gap-2 text-xs overflow-hidden">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center shrink-0 border border-emerald-200">
               <CheckCircle2 className="w-4 h-4" />
             </div>
-            <div>
-              <span className="font-extrabold text-slate-900 block">Lead Calificado en WhatsApp</span>
-              <span className="text-[11px] text-slate-500">Depto 2 amb. • Presupuesto $180k USD</span>
+            <div className="min-w-0 flex-1">
+              <span className="font-extrabold text-slate-900 block truncate">Lead Calificado en WhatsApp</span>
+              <span className="text-[11px] text-slate-500 block truncate">Depto 2 amb. • Presupuesto $180k USD</span>
             </div>
           </div>
           <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black shrink-0">
@@ -130,14 +130,14 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
           </span>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-3">
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-md shadow-slate-200/50 flex items-center justify-between gap-2 text-xs overflow-hidden">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center shrink-0 border border-indigo-200">
               <Calendar className="w-4 h-4" />
             </div>
-            <div>
-              <span className="font-extrabold text-slate-900 block">Visita Agendada en Google Cal</span>
-              <span className="text-[11px] text-slate-500">Jueves 16:30 hs • Confirmado 24/7</span>
+            <div className="min-w-0 flex-1">
+              <span className="font-extrabold text-slate-900 block truncate">Visita Agendada en Google Cal</span>
+              <span className="text-[11px] text-slate-500 block truncate">Jueves 16:30 hs • Confirmado 24/7</span>
             </div>
           </div>
           <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-black shrink-0">
@@ -147,10 +147,10 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
       </div>
 
       {/* Main Interactive Prompt Box */}
-      <div className="relative rounded-3xl bg-slate-900 border border-indigo-500/30 p-4 sm:p-6 shadow-2xl shadow-indigo-500/10 text-white space-y-4">
+      <div className="relative rounded-3xl bg-slate-900 border border-indigo-500/30 p-3.5 sm:p-6 shadow-2xl shadow-indigo-500/10 text-white space-y-4 max-w-full overflow-hidden">
         
         {/* Quick Action Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-semibold">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-semibold max-w-full">
           <span className="text-slate-400 shrink-0 font-bold text-[11px] uppercase tracking-wider">{t('prompt.quickAction')}</span>
           {chips.map((chip) => (
             <button

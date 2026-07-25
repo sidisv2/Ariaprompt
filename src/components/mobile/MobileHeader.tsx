@@ -22,32 +22,32 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   const isDashboard = currentRoute.startsWith('dashboard');
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-slate-950/90 backdrop-blur-xl border-b border-white/10 px-4 py-3">
-      <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-30 w-full max-w-full overflow-hidden bg-slate-950/90 backdrop-blur-xl border-b border-white/10 px-3 sm:px-4 py-2.5 sm:py-3">
+      <div className="flex items-center justify-between gap-2 max-w-full">
         
         {/* Left Branding */}
         <div 
           onClick={() => onRouteChange('marketing')}
-          className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+          className="flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95 transition-transform min-w-0 shrink"
         >
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-md shadow-emerald-500/20">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-md shadow-emerald-500/20 shrink-0">
             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
               <Building2 className="w-4 h-4 text-emerald-400" />
             </div>
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-black text-sm text-white tracking-tight">Aria Prop</span>
-              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1">
+              <span className="font-black text-xs sm:text-sm text-white tracking-tight truncate">Aria Prop</span>
+              <span className="text-[9px] px-1 py-0.2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
                 App
               </span>
             </div>
-            <p className="text-[9px] text-slate-400 truncate max-w-[110px]">{agencyName}</p>
+            <p className="text-[9px] text-slate-400 truncate max-w-[80px] sm:max-w-[110px]">{agencyName}</p>
           </div>
         </div>
 
         {/* Right Status & Language Toggle */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Mobile Language Switcher Dropdown */}
           <LanguageSelector variant="mobile" />
 

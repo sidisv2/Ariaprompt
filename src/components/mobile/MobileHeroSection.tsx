@@ -22,19 +22,19 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
   };
 
   return (
-    <section className="pt-4 pb-8 px-4 space-y-6">
+    <section className="pt-4 pb-8 px-4 space-y-6 max-w-full overflow-hidden">
       
       {/* Badge */}
       <div className="flex justify-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-md shadow-emerald-500/10">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Agente IA Inmobiliario LATAM</span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-md shadow-emerald-500/10 max-w-full truncate">
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">Agente IA Inmobiliario LATAM</span>
         </div>
       </div>
 
       {/* Main Headline */}
       <div className="text-center space-y-3">
-        <h1 className="text-3xl font-black text-slate-900 leading-tight tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
           Nunca pierdas otro <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-indigo-600 to-teal-600">lead inmobiliario</span>
         </h1>
         <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
