@@ -92,8 +92,8 @@ export const CrmIntegrationsView: React.FC = () => {
     }
 
     // Fallback to localStorage for smooth offline access
-    const savedTokko = localStorage.getItem(`crm_tokko_${agencyId}`);
-    const savedEasy = localStorage.getItem(`crm_easybroker_${agencyId}`);
+    const savedTokko = localStorage.getItem(`crm_tokko_${agencyId}`) || localStorage.getItem('crm_tokko_global');
+    const savedEasy = localStorage.getItem(`crm_easybroker_${agencyId}`) || localStorage.getItem('crm_easybroker_global');
 
     setIntegrations({
       tokko: savedTokko ? JSON.parse(savedTokko) : { provider: 'tokko', status: 'not_connected', syncedCount: 0 },
@@ -155,8 +155,9 @@ export const CrmIntegrationsView: React.FC = () => {
         syncedCount: json.data?.synced_count ?? json.totalCount ?? 0,
       };
 
-      // Save locally
+      // Save locally (both agency-scoped and global fallback key for instant reload)
       localStorage.setItem(`crm_${selectedModalProvider}_${agencyId}`, JSON.stringify(updatedState));
+      localStorage.setItem(`crm_${selectedModalProvider}_global`, JSON.stringify(updatedState));
       localStorage.setItem('aria_has_connected_crm', 'true');
 
       setIntegrations((prev) => ({

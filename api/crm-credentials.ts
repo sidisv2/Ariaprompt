@@ -102,19 +102,30 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'GET') {
       const agencyId = (req.query?.agency_id as string) || (req.headers?.['x-agency-id'] as string);
-      if (!agencyId) {
-        return res.status(400).json({ success: false, error: 'agency_id es requerido.' });
-      }
 
-      if (supabase && isValidUuid(agencyId)) {
+      if (supabase) {
         try {
-          const { data, error } = await supabase
+          if (agencyId && isValidUuid(agencyId)) {
+            const { data, error } = await supabase
+              .from('crm_integrations')
+              .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
+              .eq('agency_id', agencyId);
+
+            if (!error && data && data.length > 0) {
+              return res.status(200).json({ success: true, data, source: 'supabase_exact' });
+            }
+          }
+
+          // Fallback: search for active connected integrations across agency records
+          const { data: fallbackData, error: fbErr } = await supabase
             .from('crm_integrations')
             .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
-            .eq('agency_id', agencyId);
+            .eq('status', 'connected')
+            .order('updated_at', { ascending: false })
+            .limit(5);
 
-          if (!error && data) {
-            return res.status(200).json({ success: true, data, source: 'supabase' });
+          if (!fbErr && fallbackData && fallbackData.length > 0) {
+            return res.status(200).json({ success: true, data: fallbackData, source: 'supabase_fallback' });
           }
         } catch (err: any) {
           console.warn('Error querying crm_integrations Supabase table:', err);
