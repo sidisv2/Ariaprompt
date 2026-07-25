@@ -63,7 +63,7 @@ export const TestimonialsSection: React.FC = () => {
             </p>
             <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-cyan-400">
               <CheckCircle2 className="w-4 h-4" />
-              <span>Privacidad Total Garantizada</span>
+              <span>Acceso Restringido por Cuenta</span>
             </div>
           </div>
         </div>
