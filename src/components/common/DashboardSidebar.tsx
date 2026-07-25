@@ -29,7 +29,24 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 }) => {
   const { t } = useLanguage();
 
+  // Check if CRM is connected
+  const hasConnectedCrm = React.useMemo(() => {
+    try {
+      const keys = Object.keys(localStorage);
+      return keys.some((k) => k.startsWith('crm_tokko_') || k.startsWith('crm_easybroker_'));
+    } catch {
+      return false;
+    }
+  }, []);
+
   const navItems = [
+    {
+      id: 'dashboard-integrations' as AppRoute,
+      label: t('sidebar.integrations'),
+      icon: Link2,
+      badge: hasConnectedCrm ? 'Conectado' : '★ Recomendado',
+      highlight: !hasConnectedCrm,
+    },
     {
       id: 'dashboard-metrics' as AppRoute,
       label: t('sidebar.metrics'),
@@ -41,12 +58,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       label: t('sidebar.properties'),
       icon: Building2,
       count: propertiesCount,
-    },
-    {
-      id: 'dashboard-integrations' as AppRoute,
-      label: t('sidebar.integrations'),
-      icon: Link2,
-      badge: 'Tokko/EasyBroker',
     },
     {
       id: 'dashboard-leads' as AppRoute,
@@ -143,9 +154,15 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
+                  <div className="flex items-center gap-2.5 relative">
+                    {item.highlight && (
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                    )}
+                    <Icon className={`w-4 h-4 ${isActive || item.highlight ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <span className={item.highlight ? 'font-bold text-emerald-300' : ''}>{item.label}</span>
                   </div>
                   {item.count !== undefined && (
                     <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-slate-300 font-mono">
@@ -153,7 +170,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                     </span>
                   )}
                   {item.badge && item.count === undefined && (
-                    <span className="text-[9px] text-slate-500 font-medium">
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                      item.highlight 
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                        : 'text-slate-500 font-medium'
+                    }`}>
                       {item.badge}
                     </span>
                   )}

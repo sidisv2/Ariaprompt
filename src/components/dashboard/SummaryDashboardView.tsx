@@ -15,6 +15,7 @@ import {
   FileText,
   Zap
 } from 'lucide-react';
+import { CrmOnboardingModal } from './CrmOnboardingModal';
 
 interface SummaryDashboardViewProps {
   leads: Lead[];
@@ -29,6 +30,18 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
 }) => {
   const { user } = useAuth();
   const { t } = useLanguage();
+
+  const [showOnboarding, setShowOnboarding] = React.useState<boolean>(() => {
+    return localStorage.getItem('aria_onboarding_completed') !== 'true';
+  });
+
+  // Check if agency has connected any CRM or has manual properties
+  const hasConnectedCrm = React.useMemo(() => {
+    const userId = user?.id || 'demo-agency';
+    const tokko = localStorage.getItem(`crm_tokko_${userId}`);
+    const easy = localStorage.getItem(`crm_easybroker_${userId}`);
+    return Boolean(tokko || easy);
+  }, [user]);
 
   const activeLeadsCount = leads.filter((l) => l.status === 'new' || l.status === 'contacted').length;
   const toursCount = leads.filter((l) => l.status === 'visit_scheduled').length;
@@ -67,6 +80,45 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
   return (
     <div className="space-y-6 pb-6">
       
+      {/* Onboarding Wizard Modal */}
+      {showOnboarding && (
+        <CrmOnboardingModal
+          onClose={() => setShowOnboarding(false)}
+          onRouteChange={onRouteChange}
+        />
+      )}
+
+      {/* Guided Empty State Banner: Prompt to connect Tokko or EasyBroker */}
+      {!hasConnectedCrm && (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-teal-950/80 via-slate-900 to-emerald-950/80 border-2 border-emerald-500/50 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-page-fade">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <Zap className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-extrabold border border-emerald-500/30 mb-1">
+                <Sparkles className="w-3 h-3" />
+                <span>Paso Recomendado para Iniciar</span>
+              </div>
+              <h3 className="text-base font-extrabold text-white">
+                Conectá tu CRM (Tokko Broker o EasyBroker)
+              </h3>
+              <p className="text-xs text-slate-300 max-w-xl mt-0.5">
+                Para que tu Asistente IA 24/7 responda a tus prospectos con las propiedades y precios reales de tu agencia, vinculá tu API Key en 1 minuto.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onRouteChange('dashboard-integrations')}
+            className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer hover:scale-105"
+          >
+            <span>Conectar CRM Ahora</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-emerald-500/30 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-3xl pointer-events-none" />
