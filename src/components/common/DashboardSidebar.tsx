@@ -10,7 +10,8 @@ import {
   FolderKey,
   ShieldCheck,
   Globe2,
-  Link2
+  Link2,
+  Sparkles
 } from 'lucide-react';
 
 interface DashboardSidebarProps {
@@ -98,40 +99,68 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         </div>
 
         {/* Sidebar Nav */}
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-2">
-            {t('sidebar.controlPanel')}
-          </p>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = currentRoute === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onRouteChange(item.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-white/10 text-white font-semibold border border-white/10 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </div>
-                {item.count !== undefined && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-slate-300 font-mono">
-                    {item.count}
-                  </span>
-                )}
-                {item.badge && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 font-semibold uppercase">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <div className="space-y-3">
+          
+          {/* Main Primary Spotlight: Asistente IA 24/7 */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 px-3 mb-1.5 flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              <span>Protagonista Principal</span>
+            </p>
+            <button
+              onClick={() => onRouteChange('app')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                currentRoute === 'app' || currentRoute === 'aria-ai' || currentRoute === 'producto'
+                  ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-lg shadow-emerald-500/10'
+                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Bot className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Asistente IA 24/7</span>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                En vivo
+              </span>
+            </button>
+          </div>
+
+          {/* Secondary Group: Herramientas de Apoyo */}
+          <div className="space-y-1 pt-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 mb-1.5">
+              Herramientas de Apoyo
+            </p>
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentRoute === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onRouteChange(item.id)}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-white/10 text-white font-semibold border border-white/10 shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.count !== undefined && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/10 text-slate-300 font-mono">
+                      {item.count}
+                    </span>
+                  )}
+                  {item.badge && item.count === undefined && (
+                    <span className="text-[9px] text-slate-500 font-medium">
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
       </div>

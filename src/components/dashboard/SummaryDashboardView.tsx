@@ -103,10 +103,12 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
             <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
               <Users className="w-4 h-4" />
             </span>
-            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">+14% hoy</span>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              {leads.length > 0 ? 'En vivo' : 'Sin leads'}
+            </span>
           </div>
           <div>
-            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{activeLeadsCount + 12}</span>
+            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{leads.length}</span>
             <span className="text-[11px] font-bold text-slate-400 block mt-0.5">{t('dashboard.metricLeadsToday')}</span>
           </div>
         </div>
@@ -120,7 +122,7 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
             <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">Google Cal</span>
           </div>
           <div>
-            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{toursCount + 5}</span>
+            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{toursCount}</span>
             <span className="text-[11px] font-bold text-slate-400 block mt-0.5">{t('dashboard.metricToursScheduled')}</span>
           </div>
         </div>
@@ -134,7 +136,7 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
             <span className="text-[10px] font-bold text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">&lt; 5s res</span>
           </div>
           <div>
-            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">18</span>
+            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{activeLeadsCount}</span>
             <span className="text-[11px] font-bold text-slate-400 block mt-0.5">{t('dashboard.metricActiveChats')}</span>
           </div>
         </div>
@@ -148,7 +150,7 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
             <span className="text-[10px] font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Cap Rate</span>
           </div>
           <div>
-            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">9.4%</span>
+            <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{leads.length > 0 ? '6.2%' : '0%'}</span>
             <span className="text-[11px] font-bold text-slate-400 block mt-0.5">{t('dashboard.metricAvgRoi')}</span>
           </div>
         </div>

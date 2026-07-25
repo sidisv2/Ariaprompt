@@ -16,7 +16,7 @@ interface PlaygroundProps {
 }
 
 export const Playground: React.FC<PlaygroundProps> = ({
-  initialTab = 'summary',
+  initialTab = 'general',
   leads = [],
   onRouteChange = () => {},
 }) => {
@@ -38,8 +38,8 @@ export const Playground: React.FC<PlaygroundProps> = ({
   const activeChat = active === 'finance' ? financeChat : active === 'rag' ? ragChat : generalChat;
 
   const TABS: { key: TabKey; label: string; icon: React.ReactNode; description: string }[] = [
+    { key: 'general', label: t('tabs.general'), icon: <Bot className="w-4 h-4 text-emerald-400" />, description: 'Atención comercial 24/7 para responder al instante y cualificar prospectos.' },
     { key: 'summary', label: t('tabs.summary'), icon: <LayoutDashboard className="w-4 h-4" />, description: 'Resumen inicial con métricas clave de atención inmobiliaria.' },
-    { key: 'general', label: t('tabs.general'), icon: <Bot className="w-4 h-4" />, description: 'Atención comercial continua para cualificar prospectos.' },
     { key: 'finance', label: t('tabs.finance'), icon: <Calculator className="w-4 h-4" />, description: 'Cálculos de ROI, flujos de caja y plusvalía estimada.' },
     { key: 'rag', label: t('tabs.rag'), icon: <Database className="w-4 h-4" />, description: 'Búsqueda instantánea en catálogo e inmuebles.' },
     { key: 'files', label: t('tabs.files'), icon: <FileText className="w-4 h-4" />, description: 'Carga interactiva de PDFs y memorias técnicas.' },
@@ -192,15 +192,48 @@ export const Playground: React.FC<PlaygroundProps> = ({
             {/* Messages Scroll Area (Independent Scroll) */}
             <div ref={chatBoxRef} className="messages flex-1 overflow-y-auto p-3 space-y-3 text-xs font-sans scroll-smooth">
               {activeChat.messages.length === 0 ? (
-                <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center p-6 space-y-2 text-slate-500">
-                  <Bot className="w-8 h-8 text-emerald-400 opacity-80" />
-                  <p className="text-xs text-slate-300 font-medium">
-                    {active === 'finance'
-                      ? '📊 **Calculadora ROI**: Escribe una consulta financiera (ej: *"Calcula ROI de propiedad de $250k alquilada a $1,500/mes"*).'
-                      : active === 'rag'
-                      ? '🔍 **Buscar Propiedades**: Pregunta sobre especificaciones (ej: *"¿Qué opciones hay en Polanco o Madrid?"*).'
-                      : '💬 **Chat IA**: Pregunta sobre inmuebles en catálogo, precios o agendamiento de visitas.'}
-                  </p>
+                <div className="h-full min-h-[280px] flex flex-col items-center justify-center text-center p-4 sm:p-6 space-y-4 max-w-md mx-auto my-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/10">
+                    <Bot className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-extrabold text-white">
+                      ¡Hola! Soy Aria, tu asistente inmobiliaria 24/7 👋
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Respondo a tus prospectos al instante en WhatsApp y Web, cualifico su presupuesto y coordino visitas en tu calendario.
+                    </p>
+                  </div>
+
+                  {/* Guided Prompt Suggestion Chips */}
+                  <div className="w-full space-y-2 pt-1 text-left">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block text-center">
+                      Probá con una consulta de ejemplo:
+                    </span>
+                    <button
+                      onClick={() => handleSend('Tengo un lead interesado en un departamento de 2 ambientes en alquiler')}
+                      className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 hover:border-emerald-500/40 text-xs text-slate-200 font-medium transition-all text-left flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="truncate">💬 "Tengo un lead buscando depto de 2 ambientes"</span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                    </button>
+
+                    <button
+                      onClick={() => handleSend('¿Qué propiedades tenemos disponibles actualmente en el catálogo?')}
+                      className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 hover:border-emerald-500/40 text-xs text-slate-200 font-medium transition-all text-left flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="truncate">🏢 "¿Qué inmuebles tenemos disponibles en catálogo?"</span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                    </button>
+
+                    <button
+                      onClick={() => handleSend('Calculá la rentabilidad (Cap Rate) estimada de una inversión de $180,000 USD')}
+                      className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 hover:border-emerald-500/40 text-xs text-slate-200 font-medium transition-all text-left flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="truncate">📈 "Calculá el Cap Rate de una inversión de $180k USD"</span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                    </button>
+                  </div>
                 </div>
               ) : (
                 activeChat.messages.map((m, i) => (
