@@ -54,9 +54,11 @@ export function checkLeadLimit(planId: string | null | undefined, currentLeadsCo
 export function checkPropertyLimit(planId: string | null | undefined, currentPropertiesCount: number): { allowed: boolean; error?: string } {
   const plan = getPlanLimits(planId);
   if (currentPropertiesCount >= plan.maxProperties) {
+    const nextPlanName = plan.id === 'solo_agent' ? 'Agency Pro' : 'Enterprise';
+    const nextPlanMax = plan.id === 'solo_agent' ? `${PLAN_LIMITS.agency_pro.maxProperties}` : 'ilimitadas';
     return {
       allowed: false,
-      error: `Alcanzaste el límite de ${plan.maxProperties} propiedades activas en tu plan ${plan.name}. Actualizá tu plan a Agency Pro para publicar hasta 20 propiedades.`,
+      error: `Alcanzaste el límite de ${plan.maxProperties} propiedades activas en tu plan ${plan.name}. Actualizá tu plan a ${nextPlanName} para publicar hasta ${nextPlanMax} propiedades.`,
     };
   }
   return { allowed: true };
