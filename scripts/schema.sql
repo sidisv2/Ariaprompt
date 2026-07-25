@@ -106,7 +106,37 @@ CREATE POLICY "UsageRecords_Insert_Policy" ON public.usage_records FOR INSERT TO
 CREATE POLICY "UsageRecords_Update_Policy" ON public.usage_records FOR UPDATE TO authenticated USING (auth.uid() = agency_id) WITH CHECK (auth.uid() = agency_id);
 CREATE POLICY "UsageRecords_Delete_Policy" ON public.usage_records FOR DELETE TO authenticated USING (auth.uid() = agency_id);
 
--- 11. FUNCIÓN RPC PARA INCREMENTO ATÓMICO DE LEADS DE LA AGENCIA
+-- 11. COLUMNAS DE INTEGRACIÓN CRM EN 'propiedades'
+ALTER TABLE public.propiedades ADD COLUMN IF NOT EXISTS source_crm TEXT DEFAULT 'manual';
+ALTER TABLE public.propiedades ADD COLUMN IF NOT EXISTS external_id TEXT;
+ALTER TABLE public.propiedades ADD COLUMN IF NOT EXISTS synced_at TIMESTAMPTZ;
+ALTER TABLE public.propiedades ADD COLUMN IF NOT EXISTS source_label TEXT DEFAULT 'Catálogo Directo de la Agencia';
+
+-- 12. TABLA 'crm_integrations' (Credenciales y Estado de Sincronización Tokko Broker & EasyBroker)
+CREATE TABLE IF NOT EXISTS public.crm_integrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  agency_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  provider TEXT NOT NULL CHECK (provider IN ('tokko', 'easybroker')),
+  api_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'connected' CHECK (status IN ('connected', 'error', 'syncing')),
+  last_sync_at TIMESTAMPTZ,
+  last_error TEXT,
+  synced_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(agency_id, provider)
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_integrations_agency_id ON public.crm_integrations(agency_id);
+
+ALTER TABLE public.crm_integrations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "CrmIntegrations_Select_Policy" ON public.crm_integrations FOR SELECT TO authenticated USING (auth.uid() = agency_id);
+CREATE POLICY "CrmIntegrations_Insert_Policy" ON public.crm_integrations FOR INSERT TO authenticated WITH CHECK (auth.uid() = agency_id);
+CREATE POLICY "CrmIntegrations_Update_Policy" ON public.crm_integrations FOR UPDATE TO authenticated USING (auth.uid() = agency_id) WITH CHECK (auth.uid() = agency_id);
+CREATE POLICY "CrmIntegrations_Delete_Policy" ON public.crm_integrations FOR DELETE TO authenticated USING (auth.uid() = agency_id);
+
+-- 13. FUNCIÓN RPC PARA INCREMENTO ATÓMICO DE LEADS DE LA AGENCIA
 CREATE OR REPLACE FUNCTION public.increment_lead_usage(p_agency_id UUID, p_period TEXT)
 RETURNS INTEGER
 LANGUAGE plpgsql
