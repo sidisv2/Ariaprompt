@@ -5,6 +5,7 @@ import {
   searchMultiSourceRealEstate,
   MARKET_REAL_ESTATE_DATABASE,
 } from '../src/lib/multiSourceRealEstateEngine';
+import { getBackendSupabaseClient } from '../src/lib/backendSupabase';
 
 // Function Calling Tool Definition for Real Estate Search
 export const buscarPropiedadesToolDeclaration = {
@@ -220,6 +221,26 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
       responseText =
         `¡Hola! Soy Aria Promp, el asistente virtual de la agencia.\n\n` +
         `¿Podrías decirme qué tipo de propiedad buscas (depto, casa), si es para compra o alquiler, y en qué ciudad?`;
+    }
+
+    // Persist lead directly into Supabase DB if backend Supabase client is connected
+    const supabase = getBackendSupabaseClient();
+    if (supabase && (lowerMsg.includes('@') || lowerMsg.includes('comprar') || lowerMsg.includes('alquilar') || lowerMsg.includes('agendar') || lowerMsg.includes('visita'))) {
+      try {
+        const agencyId = req.body?.agency_id || req.headers['x-agency-id'];
+        await supabase.from('leads').insert([{
+          name: `Prospecto Web (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`,
+          notes: trimmedMsg,
+          chat_summary: responseText.slice(0, 300),
+          status: lowerMsg.includes('agendar') ? 'agendado' : 'nuevo',
+          temperature: lowerMsg.includes('comprar') || lowerMsg.includes('agendar') ? 'hot' : 'warm',
+          score: lowerMsg.includes('agendar') ? 90 : 70,
+          channel: 'web_widget',
+          ...(agencyId ? { agency_id: agencyId } : {}),
+        }]);
+      } catch (dbErr) {
+        console.warn('Supabase DB Lead Persistence warning:', dbErr);
+      }
     }
 
     const words = responseText.split(' ');
