@@ -112,17 +112,35 @@ export default async function handler(req: any, res: any) {
 
       if (supabase && isValidUuid(agencyId)) {
         try {
-          // Strictly filter by agency_id (Multi-Tenant Isolation)
+          // 1. Try querying crm_integrations table
           const { data, error } = await supabase
             .from('crm_integrations')
             .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
             .eq('agency_id', agencyId);
 
-          if (!error && data) {
+          if (!error && data && data.length > 0) {
             return res.status(200).json({ success: true, data, source: 'supabase' });
           }
+
+          // 2. Fallback to profiles table (crm_integrations column)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('crm_integrations')
+            .eq('id', agencyId)
+            .maybeSingle();
+
+          if (profile && profile.crm_integrations) {
+            let crmMap = profile.crm_integrations;
+            if (typeof crmMap === 'string') {
+              try { crmMap = JSON.parse(crmMap); } catch (e) { crmMap = {}; }
+            }
+            const items = Object.values(crmMap);
+            if (items.length > 0) {
+              return res.status(200).json({ success: true, data: items, source: 'supabase_profile' });
+            }
+          }
         } catch (err: any) {
-          console.warn('Error querying crm_integrations Supabase table:', err);
+          console.warn('Error querying Supabase integrations:', err);
         }
       }
       return res.status(200).json({ success: true, data: [], source: 'memory' });
@@ -162,72 +180,61 @@ export default async function handler(req: any, res: any) {
       // 3. Persist in Supabase Postgres strictly filtered by agency_id
       if (supabase && isValidUuid(agencyId)) {
         try {
-          // Ensure profile exists in profiles table so Foreign Key on agency_id never fails
-          try {
-            await supabase.from('profiles').upsert({
-              id: agencyId,
-              email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
-              nombre: 'Agencia Partner',
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
-          } catch (e) {
-            console.warn('Profile auto-create fallback:', e);
-          }
+          const integrationData = {
+            provider,
+            status: 'connected',
+            api_key: String(apiKey).trim(),
+            last_sync_at: new Date().toISOString(),
+            last_error: null,
+            synced_count: validation.totalCount || 0,
+            updated_at: new Date().toISOString(),
+          };
 
-          // Check if record exists for this specific agency_id and provider
-          const { data: existing } = await supabase
-            .from('crm_integrations')
-            .select('id')
-            .eq('agency_id', agencyId)
-            .eq('provider', provider)
+          // Save to profiles table (crm_integrations JSONB column) as guaranteed fallback
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('crm_integrations')
+            .eq('id', agencyId)
             .maybeSingle();
 
-          let savedData: any = null;
+          let crmMap: Record<string, any> = {};
+          if (existingProfile?.crm_integrations) {
+            crmMap = typeof existingProfile.crm_integrations === 'string'
+              ? JSON.parse(existingProfile.crm_integrations)
+              : existingProfile.crm_integrations;
+          }
+          crmMap[provider] = integrationData;
 
-          if (existing?.id) {
-            const { data: updated, error: updateErr } = await supabase
-              .from('crm_integrations')
-              .update({
-                api_key: String(apiKey).trim(),
-                status: 'connected',
-                last_sync_at: new Date().toISOString(),
-                last_error: null,
-                synced_count: validation.totalCount || 0,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', existing.id)
-              .eq('agency_id', agencyId)
-              .select()
-              .single();
+          await supabase.from('profiles').upsert({
+            id: agencyId,
+            email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
+            nombre: 'Agencia Partner',
+            crm_integrations: crmMap,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
 
-            if (!updateErr) savedData = updated;
-          } else {
-            const { data: inserted, error: insertErr } = await supabase
-              .from('crm_integrations')
-              .insert({
-                agency_id: agencyId,
-                provider,
-                api_key: String(apiKey).trim(),
-                status: 'connected',
-                last_sync_at: new Date().toISOString(),
-                last_error: null,
-                synced_count: validation.totalCount || 0,
-                updated_at: new Date().toISOString(),
-              })
-              .select()
-              .single();
-
-            if (!insertErr) savedData = inserted;
+          // Also attempt saving to crm_integrations table if available
+          try {
+            await supabase.from('crm_integrations').upsert({
+              agency_id: agencyId,
+              provider,
+              api_key: String(apiKey).trim(),
+              status: 'connected',
+              last_sync_at: new Date().toISOString(),
+              last_error: null,
+              synced_count: validation.totalCount || 0,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'agency_id,provider' });
+          } catch (e) {
+            console.warn('crm_integrations table upsert ignored:', e);
           }
 
-          if (savedData) {
-            return res.status(200).json({
-              success: true,
-              message: validation.message,
-              data: savedData,
-              source: 'supabase',
-            });
-          }
+          return res.status(200).json({
+            success: true,
+            message: validation.message,
+            data: integrationData,
+            source: 'supabase',
+          });
         } catch (err: any) {
           console.warn('Supabase insert exception:', err);
         }
@@ -257,11 +264,14 @@ export default async function handler(req: any, res: any) {
 
       if (supabase && isValidUuid(agencyId)) {
         try {
-          await supabase
-            .from('crm_integrations')
-            .delete()
-            .eq('agency_id', agencyId)
-            .eq('provider', provider);
+          const { data: profile } = await supabase.from('profiles').select('crm_integrations').eq('id', agencyId).maybeSingle();
+          if (profile?.crm_integrations) {
+            let crmMap = typeof profile.crm_integrations === 'string' ? JSON.parse(profile.crm_integrations) : profile.crm_integrations;
+            delete crmMap[provider];
+            await supabase.from('profiles').update({ crm_integrations: crmMap, updated_at: new Date().toISOString() }).eq('id', agencyId);
+          }
+
+          await supabase.from('crm_integrations').delete().eq('agency_id', agencyId).eq('provider', provider);
         } catch (err: any) {
           console.warn('Delete integration warning:', err);
         }
