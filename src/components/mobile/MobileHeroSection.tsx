@@ -1,6 +1,7 @@
 import React from 'react';
 import { Property, AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Sparkles, ArrowRight, ShieldCheck, Zap, MessageSquare, Building2, Play } from 'lucide-react';
 import { TwitterActionCard } from '../marketing/TwitterActionCard';
 import { InteractiveSandboxWidget } from '../marketing/InteractiveSandboxWidget';
@@ -13,6 +14,7 @@ interface MobileHeroSectionProps {
 
 export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProperties, onRouteChange }) => {
   const { requireAuthForPayment } = useAuth();
+  const { t } = useLanguage();
 
   const handleStartTrial = () => {
     requireAuthForPayment({
@@ -28,17 +30,20 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
       <div className="flex justify-center">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-md shadow-emerald-500/10 max-w-full truncate">
           <Sparkles className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">Agente IA Inmobiliario LATAM</span>
+          <span className="truncate">{t('hero.badge')}</span>
         </div>
       </div>
 
-      {/* Main Headline */}
+      {/* Main Headline with High-Contrast Gradient */}
       <div className="text-center space-y-3">
         <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
-          Nunca pierdas otro <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-indigo-600 to-teal-600">lead inmobiliario</span>
+          {t('hero.title1')}{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-teal-300 to-emerald-400 opacity-100">
+            {t('hero.title2')}
+          </span>.
         </h1>
-        <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
-          Aria Prop atiende a tus prospectos en menos de 5 segundos, cualifica su presupuesto y agenda visitas a tus inmuebles 24/7 en WhatsApp y Web.
+        <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
+          {t('hero.subtitle')}
         </p>
       </div>
 
