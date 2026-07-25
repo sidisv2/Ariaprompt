@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Check, Minus, Sparkles, Zap, ShieldCheck, Building2, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { PLAN_LIMITS } from '../../lib/planLimits';
 
 export const FeatureComparisonMatrix: React.FC = () => {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
@@ -18,7 +19,7 @@ export const FeatureComparisonMatrix: React.FC = () => {
       key: 'ai',
       title: '1. Motor de IA & Agentes Virtuales 24/7',
       items: [
-        { name: 'Agentes Inmobiliarios de IA Activos 24/7', starter: '1 Agente', pro: 'Ilimitados', custom: 'Ilimitados Dedicados' },
+        { name: 'Agentes Inmobiliarios de IA Activos 24/7', starter: '1 Agente', pro: '5 Agentes', custom: 'Ilimitados Dedicados' },
         { name: 'Motor de Respuestas Aria AI Streaming', starter: true, pro: true, custom: true },
         { name: 'Personalización de Tono & Nombre de Agente', starter: true, pro: true, custom: true },
         { name: 'Prompt System Prompt a Medida', starter: false, pro: true, custom: true },
@@ -29,7 +30,7 @@ export const FeatureComparisonMatrix: React.FC = () => {
       key: 'rag',
       title: '2. RAG, Documentación PDF & Análisis de Inmuebles',
       items: [
-        { name: 'Capacidad de Inmuebles en Catálogo RAG', starter: 'Hasta 50 Inmuebles', pro: 'Ilimitados', custom: 'Ilimitados' },
+        { name: 'Capacidad de Inmuebles en Catálogo RAG', starter: `Hasta ${PLAN_LIMITS.solo_agent.maxProperties} Inmuebles`, pro: `Hasta ${PLAN_LIMITS.agency_pro.maxProperties} Inmuebles`, custom: 'Ilimitados' },
         { name: 'Lectura de Memorias de Calidades y Dossiers PDF', starter: true, pro: true, custom: true },
         { name: 'Lectura de Planos 2D / 3D y Planos de Planta', starter: false, pro: true, custom: true },
         { name: 'Evaluador de Rentabilidad Bruta (ROI / Cap Rate)', starter: false, pro: true, custom: true },
@@ -76,7 +77,7 @@ export const FeatureComparisonMatrix: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 pt-8 border-t border-white/10 animate-page-fade">
+    <div className="space-y-6 pt-8 border-t border-white/10 animate-page-fade">
       
       {/* Title */}
       <div className="text-center space-y-3 max-w-2xl mx-auto">
@@ -99,17 +100,17 @@ export const FeatureComparisonMatrix: React.FC = () => {
         <div className="grid grid-cols-12 bg-slate-950/80 p-4 sm:p-6 border-b border-white/10 text-xs font-bold items-center sticky top-16 z-20 backdrop-blur-md">
           <div className="col-span-5 text-slate-200 uppercase tracking-wider">Funcionalidades</div>
           <div className="col-span-2 text-center text-slate-300">
-            <span className="block text-sm font-extrabold text-white">Starter</span>
-            <span className="text-[10px] text-emerald-400 font-mono">$19 / mes</span>
+            <span className="block text-sm font-extrabold text-white">{PLAN_LIMITS.solo_agent.name}</span>
+            <span className="text-[10px] text-emerald-400 font-mono">${PLAN_LIMITS.solo_agent.annualPriceUsd} / mes</span>
           </div>
           <div className="col-span-3 text-center bg-emerald-500/10 p-2 rounded-2xl border border-emerald-500/30 shadow-inner">
             <span className="text-[9px] font-black uppercase text-emerald-400 block tracking-wider">★ Más Popular</span>
-            <span className="block text-sm font-black text-white">Pro Enterprise</span>
-            <span className="text-[10px] text-emerald-300 font-mono">$39 / mes</span>
+            <span className="block text-sm font-black text-white">{PLAN_LIMITS.agency_pro.name}</span>
+            <span className="text-[10px] text-emerald-300 font-mono">${PLAN_LIMITS.agency_pro.annualPriceUsd} / mes</span>
           </div>
           <div className="col-span-2 text-center text-slate-300">
-            <span className="block text-sm font-extrabold text-white">Custom</span>
-            <span className="text-[10px] text-cyan-400 font-mono">$59 / mes</span>
+            <span className="block text-sm font-extrabold text-white">{PLAN_LIMITS.enterprise.name}</span>
+            <span className="text-[10px] text-cyan-400 font-mono">A Medida</span>
           </div>
         </div>
 

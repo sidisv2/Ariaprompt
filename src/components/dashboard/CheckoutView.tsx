@@ -48,6 +48,8 @@ const CURRENCIES: { code: CurrencyCode; label: string; symbol: string; rate: num
   { code: 'CLP', label: 'Pesos Chilenos (CLP)', symbol: '$', rate: 940, flag: '🇨🇱' },
 ];
 
+import { PLAN_LIMITS } from '../../lib/planLimits';
+
 interface PlanItem {
   id: string;
   name: string;
@@ -60,45 +62,45 @@ interface PlanItem {
 const PLANS: PlanItem[] = [
   {
     id: 'starter',
-    name: 'Plan Básico',
-    priceUsd: 31,
-    description: 'Ideal para agentes independientes o agencias pequeñas iniciando con IA.',
+    name: PLAN_LIMITS.solo_agent.name,
+    priceUsd: PLAN_LIMITS.solo_agent.annualPriceUsd,
+    description: PLAN_LIMITS.solo_agent.description,
     features: [
       '1 Agente de IA (Aria) activo',
-      'Hasta 500 chats de cualificación/mes',
-      'Hasta 20 propiedades sincronizadas',
-      'Widget Web Embebible',
+      `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} leads cualificados/mes`,
+      `Hasta ${PLAN_LIMITS.solo_agent.maxProperties} propiedades en catálogo`,
+      'Widget Web & WhatsApp API',
       '7 Días de Prueba Gratis (Sin tarjeta)'
     ]
   },
   {
     id: 'pro',
-    name: 'Plan Profesional',
-    priceUsd: 71,
+    name: PLAN_LIMITS.agency_pro.name,
+    priceUsd: PLAN_LIMITS.agency_pro.annualPriceUsd,
     badge: 'MÁS POPULAR',
-    description: 'Para agencias en crecimiento que buscan automatización total por WhatsApp y CRM.',
+    description: PLAN_LIMITS.agency_pro.description,
     features: [
-      '3 Agentes de IA configurables',
-      'Chats y Propiedades Ilimitados',
-      'Sincronización Automática de CRM',
-      'Soporte Prioritario por WhatsApp 24/7',
-      'RAG Documental (PDFs, Excel, Planos)',
-      'Intervención en Vivo (Human-in-the-loop)'
+      '5 Agentes de IA configurables',
+      `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} leads cualificados/mes`,
+      `Hasta ${PLAN_LIMITS.agency_pro.maxProperties} propiedades en catálogo`,
+      'Sincronización Automática Tokko & EasyBroker',
+      'RAG Documental (PDFs, Planos)',
+      'Soporte Prioritario VIP 24/7'
     ]
   },
   {
     id: 'agency',
-    name: 'Plan Enterprise',
-    priceUsd: 159,
-    badge: 'MEJOR VALOR',
-    description: 'Para redes inmobiliarias, franquicias y múltiples sucursales con marca blanca.',
+    name: PLAN_LIMITS.enterprise.name,
+    priceUsd: 0,
+    badge: 'SOLUCIÓN A MEDIDA',
+    description: PLAN_LIMITS.enterprise.description,
     features: [
       'Agentes de IA Ilimitados',
       'Marca Blanca 100% (Sin logo de Aria Prop)',
       'Dominio Personalizado',
       'Múltiples sucursales y ciudades',
       'Gerente de Cuenta Dedicado',
-      'API Custom, Webhooks & Zapier'
+      'API Custom, Webhooks & SLA 99.9%'
     ]
   }
 ];

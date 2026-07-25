@@ -3,6 +3,8 @@ import { Check, Sparkles, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { AppRoute } from '../../types';
 
+import { PLAN_LIMITS } from '../../lib/planLimits';
+
 interface PricingSwitcherProps {
   onRouteChange?: (route: AppRoute) => void;
 }
@@ -16,15 +18,15 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
   const plans = [
     {
       id: 'starter',
-      name: 'Solo Agent',
-      tagline: 'Ideal para corredores y agentes inmobiliarios independientes.',
-      monthlyPrice: 35,
-      annualPrice: 29,
+      name: PLAN_LIMITS.solo_agent.name,
+      tagline: PLAN_LIMITS.solo_agent.description,
+      monthlyPrice: PLAN_LIMITS.solo_agent.monthlyPriceUsd,
+      annualPrice: PLAN_LIMITS.solo_agent.annualPriceUsd,
       features: [
         '1 Agente de IA Activo 24/7 (Web)',
-        'Hasta 100 Leads Cualificados / mes',
+        `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} Leads Cualificados / mes`,
         'Sincronización con Google Calendar',
-        'Catálogo de hasta 20 Inmuebles',
+        `Catálogo de hasta ${PLAN_LIMITS.solo_agent.maxProperties} Inmuebles`,
         'Soporte por Email & Chat',
       ],
       popular: false,
@@ -34,15 +36,15 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
     },
     {
       id: 'pro',
-      name: 'Agency Pro',
-      tagline: 'Para agencias en crecimiento con WhatsApp y sincronización CRM.',
-      monthlyPrice: 99,
-      annualPrice: 79,
+      name: PLAN_LIMITS.agency_pro.name,
+      tagline: PLAN_LIMITS.agency_pro.description,
+      monthlyPrice: PLAN_LIMITS.agency_pro.monthlyPriceUsd,
+      annualPrice: PLAN_LIMITS.agency_pro.annualPriceUsd,
       features: [
         '5 Agentes de IA 24/7 (WhatsApp & Web)',
-        'Leads Cualificados Ilimitados',
+        `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} Leads Cualificados / mes`,
         'Integración Tokko Broker & EasyBroker',
-        'Bóveda RAG Ilimitada (Dossieres PDF)',
+        `Catálogo de hasta ${PLAN_LIMITS.agency_pro.maxProperties} Inmuebles`,
         'Evaluador de Rentabilidad & Cap Rate',
         'Soporte Prioritario VIP 24/7',
       ],
@@ -53,11 +55,11 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
     },
     {
       id: 'custom',
-      name: 'Enterprise / Desarrolladores',
-      tagline: 'Para desarrolladoras, promotoras y redes inmobiliarias multi-sucursal.',
+      name: `${PLAN_LIMITS.enterprise.name} / Desarrolladores`,
+      tagline: PLAN_LIMITS.enterprise.description,
       isCustom: true,
-      monthlyPrice: 0,
-      annualPrice: 0,
+      monthlyPrice: PLAN_LIMITS.enterprise.monthlyPriceUsd,
+      annualPrice: PLAN_LIMITS.enterprise.annualPriceUsd,
       features: [
         'Agentes & Sucursales Ilimitadas',
         'Infraestructura RAG Dedicada',

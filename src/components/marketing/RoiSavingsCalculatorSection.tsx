@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { AppRoute } from '../../types';
 import { Calculator, TrendingUp, Clock, AlertTriangle, Sparkles, CheckCircle2, ArrowRight, DollarSign } from 'lucide-react';
 
+import { PLAN_LIMITS } from '../../lib/planLimits';
+
 interface RoiSavingsCalculatorSectionProps {
   onRouteChange?: (route: AppRoute) => void;
 }
@@ -25,7 +27,8 @@ export const RoiSavingsCalculatorSection: React.FC<RoiSavingsCalculatorSectionPr
   const recoveredToursMonthly = Math.round(lostLeadsMonthly * 0.45);
   const potentialClosedDeals = Math.max(1, Math.round(recoveredToursMonthly * 0.12));
   const lostCommissionUsd = potentialClosedDeals * avgCommissionUsd;
-  const estimatedRoiMultiplier = Math.round((lostCommissionUsd / 299) * 10) / 10;
+  const annualAriaCostUsd = PLAN_LIMITS.solo_agent.annualPriceUsd * 12;
+  const estimatedRoiMultiplier = Math.round((lostCommissionUsd / annualAriaCostUsd) * 10) / 10;
 
   return (
     <section className="py-20 bg-slate-950 text-white relative overflow-hidden border-t border-white/10">

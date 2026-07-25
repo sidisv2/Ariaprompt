@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { UserSubscriptionRole, AppRoute } from '../../types';
 import { ShieldCheck, UserCheck, Zap, Star, Sparkles, CheckCircle2, Lock, ArrowRight, Building2, UserX, Crown } from 'lucide-react';
+import { PLAN_LIMITS } from '../../lib/planLimits';
 
 interface UserRolesDashboardProps {
   onRouteChange: (route: AppRoute) => void;
@@ -43,28 +44,28 @@ export const UserRolesDashboard: React.FC<UserRolesDashboardProps> = ({ onRouteC
     },
     {
       id: 'subscriber_starter',
-      title: 'Suscriptor Plan Starter',
-      badge: 'Básico ($19/mes)',
+      title: `Suscriptor Plan ${PLAN_LIMITS.solo_agent.name}`,
+      badge: `${PLAN_LIMITS.solo_agent.name} ($${PLAN_LIMITS.solo_agent.annualPriceUsd}/mes)`,
       icon: <Zap className="w-5 h-5 text-teal-400" />,
       color: 'border-teal-500/30 bg-teal-500/5',
-      description: 'Agente independiente con IA comercial para captación e inmuebles.',
+      description: PLAN_LIMITS.solo_agent.description,
       features: [
-        'Hasta 500 Interacciones Mensuales',
-        'Búsqueda RAG sobre 5 Inmuebles',
+        `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} Interacciones Mensuales`,
+        `Búsqueda RAG sobre ${PLAN_LIMITS.solo_agent.maxProperties} Inmuebles`,
         'Calificación de Leads Básica',
         'Soporte por Email Prioritario',
       ],
     },
     {
       id: 'subscriber_pro',
-      title: 'Suscriptor Plan Pro',
-      badge: 'Recomendado ($39/mes)',
+      title: `Suscriptor Plan ${PLAN_LIMITS.agency_pro.name}`,
+      badge: `Recomendado ($${PLAN_LIMITS.agency_pro.annualPriceUsd}/mes)`,
       icon: <Crown className="w-5 h-5 text-amber-400" />,
       color: 'border-amber-500/40 bg-amber-500/10',
-      description: 'Agencia mediana con automatización avanzada e integraciones.',
+      description: PLAN_LIMITS.agency_pro.description,
       features: [
-        'Hasta 2,500 Interacciones Mensuales',
-        'Búsqueda RAG sobre 25 Inmuebles',
+        `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} Interacciones Mensuales`,
+        `Búsqueda RAG sobre ${PLAN_LIMITS.agency_pro.maxProperties} Inmuebles`,
         'Integración con WhatsApp Business',
         'Exportación de Expedientes PDF',
         'Soporte 24/7 Preferencial',
@@ -72,11 +73,11 @@ export const UserRolesDashboard: React.FC<UserRolesDashboardProps> = ({ onRouteC
     },
     {
       id: 'subscriber_custom',
-      title: 'Suscriptor Plan Enterprise',
-      badge: 'A Medida ($59/mes)',
+      title: `Suscriptor Plan ${PLAN_LIMITS.enterprise.name}`,
+      badge: 'A Medida',
       icon: <Sparkles className="w-5 h-5 text-emerald-400" />,
       color: 'border-emerald-500/40 bg-emerald-500/10',
-      description: 'Red inmobiliaria o desarrolladora con infraestructura dedicada RAG ($59/mes).',
+      description: PLAN_LIMITS.enterprise.description,
       features: [
         'Servidores RAG Dedicados',
         'Modelos Aria AI Personalizados',

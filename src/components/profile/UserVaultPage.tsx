@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { AppRoute } from '../../types';
 import { FileText, Download, Lock, ShieldCheck, Sparkles, Upload, ArrowRight, UserCheck } from 'lucide-react';
 
+import { PLAN_LIMITS } from '../../lib/planLimits';
+
 interface UserVaultPageProps {
   onRouteChange: (route: AppRoute) => void;
 }
@@ -109,7 +111,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
               onClick={() => onRouteChange('pricing')}
               className="px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Ver Planes de Suscripción ($19/mes)</span>
+              <span>Ver Planes de Suscripción (desde ${PLAN_LIMITS.solo_agent.annualPriceUsd}/mes)</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

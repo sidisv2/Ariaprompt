@@ -13,6 +13,8 @@ import {
   HelpCircle
 } from 'lucide-react';
 
+import { PLAN_LIMITS } from '../../lib/planLimits';
+
 interface MobilePricingSectionProps {
   onRouteChange: (route: AppRoute) => void;
 }
@@ -76,19 +78,19 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
             if (index >= 0 && index <= 2) setActiveCardIndex(index);
           }}
         >
-          {/* Card 1: Básico */}
+          {/* Card 1: Solo Agent */}
           <div className="snap-center shrink-0 w-[85vw] max-w-xs bg-slate-900 border border-white/10 rounded-3xl p-5 space-y-4 flex flex-col justify-between shadow-xl">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-slate-400">Básico</span>
+                <span className="text-xs font-bold uppercase text-slate-400">{PLAN_LIMITS.solo_agent.name}</span>
                 <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-300 font-semibold">1 Agente IA</span>
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${isAnnual ? 19 : 24}</span>
+                  <span className="text-3xl font-black text-white">${isAnnual ? PLAN_LIMITS.solo_agent.annualPriceUsd : PLAN_LIMITS.solo_agent.monthlyPriceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">Ideal para corredores independientes.</p>
+                <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.solo_agent.description}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-white/5 text-xs text-slate-300">
@@ -96,13 +98,13 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Hasta 50 inmuebles en catálogo</span>
+                  <span>Hasta {PLAN_LIMITS.solo_agent.maxProperties} inmuebles en catálogo</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Atención WhatsApp & Web Widget</span>
+                  <span>Hasta {PLAN_LIMITS.solo_agent.maxLeadsPerMonth} leads/mes</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
@@ -114,14 +116,14 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
             </div>
 
             <button
-              onClick={() => handlePlanSelection('basico')}
+              onClick={() => handlePlanSelection('solo_agent')}
               className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-white font-bold text-xs border border-white/10 transition-all active:scale-95 cursor-pointer"
             >
-              Probar Plan Básico
+              Probar Plan Solo Agent
             </button>
           </div>
 
-          {/* Card 2: Profesional (Recomendado) */}
+          {/* Card 2: Agency Pro (Recomendado) */}
           <div className="snap-center shrink-0 w-[85vw] max-w-xs bg-slate-900 border-2 border-emerald-500 rounded-3xl p-5 space-y-4 flex flex-col justify-between shadow-2xl shadow-emerald-500/20 relative overflow-hidden">
             <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-teal-400 text-slate-950 font-black text-[9px] px-3 py-1 rounded-bl-xl uppercase tracking-wider">
               Popular LATAM
@@ -129,16 +131,16 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
 
             <div className="space-y-3 pt-1">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-emerald-400">Profesional</span>
-                <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-300 font-semibold">3 Agentes IA</span>
+                <span className="text-xs font-bold uppercase text-emerald-400">{PLAN_LIMITS.agency_pro.name}</span>
+                <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-300 font-semibold">5 Agentes IA</span>
               </div>
 
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${isAnnual ? 39 : 49}</span>
+                  <span className="text-3xl font-black text-white">${isAnnual ? PLAN_LIMITS.agency_pro.annualPriceUsd : PLAN_LIMITS.agency_pro.monthlyPriceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
-                <p className="text-[11px] text-slate-300 mt-1">Para inmobiliarias en crecimiento.</p>
+                <p className="text-[11px] text-slate-300 mt-1">{PLAN_LIMITS.agency_pro.description}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-emerald-500/20 text-xs text-slate-200">
@@ -146,13 +148,13 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Inmuebles e inventario ilimitado</span>
+                  <span>Hasta {PLAN_LIMITS.agency_pro.maxProperties} inmuebles en catálogo</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>RAG con fotos y fichas PDF</span>
+                  <span>Hasta {PLAN_LIMITS.agency_pro.maxLeadsPerMonth} leads/mes</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
@@ -170,11 +172,11 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
             </div>
 
             <button
-              onClick={() => handlePlanSelection('profesional')}
+              onClick={() => handlePlanSelection('agency_pro')}
               className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-95 transition-transform cursor-pointer flex items-center justify-center gap-1.5"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              <span>Suscribirme Ahora</span>
+              <span>Suscribirme a Agency Pro</span>
             </button>
           </div>
 
@@ -182,16 +184,15 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
           <div className="snap-center shrink-0 w-[85vw] max-w-xs bg-slate-900 border border-white/10 rounded-3xl p-5 space-y-4 flex flex-col justify-between shadow-xl">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-slate-400">Enterprise</span>
+                <span className="text-xs font-bold uppercase text-slate-400">{PLAN_LIMITS.enterprise.name}</span>
                 <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-300 font-semibold">Ilimitado</span>
               </div>
 
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${isAnnual ? 59 : 69}</span>
-                  <span className="text-xs text-slate-400">/mes</span>
+                  <span className="text-3xl font-black text-white">A Medida</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">Para grandes desarrolladoras e inmobiliarias.</p>
+                <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.enterprise.description}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-white/5 text-xs text-slate-300">
