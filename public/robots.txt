@@ -1,10 +1,31 @@
 # robots.txt for Aria Prop (https://ariaprompt.vercel.app)
+
 User-agent: *
 Allow: /
 Allow: /app
 Allow: /soluciones
 Allow: /pricing
 Allow: /recursos
+
+# Explicit OpenAI Crawlers (ChatGPT, OAI-SearchBot, GPTBot)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+# Explicit AI Search Engines & Crawlers
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
 
 # Disallow private user workspace & API endpoints from search engine indexing
 Disallow: /dashboard/
