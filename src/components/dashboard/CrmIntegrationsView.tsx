@@ -27,6 +27,19 @@ interface CrmIntegrationState {
   syncedCount?: number;
 }
 
+const getAgencyId = (userId?: string | null): string => {
+  if (userId && userId !== 'demo-agency') {
+    localStorage.setItem('aria_agency_id', userId);
+    return userId;
+  }
+  let stored = localStorage.getItem('aria_agency_id');
+  if (!stored || stored === 'demo-agency') {
+    stored = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+    localStorage.setItem('aria_agency_id', stored);
+  }
+  return stored;
+};
+
 export const CrmIntegrationsView: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
@@ -49,12 +62,12 @@ export const CrmIntegrationsView: React.FC = () => {
   }, [user]);
 
   const fetchIntegrations = async () => {
-    const agencyId = user?.id || 'demo-agency';
+    const agencyId = getAgencyId(user?.id);
     try {
       const res = await fetch(`/api/crm-credentials?agency_id=${agencyId}`);
       if (res.ok) {
         const json = await res.json();
-        if (json.success && Array.isArray(json.data)) {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           const map: Record<string, CrmIntegrationState> = {
             tokko: { provider: 'tokko', status: 'not_connected', syncedCount: 0 },
             easybroker: { provider: 'easybroker', status: 'not_connected', syncedCount: 0 },
@@ -66,7 +79,7 @@ export const CrmIntegrationsView: React.FC = () => {
                 status: item.status || 'connected',
                 lastSyncAt: item.last_sync_at,
                 lastError: item.last_error,
-                syncedCount: item.synced_count || 0,
+                syncedCount: item.synced_count ?? 0,
               };
             }
           });
@@ -78,7 +91,7 @@ export const CrmIntegrationsView: React.FC = () => {
       console.warn('CRM credentials fetch fallback:', err);
     }
 
-    // Fallback to localStorage for smooth demo
+    // Fallback to localStorage for smooth offline access
     const savedTokko = localStorage.getItem(`crm_tokko_${agencyId}`);
     const savedEasy = localStorage.getItem(`crm_easybroker_${agencyId}`);
 
@@ -102,7 +115,7 @@ export const CrmIntegrationsView: React.FC = () => {
     setValidationError(null);
     setValidationSuccess(null);
 
-    const agencyId = user?.id || 'demo-agency';
+    const agencyId = getAgencyId(user?.id);
 
     try {
       // Send validation directly to Vercel Serverless Function (runs server-to-server, avoiding CORS restrictions)
@@ -173,7 +186,7 @@ export const CrmIntegrationsView: React.FC = () => {
 
   const handleManualSync = async (provider: 'tokko' | 'easybroker') => {
     setIsSyncing(provider);
-    const agencyId = user?.id || 'demo-agency';
+    const agencyId = getAgencyId(user?.id);
 
     try {
       const res = await fetch('/api/crm-sync', {
@@ -203,7 +216,7 @@ export const CrmIntegrationsView: React.FC = () => {
   };
 
   const handleDisconnect = async (provider: 'tokko' | 'easybroker') => {
-    const agencyId = user?.id || 'demo-agency';
+    const agencyId = getAgencyId(user?.id);
     if (!confirm(`¿Desvincular la cuenta de ${provider === 'tokko' ? 'Tokko Broker' : 'EasyBroker'}?`)) return;
 
     try {

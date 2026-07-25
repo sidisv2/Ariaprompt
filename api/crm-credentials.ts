@@ -1,3 +1,4 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 function getBackendSupabaseClient() {
@@ -153,29 +154,71 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // 3. Persist in Supabase if DB is connected and agencyId is a valid UUID
+      // 3. Persist in Supabase Postgres
       if (supabase && isValidUuid(agencyId)) {
         try {
-          const { data, error } = await supabase
-            .from('crm_integrations')
-            .upsert({
-              agency_id: agencyId,
-              provider,
-              api_key: String(apiKey).trim(),
-              status: 'connected',
-              last_sync_at: new Date().toISOString(),
-              last_error: null,
-              synced_count: validation.totalCount || 0,
+          // Ensure profile exists in profiles table so Foreign Key on agency_id never fails
+          try {
+            await supabase.from('profiles').upsert({
+              id: agencyId,
+              email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
+              nombre: 'Agencia Partner',
               updated_at: new Date().toISOString(),
-            }, { onConflict: 'agency_id,provider' })
-            .select()
-            .single();
+            }, { onConflict: 'id' });
+          } catch (e) {
+            console.warn('Profile auto-create fallback:', e);
+          }
 
-          if (!error && data) {
+          // Check if record exists
+          const { data: existing } = await supabase
+            .from('crm_integrations')
+            .select('id')
+            .eq('agency_id', agencyId)
+            .eq('provider', provider)
+            .maybeSingle();
+
+          let savedData: any = null;
+
+          if (existing?.id) {
+            const { data: updated, error: updateErr } = await supabase
+              .from('crm_integrations')
+              .update({
+                api_key: String(apiKey).trim(),
+                status: 'connected',
+                last_sync_at: new Date().toISOString(),
+                last_error: null,
+                synced_count: validation.totalCount || 0,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existing.id)
+              .select()
+              .single();
+
+            if (!updateErr) savedData = updated;
+          } else {
+            const { data: inserted, error: insertErr } = await supabase
+              .from('crm_integrations')
+              .insert({
+                agency_id: agencyId,
+                provider,
+                api_key: String(apiKey).trim(),
+                status: 'connected',
+                last_sync_at: new Date().toISOString(),
+                last_error: null,
+                synced_count: validation.totalCount || 0,
+                updated_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+
+            if (!insertErr) savedData = inserted;
+          }
+
+          if (savedData) {
             return res.status(200).json({
               success: true,
               message: validation.message,
-              data,
+              data: savedData,
               source: 'supabase',
             });
           }
