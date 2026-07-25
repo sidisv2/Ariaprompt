@@ -111,8 +111,8 @@ export default async function handler(req: any, res: any) {
       }
 
       if (supabase && isValidUuid(agencyId)) {
+        // 1. Try querying crm_integrations table
         try {
-          // 1. Try querying crm_integrations table
           const { data, error } = await supabase
             .from('crm_integrations')
             .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
@@ -121,15 +121,19 @@ export default async function handler(req: any, res: any) {
           if (!error && data && data.length > 0) {
             return res.status(200).json({ success: true, data, source: 'supabase' });
           }
+        } catch (e) {
+          console.warn('crm_integrations table query ignored:', e);
+        }
 
-          // 2. Fallback to profiles table (crm_integrations column)
-          const { data: profile } = await supabase
+        // 2. Fallback to profiles table (crm_integrations column)
+        try {
+          const { data: profile, error: pErr } = await supabase
             .from('profiles')
             .select('crm_integrations')
             .eq('id', agencyId)
             .maybeSingle();
 
-          if (profile && profile.crm_integrations) {
+          if (!pErr && profile && profile.crm_integrations) {
             let crmMap = profile.crm_integrations;
             if (typeof crmMap === 'string') {
               try { crmMap = JSON.parse(crmMap); } catch (e) { crmMap = {}; }
@@ -139,10 +143,11 @@ export default async function handler(req: any, res: any) {
               return res.status(200).json({ success: true, data: items, source: 'supabase_profile' });
             }
           }
-        } catch (err: any) {
-          console.warn('Error querying Supabase integrations:', err);
+        } catch (e) {
+          console.warn('profiles crm_integrations query ignored:', e);
         }
       }
+
       return res.status(200).json({ success: true, data: [], source: 'memory' });
     }
 
