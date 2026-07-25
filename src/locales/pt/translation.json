@@ -45,15 +45,15 @@
     "login": "Entrar"
   },
   "hero": {
-    "badge": "Atendimento Imobiliário 24/7 no WhatsApp e Web",
-    "title1": "Nunca perca outro lead imobiliário",
-    "title2": "por demorar para responder",
-    "subtitle": "O Aria Prop atende seus clientes em potencial instantaneamente, responde a dúvidas sobre seus imóveis, qualifica o orçamento e agenda visitas diretamente no seu calendário 24 horas por dia.",
-    "socialProof": "Resposta imediata em < 5s • Agendamento no Google Calendar • Integração CRM",
+    "badge": "Atendimento Imobiliário Instantâneo 24/7",
+    "title1": "O Aria Prop responde instantaneamente por você,",
+    "title2": "para nenhum lead esfriar esperando",
+    "subtitle": "Atenda clientes 24 horas por dia, tire dúvidas sobre seus imóveis e agende visitas no seu calendário para você se concentrar em fechar negócios.",
+    "socialProof": "Resposta em < 5 segundos • Atendimento 24/7 sem interromper seu dia",
     "ctaPrimary": "Iniciar Teste Grátis de 7 Dias",
-    "ctaSecondary": "Ver Demonstração Ao Vivo",
-    "trust1": "Sem cartão de crédito obrigatório",
-    "trust2": "Configuração em menos de 3 minutos",
+    "ctaSecondary": "Ver Demonstração",
+    "trust1": "Sem cartão de crédito",
+    "trust2": "Pronto em menos de 3 minutos",
     "trust3": "Integrado com Tokko e EasyBroker"
   },
   "prompt": {
