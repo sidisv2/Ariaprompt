@@ -23,7 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { uploadFileToSupabase } from '../../lib/storageService';
 
 export const ProfileSettingsView: React.FC = () => {
-  const { user, userPreferences, updateUserProfile, updateUserPreferences, openAuthModal } = useAuth();
+  const { user, userPreferences, updateUserProfile, updateUserPreferences, openAuthModal, requestSignOut } = useAuth();
 
   const [nombre, setNombre] = useState<string>(user?.nombre || '');
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatarUrl || '');
@@ -355,10 +355,10 @@ export const ProfileSettingsView: React.FC = () => {
         {user && (
           <button
             type="button"
-            onClick={() => useAuth().requestSignOut()}
+            onClick={requestSignOut}
             className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold text-xs border border-red-500/30 flex items-center gap-2 transition-all cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 text-red-400" />
             <span>Cerrar Sesión</span>
           </button>
         )}

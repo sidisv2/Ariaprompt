@@ -342,7 +342,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   };
 
-  // Immediate Sign Out
+  // Immediate Sign Out with Complete Multi-Tenant State Cleansing
   const signOut = async () => {
     setLoading(true);
     if (isSupabaseConfigured) {
@@ -350,7 +350,14 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
     setUser(null);
     setSession(null);
-    try { localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY); } catch {}
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
+      localStorage.removeItem('aria_partner_crm_connections_v1');
+      localStorage.removeItem('aria_partner_synced_properties_v1');
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('Error clearing storage on logout:', e);
+    }
     setLoading(false);
     if (onRouteChange) {
       onRouteChange('marketing');

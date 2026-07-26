@@ -17,7 +17,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   onRouteChange,
   agencyName = 'Aria Prop LATAM',
 }) => {
-  const { user, openAuthModal, signOut } = useAuth();
+  const { user, openAuthModal, requestSignOut } = useAuth();
   const isDashboard = currentRoute.startsWith('dashboard');
 
   return (
@@ -83,7 +83,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                 )}
               </button>
               <button
-                onClick={signOut}
+                onClick={requestSignOut}
                 className="p-1.5 rounded-lg bg-slate-900 border border-white/10 text-slate-400 hover:text-rose-400 active:scale-95 transition-all cursor-pointer shrink-0"
                 title="Cerrar Sesión"
               >
