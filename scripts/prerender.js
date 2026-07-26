@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DIST_DIR = path.resolve(__dirname, '../dist');
-const BASE_URL = 'https://ariaprompt.vercel.app';
+const BASE_URL = 'https://ariaprop.online';
 
 // ----------------------------------------------------------------------
 // SINGLE SOURCE OF TRUTH: Read dynamic translations from src/locales/es/translation.json

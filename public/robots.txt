@@ -1,4 +1,4 @@
-# robots.txt for Aria Prop (https://ariaprompt.vercel.app)
+# robots.txt for Aria Prop (https://ariaprop.online)
 
 User-agent: *
 Allow: /
@@ -32,4 +32,4 @@ Disallow: /dashboard/
 Disallow: /user/
 Disallow: /api/
 
-Sitemap: https://ariaprompt.vercel.app/sitemap.xml
+Sitemap: https://ariaprop.online/sitemap.xml

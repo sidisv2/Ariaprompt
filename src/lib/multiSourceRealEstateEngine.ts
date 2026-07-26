@@ -63,7 +63,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-22',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -102,7 +102,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-21',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -147,7 +147,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-20',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -191,7 +191,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-21',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -233,7 +233,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-19',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -273,7 +273,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-22',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -313,7 +313,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     createdAt: '2026-07-20',
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: 'https://ariaprompt.vercel.app/dashboard/properties',
+      url: 'https://ariaprop.online/dashboard/properties',
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
@@ -328,7 +328,7 @@ export const MARKET_REAL_ESTATE_DATABASE: Property[] = [
     },
     source: {
       name: 'Catálogo Directo de la Agencia',
-      url: `https://ariaprompt.vercel.app/dashboard/properties`,
+      url: `https://ariaprop.online/dashboard/properties`,
       isOfficialApi: true,
       lastUpdated: 'Inventario Verificado',
     },
