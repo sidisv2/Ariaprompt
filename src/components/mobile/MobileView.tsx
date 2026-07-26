@@ -175,6 +175,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
       </main>
 
       <MobileBottomNav currentRoute={currentRoute} onRouteChange={onRouteChange} />
+
+      {/* Native Mobile Auth Bottom Sheet Modal */}
+      <MobileAuthBottomSheet />
     </div>
   );
 };
