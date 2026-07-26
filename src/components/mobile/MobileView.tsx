@@ -5,7 +5,10 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { MobileHeroSection } from './MobileHeroSection';
 import { MobilePricingSection } from './MobilePricingSection';
 import { MobileAuthBottomSheet } from './MobileAuthBottomSheet';
-import { SocialProofMarquee } from '../marketing/SocialProofMarquee';
+import { TechStackBanner } from '../marketing/TechStackBanner';
+import { RealUseCaseNarrative } from '../marketing/RealUseCaseNarrative';
+import { ComparisonSection } from '../marketing/ComparisonSection';
+import { WhyAriaSection } from '../marketing/WhyAriaSection';
 import { BentoGridFeatures } from '../marketing/BentoGridFeatures';
 import { Playground } from '../playground/Playground';
 import { SolutionsGrid } from '../solutions/SolutionsGrid';
@@ -27,7 +30,6 @@ import { RecursosPage } from '../pages/RecursosPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
-import { TestimonialsSection } from '../marketing/TestimonialsSection';
 import { TechStackSection } from '../marketing/TechStackSection';
 import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
@@ -63,138 +65,92 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onOpenPrompt,
 }) => {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 selection:bg-emerald-500 selection:text-slate-950">
-      
-      {/* Mobile Top Header Bar */}
-      <MobileHeader
-        currentRoute={currentRoute}
-        onRouteChange={onRouteChange}
-        agencyName={botConfig.agencyName}
-      />
+    <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
+      <MobileHeader currentRoute={currentRoute} onRouteChange={onRouteChange} />
 
-      {/* Main Content Flow */}
-      <main className="flex-1 overflow-x-hidden animate-page-fade">
-        {(currentRoute === 'dashboard-metrics' || currentRoute === 'app') && (
-          <div className="p-2 sm:p-4">
-            <SummaryDashboardView leads={leads} onRouteChange={onRouteChange} />
-          </div>
-        )}
-
-        {currentRoute === 'dashboard-properties' && (
-          <div className="p-2 sm:p-4">
-            <PropertiesView properties={properties} onAddProperty={onAddProperty} />
-          </div>
-        )}
-
-        {currentRoute === 'dashboard-leads' && (
-          <div className="p-2 sm:p-4">
-            <LeadsView
-              leads={leads}
-              onUpdateLeadStatus={onUpdateLeadStatus}
-              selectedLeadForChat={selectedLeadForChat}
-              onClearSelectedLead={onClearSelectedLead}
-            />
-          </div>
-        )}
-
-        {currentRoute === 'dashboard-bot-config' && (
-          <div className="p-2 sm:p-4">
-            <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
-          </div>
-        )}
-
-        {currentRoute === 'dashboard-checkout' && (
-          <div className="p-2 sm:p-4">
-            <CheckoutView onRouteChange={onRouteChange} />
-          </div>
-        )}
-
-        {currentRoute === 'dashboard-integrations' && (
-          <div className="p-2 sm:p-4">
-            <CrmIntegrationsView />
-          </div>
-        )}
-
-        {currentRoute === 'dashboard-roles' && (
-          <div className="p-2 sm:p-4">
-            <UserRolesDashboard onRouteChange={onRouteChange} />
-          </div>
-        )}
-
-        {(currentRoute === 'dashboard-files' || currentRoute === 'dashboard-profile') && (
-          <div className="p-2 sm:p-4">
-            <UserProfileDashboard
-              initialTab={currentRoute === 'dashboard-profile' ? 'profile' : 'files'}
-              onRouteChange={onRouteChange}
-            />
-          </div>
-        )}
-
-        {(currentRoute === 'aria-ai' || currentRoute === 'producto') && (
+      <main className="flex-1 pb-20">
+        {currentRoute === 'dashboard-metrics' ? (
+          <SummaryDashboardView leads={leads} onRouteChange={onRouteChange} />
+        ) : currentRoute === 'dashboard-properties' ? (
+          <PropertiesView properties={properties} onAddProperty={onAddProperty} />
+        ) : currentRoute === 'dashboard-leads' ? (
+          <LeadsView
+            leads={leads}
+            onUpdateLeadStatus={onUpdateLeadStatus}
+            selectedLeadForChat={selectedLeadForChat}
+            onClearSelectedLead={onClearSelectedLead}
+          />
+        ) : currentRoute === 'dashboard-bot-config' ? (
+          <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
+        ) : currentRoute === 'dashboard-checkout' ? (
+          <CheckoutView onRouteChange={onRouteChange} />
+        ) : currentRoute === 'dashboard-integrations' ? (
+          <CrmIntegrationsView />
+        ) : currentRoute === 'dashboard-roles' ? (
+          <UserRolesDashboard onRouteChange={onRouteChange} />
+        ) : (currentRoute === 'dashboard-files' || currentRoute === 'dashboard-profile') ? (
+          <UserProfileDashboard
+            initialTab={currentRoute === 'dashboard-profile' ? 'profile' : 'files'}
+            onRouteChange={onRouteChange}
+          />
+        ) : (currentRoute === 'aria-ai' || currentRoute === 'producto') ? (
           <div>
             <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
             <Footer />
           </div>
-        )}
-
-        {currentRoute === 'soluciones' && (
+        ) : currentRoute === 'soluciones' ? (
           <div>
             <SolucionesPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
             <Footer />
           </div>
-        )}
-
-        {currentRoute === 'recursos' && (
+        ) : currentRoute === 'recursos' ? (
           <div>
             <RecursosPage onRouteChange={onRouteChange} />
             <Footer />
           </div>
-        )}
-
-        {currentRoute === 'embed-preview' && (
+        ) : currentRoute === 'embed-preview' ? (
           <div className="p-4 space-y-4 text-center">
-            <div className="p-5 bg-slate-900 border border-emerald-500/30 rounded-2xl space-y-2">
-              <h2 className="text-base font-bold text-white">Widget Embebible de IA</h2>
-              <p className="text-xs text-slate-400">
-                Chatea con nuestra IA en tiempo real. Escribe tus dudas y consulta información del catálogo.
-              </p>
+            <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/30">
+              <h2 className="text-lg font-bold text-white">Widget Embebible Mobile</h2>
             </div>
             <EmbedChatWidget botConfig={botConfig} properties={properties} />
           </div>
-        )}
-
-        {currentRoute === 'pricing' && (
+        ) : currentRoute === 'pricing' ? (
           <div>
             <MobilePricingSection onRouteChange={onRouteChange} />
             <FAQ />
             <Footer />
           </div>
-        )}
-
-        {(currentRoute === 'marketing' || !currentRoute) && (
-          <div>
+        ) : (
+          <div className="space-y-8 animate-page-fade">
             {/* Section 2: Mobile Hero */}
             <MobileHeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
 
-            {/* Section 3: Barra de Confianza (Social Proof) */}
-            <SocialProofMarquee />
+            {/* Section 2: Banner de Stack e Integraciones */}
+            <TechStackBanner />
 
-            {/* Section 4: Sección de Problema */}
+            {/* Section 3: Caso de Uso Narrativo */}
+            <RealUseCaseNarrative />
+
+            {/* Section 4: Comparativa Sin Aria vs Con Aria */}
+            <ComparisonSection />
+
+            {/* Section 5: ¿Por qué Aria y no ChatGPT o CRM tradicional? */}
+            <WhyAriaSection />
+
+            {/* Section 6: Sección de Problema */}
             <ProblemSection />
 
-            {/* Section 5: Cómo Funciona (4 Pasos) */}
+            {/* Section 7: Cómo Funciona (4 Pasos) */}
             <HowItWorksSection />
 
-            {/* Section 6: Funcionalidades Clave */}
+            {/* Section 8: Funcionalidades Clave */}
             <BentoGridFeatures />
 
-            {/* Section 7: Demo Interactiva */}
+            {/* Section 9: Demo Interactiva */}
             <InteractiveDemoSection />
 
-            {/* Section 8: Testimonios / Resultados */}
-            <TestimonialsSection />
-
-            {/* Section 9: Sellos de Confianza y Seguridad */}
+            {/* Section 10: Sellos de Confianza y Seguridad */}
             <TrustSecuritySection />
 
             {/* Section 10: Integraciones */}
@@ -203,7 +159,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             {/* Section 11: Precios / Cotización */}
             <MobilePricingSection onRouteChange={onRouteChange} />
 
-            {/* Section 12: Arquitectura y Stack Técnico (Sección Secundaria) */}
+            {/* Section 12: Arquitectura y Stack Técnico */}
             <TechStackSection />
 
             {/* Section 13: Preguntas Frecuentes (FAQ) */}
@@ -218,17 +174,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
       </main>
 
-      {/* Mobile Fixed Bottom Navigation Bar */}
-      <MobileBottomNav
-        currentRoute={currentRoute}
-        onRouteChange={onRouteChange}
-        propertiesCount={properties.length}
-        leadsCount={leads.length}
-      />
-
-      {/* Mobile Exclusive Bottom Sheet Auth Modal */}
-      <MobileAuthBottomSheet />
-
+      <MobileBottomNav currentRoute={currentRoute} onRouteChange={onRouteChange} />
     </div>
   );
 };

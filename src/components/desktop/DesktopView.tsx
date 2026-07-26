@@ -3,7 +3,7 @@ import { AppRoute, Property, Lead, BotConfig } from '../../types';
 import { Header } from '../common/Header';
 import { DashboardSidebar } from '../common/DashboardSidebar';
 import { HeroSection } from '../marketing/HeroSection';
-import { SocialProofMarquee } from '../marketing/SocialProofMarquee';
+import { TechStackBanner } from '../marketing/TechStackBanner';
 import { BentoGridFeatures } from '../marketing/BentoGridFeatures';
 import { PricingSection } from '../marketing/PricingSection';
 import { Footer } from '../marketing/Footer';
@@ -185,7 +185,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           <HeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
 
           {/* Section 2: Barra de Confianza / Ecosistema Inmobiliario */}
-          <SocialProofMarquee />
+          <TechStackBanner />
 
           {/* Section 3: Caso de Uso Narrativo de Principio a Fin */}
           <RealUseCaseNarrative />

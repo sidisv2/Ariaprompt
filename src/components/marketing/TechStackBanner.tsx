@@ -1,7 +1,10 @@
 import React from 'react';
-import { Zap, Clock, ShieldCheck, CheckCircle2, Cpu, Calendar, MessageSquare, Database } from 'lucide-react';
+import { Zap, Clock, ShieldCheck, Link2, Calendar } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
-export const SocialProofMarquee: React.FC = () => {
+export const TechStackBanner: React.FC = () => {
+  const { t } = useLanguage();
+
   const metrics = [
     { icon: <Zap className="w-4 h-4 text-emerald-400" />, label: 'Respuesta < 5s', sub: 'Atención Inmediata 24/7' },
     { icon: <Clock className="w-4 h-4 text-teal-400" />, label: '100% Automatizado', sub: 'Sin Guardias Manuales' },
@@ -10,12 +13,10 @@ export const SocialProofMarquee: React.FC = () => {
   ];
 
   const integrations = [
-    { name: 'Tokko Broker CRM', desc: 'API Key Directa' },
-    { name: 'EasyBroker CRM', desc: 'Sincronización Nativa' },
+    { name: 'Tokko Broker CRM', desc: 'Conectá tu API Key' },
+    { name: 'EasyBroker CRM', desc: 'Conectá tu API Key' },
     { name: 'WhatsApp Business', desc: 'Atención Omnicanal' },
     { name: 'Google Calendar', desc: 'Agendamiento Real-Time' },
-    { name: 'Bóveda RAG PDF', desc: 'Extracción de Planos' },
-    { name: 'MercadoLibre Connect', desc: 'Captura de Leads' },
   ];
 
   return (
@@ -43,7 +44,7 @@ export const SocialProofMarquee: React.FC = () => {
         {/* Integration Badges Row */}
         <div className="pt-2 text-center space-y-3">
           <p className="text-[11px] font-extrabold uppercase tracking-widest text-emerald-400">
-            Integrado al Ecosistema Inmobiliario
+            Ecosistema de Integraciones Disponibles
           </p>
 
           <div className="flex flex-wrap justify-center items-center gap-3">
@@ -52,7 +53,7 @@ export const SocialProofMarquee: React.FC = () => {
                 key={idx}
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-950 border border-white/10 text-slate-300 text-xs font-medium"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <Link2 className="w-3.5 h-3.5 text-teal-400" />
                 <span className="font-bold text-white">{item.name}</span>
                 <span className="text-[10px] text-slate-400">({item.desc})</span>
               </div>
