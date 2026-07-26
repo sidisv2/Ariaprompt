@@ -211,6 +211,14 @@ export const Playground: React.FC<PlaygroundProps> = ({
                       Probá con una consulta de ejemplo:
                     </span>
                     <button
+                      onClick={() => handleSend('Busco algo cerca del centro, no muy caro.')}
+                      className="w-full p-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs text-emerald-300 font-extrabold transition-all text-left flex items-center justify-between group cursor-pointer shadow-sm"
+                    >
+                      <span className="truncate">🧠 "Busco algo cerca del centro, no muy caro" (Entiende Contexto)</span>
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                    </button>
+
+                    <button
                       onClick={() => handleSend('Tengo un lead interesado en un departamento de 2 ambientes en alquiler')}
                       className="w-full p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-white/10 hover:border-emerald-500/40 text-xs text-slate-200 font-medium transition-all text-left flex items-center justify-between group cursor-pointer"
                     >
