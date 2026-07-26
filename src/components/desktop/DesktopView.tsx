@@ -26,7 +26,9 @@ import { RecursosPage } from '../pages/RecursosPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
-import { TestimonialsSection } from '../marketing/TestimonialsSection';
+import { ComparisonSection } from '../marketing/ComparisonSection';
+import { WhyAriaSection } from '../marketing/WhyAriaSection';
+import { RealUseCaseNarrative } from '../marketing/RealUseCaseNarrative';
 import { TechStackSection } from '../marketing/TechStackSection';
 import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
@@ -179,49 +181,55 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         </main>
       ) : (
         <main className="flex-1 animate-page-fade">
-          {/* Section 1: Hero con Asistente Interactivo Cloudairy */}
+          {/* Section 1: Hero con Asistente Interactivo Cloudairy & Sequencia Animada */}
           <HeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
 
-          {/* Section 2: Barra de Confianza (Social Proof) */}
+          {/* Section 2: Barra de Confianza / Ecosistema Inmobiliario */}
           <SocialProofMarquee />
 
-          {/* Section 3: Sección de Problema (Agitación de Dolor) */}
+          {/* Section 3: Caso de Uso Narrativo de Principio a Fin */}
+          <RealUseCaseNarrative />
+
+          {/* Section 4: Comparativa Sin Aria vs Con Aria */}
+          <ComparisonSection />
+
+          {/* Section 5: ¿Por qué Aria y no ChatGPT o CRM tradicional? */}
+          <WhyAriaSection />
+
+          {/* Section 6: Sección de Problema (Agitación de Dolor) */}
           <ProblemSection />
 
-          {/* Section 4: Calculadora Interactiva de Ahorro / Pérdidas de Leads */}
+          {/* Section 7: Calculadora Interactiva de Ahorro / Pérdidas de Leads */}
           <RoiSavingsCalculatorSection onRouteChange={onRouteChange} />
 
-          {/* Section 5: Cómo Funciona (Flujo en 4 Pasos) */}
+          {/* Section 8: Cómo Funciona (Flujo en 4 Pasos) */}
           <HowItWorksSection />
 
-          {/* Section 6: Funcionalidades Clave (Bento Grid estilo Cloudairy) */}
+          {/* Section 9: Funcionalidades Clave (Bento Grid) */}
           <BentoGridFeatures />
 
-          {/* Section 7: Demo Interactiva */}
+          {/* Section 10: Demo Interactiva */}
           <InteractiveDemoSection />
 
-          {/* Section 8: Testimonios con Métricas de Resultado */}
-          <TestimonialsSection />
-
-          {/* Section 9: Sellos de Confianza y Seguridad Enterprise */}
+          {/* Section 11: Sellos de Confianza y Seguridad Enterprise */}
           <TrustSecuritySection />
 
-          {/* Section 10: Integraciones (WhatsApp, Calendar, CRMs, Portales) */}
+          {/* Section 12: Integraciones (WhatsApp, Calendar, CRMs, Portales) */}
           <IntegrationsSection />
 
-          {/* Section 11: Precios / Cotización */}
+          {/* Section 13: Precios / Cotización */}
           <PricingSection onRouteChange={onRouteChange} />
 
-          {/* Section 12: Arquitectura y Stack Técnico (Sección Secundaria) */}
+          {/* Section 14: Arquitectura y Stack Técnico */}
           <TechStackSection />
 
-          {/* Section 13: Preguntas Frecuentes (FAQ) */}
+          {/* Section 15: Preguntas Frecuentes (FAQ) */}
           <FAQ />
 
-          {/* Section 13: CTA Final de Cierre */}
+          {/* Section 16: CTA Final de Cierre */}
           <FinalCtaSection />
 
-          {/* Section 14: Footer Completo */}
+          {/* Section 17: Footer Completo */}
           <Footer onRouteChange={onRouteChange} />
         </main>
       )}
