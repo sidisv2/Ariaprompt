@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { RealtimeDot } from '../common/RealtimeDot';
-import { Building2, Sparkles, Sliders, LogOut, LogIn, ChevronRight, Globe } from 'lucide-react';
+import { Building2, Sliders, LogOut, LogIn } from 'lucide-react';
 
 interface MobileHeaderProps {
   currentRoute: AppRoute;
@@ -18,36 +18,36 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   agencyName = 'Aria Prop LATAM',
 }) => {
   const { user, openAuthModal, signOut } = useAuth();
-  const { lang, toggleLang } = useLanguage();
   const isDashboard = currentRoute.startsWith('dashboard');
 
   return (
-    <header className="sticky top-0 z-30 w-full max-w-full overflow-hidden bg-slate-950/90 backdrop-blur-xl border-b border-white/10 px-3 sm:px-4 py-2.5 sm:py-3">
-      <div className="flex items-center justify-between gap-2 max-w-full">
+    <header className="sticky top-0 z-40 w-full bg-slate-950/95 backdrop-blur-xl border-b border-white/10 px-2.5 sm:px-4 py-2 relative">
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2 max-w-full">
         
         {/* Left Branding */}
         <div 
           onClick={() => onRouteChange('marketing')}
           className="flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95 transition-transform min-w-0 shrink"
         >
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-md shadow-emerald-500/20 shrink-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-md shadow-emerald-500/20 shrink-0">
             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-emerald-400" />
+              <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
             </div>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <span className="font-black text-xs sm:text-sm text-white tracking-tight truncate">Aria Prop</span>
-              <span className="text-[9px] px-1 py-0.2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
+              <span className="text-[8px] sm:text-[9px] px-1 py-0.2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold shrink-0">
                 App
               </span>
             </div>
-            <p className="text-[9px] text-slate-400 truncate max-w-[80px] sm:max-w-[110px]">{agencyName}</p>
+            <p className="text-[9px] text-slate-400 truncate max-w-[65px] sm:max-w-[110px]">{agencyName}</p>
           </div>
         </div>
 
         {/* Right Status & Language Toggle */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap">
+          
           {/* Mobile Language Switcher Dropdown */}
           <LanguageSelector variant="mobile" />
 
@@ -56,7 +56,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           {isDashboard && (
             <button
               onClick={() => onRouteChange('dashboard-bot-config')}
-              className="p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 active:bg-white/10 text-xs flex items-center gap-1 cursor-pointer"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 active:bg-white/10 text-xs flex items-center justify-center shrink-0 cursor-pointer"
               title="Configurar IA"
             >
               <Sliders className="w-3.5 h-3.5 text-emerald-400" />
@@ -64,27 +64,27 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           )}
 
           {user ? (
-            <div className="flex items-center gap-1.5 pl-1">
+            <div className="flex items-center gap-1 sm:gap-1.5 pl-0.5 shrink-0">
               <button
                 onClick={() => onRouteChange('dashboard-files')}
-                className="cursor-pointer active:scale-90 transition-transform"
+                className="cursor-pointer active:scale-90 transition-transform shrink-0"
                 title="Mis Archivos & Perfil"
               >
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.nombre}
-                    className="w-7 h-7 rounded-full border border-emerald-400 object-cover"
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-emerald-400 object-cover"
                   />
                 ) : (
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold text-xs flex items-center justify-center">
                     {user.nombre.charAt(0).toUpperCase()}
                   </div>
                 )}
               </button>
               <button
                 onClick={signOut}
-                className="p-1.5 rounded-lg bg-slate-900 border border-white/10 text-slate-400 hover:text-rose-400 active:scale-95 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg bg-slate-900 border border-white/10 text-slate-400 hover:text-rose-400 active:scale-95 transition-all cursor-pointer shrink-0"
                 title="Cerrar Sesión"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -93,10 +93,10 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
           ) : (
             <button
               onClick={() => openAuthModal('login')}
-              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs active:scale-95 transition-transform flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-xs active:scale-95 transition-transform flex items-center gap-1 shadow-md shadow-emerald-500/20 cursor-pointer shrink-0 whitespace-nowrap"
             >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Ingresar</span>
+              <LogIn className="w-3.5 h-3.5 shrink-0" />
+              <span className="leading-none">Ingresar</span>
             </button>
           )}
 
@@ -106,7 +106,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
 
       {/* Sub-navigation pills for Mobile Dashboard */}
       {isDashboard && (
-        <div className="flex items-center gap-1.5 pt-2.5 mt-2 border-t border-white/5 overflow-x-auto scrollbar-none pb-0.5">
+        <div className="flex items-center gap-1.5 pt-2 mt-1.5 border-t border-white/5 overflow-x-auto scrollbar-none pb-0.5">
           <button
             onClick={() => onRouteChange('dashboard-metrics')}
             className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all cursor-pointer ${
