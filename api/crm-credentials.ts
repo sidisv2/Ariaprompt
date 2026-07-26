@@ -25,6 +25,13 @@ function isValidUuid(str?: string): boolean {
   return uuidRegex.test(str);
 }
 
+function maskApiKey(key?: string): string {
+  if (!key) return '';
+  const clean = key.trim();
+  if (clean.length <= 4) return '••••' + clean;
+  return '••••••••' + clean.slice(-4);
+}
+
 async function validateTokkoApiKey(apiKey: string) {
   const cleanKey = apiKey.trim();
   if (!cleanKey) {
@@ -110,7 +117,17 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ success: false, error: 'agency_id es requerido.' });
       }
 
-      if (supabase && isValidUuid(agencyId)) {
+      if (!supabase) {
+        return res.status(500).json({ success: false, error: 'Error de conexión con la base de datos Supabase.' });
+      }
+
+      if (!isValidUuid(agencyId)) {
+        return res.status(400).json({ success: false, error: 'agency_id debe ser un UUID válido.' });
+      }
+
+      try {
+        let items: any[] = [];
+
         // 1. Try querying crm_integrations table (strictly by agency_id)
         try {
           const { data, error } = await supabase
@@ -119,36 +136,51 @@ export default async function handler(req: any, res: any) {
             .eq('agency_id', agencyId);
 
           if (!error && data && data.length > 0) {
-            return res.status(200).json({ success: true, data, source: 'supabase' });
+            items = data;
           }
         } catch (e) {
           console.warn('crm_integrations table query skipped:', e);
         }
 
-        // 2. Query profiles table (estado_cuenta column holding CRM JSON for agency_id)
-        try {
-          const { data: profile, error: pErr } = await supabase
-            .from('profiles')
-            .select('estado_cuenta')
-            .eq('id', agencyId)
-            .maybeSingle();
+        // 2. Query profiles table (estado_cuenta column holding CRM JSON for agency_id) if items empty
+        if (items.length === 0) {
+          try {
+            const { data: profile, error: pErr } = await supabase
+              .from('profiles')
+              .select('estado_cuenta')
+              .eq('id', agencyId)
+              .maybeSingle();
 
-          if (!pErr && profile && profile.estado_cuenta) {
-            let crmMap: Record<string, any> = {};
-            if (typeof profile.estado_cuenta === 'string' && (profile.estado_cuenta.startsWith('{') || profile.estado_cuenta.startsWith('['))) {
-              try { crmMap = JSON.parse(profile.estado_cuenta); } catch (e) { crmMap = {}; }
+            if (!pErr && profile && profile.estado_cuenta) {
+              let crmMap: Record<string, any> = {};
+              if (typeof profile.estado_cuenta === 'string' && (profile.estado_cuenta.startsWith('{') || profile.estado_cuenta.startsWith('['))) {
+                try { crmMap = JSON.parse(profile.estado_cuenta); } catch (e) { crmMap = {}; }
+              }
+              items = Object.values(crmMap);
             }
-            const items = Object.values(crmMap);
-            if (items.length > 0) {
-              return res.status(200).json({ success: true, data: items, source: 'supabase' });
-            }
+          } catch (e) {
+            console.warn('profiles estado_cuenta query skipped:', e);
           }
-        } catch (e) {
-          console.warn('profiles estado_cuenta query skipped:', e);
         }
-      }
 
-      return res.status(200).json({ success: true, data: [], source: 'memory' });
+        // Sanitize and mask API keys for frontend responses
+        const sanitizedItems = items.map((item: any) => {
+          const rawKey = item.api_key || item.apiKey || '';
+          const { api_key, apiKey, ...rest } = item;
+          return {
+            ...rest,
+            api_key_preview: maskApiKey(rawKey),
+          };
+        });
+
+        // ALWAYS return source: "supabase"
+        return res.status(200).json({ success: true, data: sanitizedItems, source: 'supabase' });
+      } catch (err: any) {
+        return res.status(500).json({
+          success: false,
+          error: `Error al consultar la base de datos Supabase: ${err?.message || err}`,
+        });
+      }
     }
 
     if (req.method === 'POST') {
@@ -160,6 +192,20 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({
           success: false,
           error: 'Campos requeridos faltantes: agency_id, provider y apiKey.',
+        });
+      }
+
+      if (!supabase) {
+        return res.status(500).json({
+          success: false,
+          error: 'Error de conexión con la base de datos Supabase.',
+        });
+      }
+
+      if (!isValidUuid(agencyId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'agency_id debe ser un UUID válido.',
         });
       }
 
@@ -183,89 +229,82 @@ export default async function handler(req: any, res: any) {
       }
 
       // 3. Persist in Supabase Postgres strictly filtered by agency_id
-      if (supabase && isValidUuid(agencyId)) {
+      try {
+        const integrationData = {
+          provider,
+          status: 'connected',
+          api_key: String(apiKey).trim(),
+          last_sync_at: new Date().toISOString(),
+          last_error: null,
+          synced_count: validation.totalCount || 0,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Ensure auth.users user exists for agencyId
         try {
-          const integrationData = {
+          await supabase.auth.admin.createUser({
+            id: agencyId,
+            email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
+            email_confirm: true,
+          });
+        } catch (uErr) {
+          // User might already exist in auth.users
+        }
+
+        // Save to profiles table (estado_cuenta column) as guaranteed Supabase storage
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('estado_cuenta')
+          .eq('id', agencyId)
+          .maybeSingle();
+
+        let crmMap: Record<string, any> = {};
+        if (existingProfile?.estado_cuenta && (existingProfile.estado_cuenta.startsWith('{') || existingProfile.estado_cuenta.startsWith('['))) {
+          try { crmMap = JSON.parse(existingProfile.estado_cuenta); } catch (e) { crmMap = {}; }
+        }
+        crmMap[provider] = integrationData;
+
+        await supabase.from('profiles').upsert({
+          id: agencyId,
+          email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
+          nombre: 'Agencia Partner',
+          estado_cuenta: JSON.stringify(crmMap),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+        // Also attempt saving to crm_integrations table if available
+        try {
+          await supabase.from('crm_integrations').upsert({
+            agency_id: agencyId,
             provider,
-            status: 'connected',
             api_key: String(apiKey).trim(),
+            status: 'connected',
             last_sync_at: new Date().toISOString(),
             last_error: null,
             synced_count: validation.totalCount || 0,
             updated_at: new Date().toISOString(),
-          };
-
-          // Ensure auth.users user exists for agencyId
-          try {
-            await supabase.auth.admin.createUser({
-              id: agencyId,
-              email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
-              email_confirm: true,
-            });
-          } catch (uErr) {
-            // User might already exist in auth.users
-          }
-
-          // Save to profiles table (estado_cuenta column) as guaranteed Supabase storage
-          const { data: existingProfile } = await supabase
-            .from('profiles')
-            .select('estado_cuenta')
-            .eq('id', agencyId)
-            .maybeSingle();
-
-          let crmMap: Record<string, any> = {};
-          if (existingProfile?.estado_cuenta && (existingProfile.estado_cuenta.startsWith('{') || existingProfile.estado_cuenta.startsWith('['))) {
-            try { crmMap = JSON.parse(existingProfile.estado_cuenta); } catch (e) { crmMap = {}; }
-          }
-          crmMap[provider] = integrationData;
-
-          await supabase.from('profiles').upsert({
-            id: agencyId,
-            email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
-            nombre: 'Agencia Partner',
-            estado_cuenta: JSON.stringify(crmMap),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
-
-          // Also attempt saving to crm_integrations table if available
-          try {
-            await supabase.from('crm_integrations').upsert({
-              agency_id: agencyId,
-              provider,
-              api_key: String(apiKey).trim(),
-              status: 'connected',
-              last_sync_at: new Date().toISOString(),
-              last_error: null,
-              synced_count: validation.totalCount || 0,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'agency_id,provider' });
-          } catch (e) {
-            // Table might not exist yet
-          }
-
-          return res.status(200).json({
-            success: true,
-            message: validation.message,
-            data: integrationData,
-            source: 'supabase',
-          });
-        } catch (err: any) {
-          console.warn('Supabase insert exception:', err);
+          }, { onConflict: 'agency_id,provider' });
+        } catch (e) {
+          // Table might not exist yet
         }
-      }
 
-      // 4. Memory Fallback Response
-      return res.status(200).json({
-        success: true,
-        message: validation.message,
-        data: {
-          provider,
-          status: 'connected',
-          synced_count: validation.totalCount || 0,
-          agency_id: agencyId,
-        },
-        source: 'memory',
-      });
+        const { api_key, ...safeData } = integrationData;
+
+        return res.status(200).json({
+          success: true,
+          message: validation.message,
+          data: {
+            ...safeData,
+            api_key_preview: maskApiKey(apiKey),
+          },
+          source: 'supabase',
+        });
+      } catch (err: any) {
+        return res.status(500).json({
+          success: false,
+          error: `Error al guardar en Supabase: ${err?.message || err}`,
+        });
+      }
     }
 
     if (req.method === 'DELETE') {
