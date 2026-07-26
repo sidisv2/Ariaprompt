@@ -82,7 +82,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                 <h3 className="font-semibold text-white text-sm">Script Embebible (Instalación de 1 Clic)</h3>
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
-                HTML / WordPress / Idealista
+                HTML / WordPress / Webflow
               </span>
             </div>
 

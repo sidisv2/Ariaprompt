@@ -278,9 +278,15 @@
   },
   "integ": {
     "badge": "Connected Ecosystem",
-    "title": "Integrated with your daily real estate tools",
-    "subtitle": "Connect Aria Prop with your real estate CRM, business calendar, and favorite messaging channels.",
-    "compliance": "Secure connection encrypted via HTTPS / TLS API with tenant data isolation."
+    "title": "Connect with your daily work tools",
+    "subtitle": "Link Aria Prop with your real estate CRM, company calendar, and messaging channels.",
+    "tokkoType": "API Key Connection",
+    "easyType": "API Key Connection",
+    "waType": "24/7 Omnichannel Support",
+    "calType": "Real-Time Scheduling",
+    "securityType": "Data Security",
+    "slaType": "99.9% Uptime SLA",
+    "compliance": "Secure encrypted connection via HTTPS / TLS API and private agency isolation."
   },
   "demo": {
     "badge": "Interactive Demo",

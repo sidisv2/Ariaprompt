@@ -1,17 +1,17 @@
 import React from 'react';
-import { Layers, CheckCircle2, Cpu, Globe2, Calendar, MessageSquare, Database, Zap } from 'lucide-react';
+import { Layers, ShieldCheck, Calendar, MessageSquare, Database, Cpu, Link2 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const IntegrationsSection: React.FC = () => {
   const { t } = useLanguage();
 
   const integrations = [
-    { name: 'WhatsApp Business API', icon: <MessageSquare className="w-5 h-5 text-emerald-600" />, type: 'Mensajería 24/7' },
-    { name: 'Google & Outlook Calendar', icon: <Calendar className="w-5 h-5 text-teal-600" />, type: 'Agendado Automático' },
-    { name: 'HubSpot & Salesforce CRM', icon: <Database className="w-5 h-5 text-indigo-600" />, type: 'Sincronización de Leads' },
-    { name: 'Idealista & Fotocasa & ZonaProp', icon: <Globe2 className="w-5 h-5 text-amber-600" />, type: 'Portales Inmobiliarios' },
-    { name: 'Zapier & Webhooks API', icon: <Zap className="w-5 h-5 text-cyan-600" />, type: 'Conexión a Medida' },
-    { name: 'Infraestructura SaaS Cloud', icon: <Cpu className="w-5 h-5 text-indigo-600" />, type: '99.9% Uptime SLA' },
+    { name: 'Tokko Broker API', icon: <Link2 className="w-5 h-5 text-emerald-600" />, type: t('integ.tokkoType') || 'Conexión por API Key' },
+    { name: 'EasyBroker API', icon: <Link2 className="w-5 h-5 text-teal-600" />, type: t('integ.easyType') || 'Conexión por API Key' },
+    { name: 'WhatsApp Business API', icon: <MessageSquare className="w-5 h-5 text-emerald-600" />, type: t('integ.waType') || 'Atención Omnicanal 24/7' },
+    { name: 'Google Calendar Sync', icon: <Calendar className="w-5 h-5 text-teal-600" />, type: t('integ.calType') || 'Agendado Real-Time' },
+    { name: 'Cifrado HTTPS / TLS', icon: <ShieldCheck className="w-5 h-5 text-indigo-600" />, type: t('integ.securityType') || 'Seguridad de Datos' },
+    { name: 'Infraestructura SaaS Cloud', icon: <Cpu className="w-5 h-5 text-indigo-600" />, type: t('integ.slaType') || 'Disponibilidad 99.9%' },
   ];
 
   return (
@@ -52,7 +52,7 @@ export const IntegrationsSection: React.FC = () => {
 
         {/* Security / Compliance Banner */}
         <div className="mt-12 p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 max-w-2xl mx-auto flex items-center justify-center gap-3 text-xs text-indigo-950 font-medium">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{t('integ.compliance')}</span>
         </div>
 

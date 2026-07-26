@@ -19,9 +19,9 @@ function generateClientFallbackText(message: string, context: string): string {
     lowerMsg === 'hi'
   ) {
     return (
-      `¡Hola! Soy Aria Promp, tu comparador inmobiliario neutral para toda América.\n\n` +
-      `Analizo en tiempo real publicaciones de múltiples fuentes (MercadoLibre, Properati, Zonaprop) para ayudarte a encontrar la mejor opción.\n\n` +
-      `Para empezar, ¿buscas comprar o alquilar, y en qué ciudad o zona estás interesado?`
+      `¡Hola! Soy Aria Prop, tu asistente comercial inmobiliario 24/7.\n\n` +
+      `Analizo el catálogo inmobiliario de tu agencia para responder dudas de prospectos y agendar visitas en vivo.\n\n` +
+      `Para empezar, ¿buscas comprar o alquilar, y en qué zona estás interesado?`
     );
   }
 

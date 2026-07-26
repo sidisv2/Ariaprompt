@@ -279,8 +279,14 @@
   },
   "integ": {
     "badge": "Ecosistema Conectado",
-    "title": "Integrado con tus herramientas de trabajo diario",
-    "subtitle": "Conecta Aria Prop con tu CRM inmobiliario, calendario empresarial y canales de mensajería favoritos.",
+    "title": "Conectá con tus herramientas de trabajo diario",
+    "subtitle": "Vinculá Aria Prop con tu CRM inmobiliario, calendario empresarial y canales de mensajería.",
+    "tokkoType": "Conexión por API Key",
+    "easyType": "Conexión por API Key",
+    "waType": "Atención Omnicanal 24/7",
+    "calType": "Agendado Real-Time",
+    "securityType": "Seguridad de Datos",
+    "slaType": "Disponibilidad 99.9%",
     "compliance": "Conexión segura cifrada mediante API HTTPS / TLS y aislamiento privado por agencia."
   },
   "demo": {

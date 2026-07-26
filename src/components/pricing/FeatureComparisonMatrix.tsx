@@ -45,7 +45,7 @@ export const FeatureComparisonMatrix: React.FC = () => {
         { name: 'Integración Directa con WhatsApp Business API', starter: true, pro: true, custom: true },
         { name: 'Lead Scoring Automático (Hot / Warm / Cold)', starter: true, pro: true, custom: true },
         { name: 'Agendamiento Directo a Google Calendar', starter: false, pro: true, custom: true },
-        { name: 'Exportación a Salesforce, Hubspot & CRMs Locales', starter: false, pro: true, custom: true },
+        { name: 'Sincronización con Tokko Broker, EasyBroker & CRMs Partners', starter: false, pro: true, custom: true },
         { name: 'Webhooks & API REST Dedicada', starter: false, pro: false, custom: true },
       ],
     },

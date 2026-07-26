@@ -130,7 +130,7 @@ export const BentoGridFeatures: React.FC = () => {
                 Un solo script listo para copiar y pegar
               </h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Compatible al 100% con WordPress, Wix, Webflow, Idealista, TocToc, Properati o sitios en HTML puro. Pégalo antes de la etiqueta <code className="text-emerald-400 font-mono bg-black/40 px-1.5 py-0.5 rounded border border-white/10">&lt;/body&gt;</code> y empieza a recibir leands calientes de inmediato.
+                Compatible al 100% con WordPress, Wix, Webflow, Next.js, React o sitios en HTML puro. Pégalo antes de la etiqueta <code className="text-emerald-400 font-mono bg-black/40 px-1.5 py-0.5 rounded border border-white/10">&lt;/body&gt;</code> y empieza a recibir leads calientes de inmediato.
               </p>
             </div>
 
