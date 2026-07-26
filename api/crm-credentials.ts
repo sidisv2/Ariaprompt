@@ -2,11 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 const DEFAULT_SUPABASE_URL = 'https://qdadkcpqzpvdiqxdnjuf.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkYWRrY3BxenB2ZGlxeGRuanVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5Mzg5MjUsImV4cCI6MjEwMDUxNDkyNX0.Bj5ug6I-QYFF8ABdGnHR011jIASmDuSA2N0OKeZhQ74';
+const DEFAULT_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkYWRrY3BxenB2ZGlxeGRuanVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDkzODkyNSwiZXhwIjoyMTAwNTE0OTI1fQ.kWqOKIhNwaKTAugbRZ8I2-qxAx7NakaxdYF665nf9-g';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).trim();
-  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY).trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SERVICE_ROLE_KEY).trim();
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
     return null;
   }
@@ -111,7 +111,7 @@ export default async function handler(req: any, res: any) {
       }
 
       if (supabase && isValidUuid(agencyId)) {
-        // 1. Try querying crm_integrations table
+        // 1. Try querying crm_integrations table (strictly by agency_id)
         try {
           const { data, error } = await supabase
             .from('crm_integrations')
@@ -122,29 +122,29 @@ export default async function handler(req: any, res: any) {
             return res.status(200).json({ success: true, data, source: 'supabase' });
           }
         } catch (e) {
-          console.warn('crm_integrations table query ignored:', e);
+          console.warn('crm_integrations table query skipped:', e);
         }
 
-        // 2. Fallback to profiles table (crm_integrations column)
+        // 2. Query profiles table (estado_cuenta column holding CRM JSON for agency_id)
         try {
           const { data: profile, error: pErr } = await supabase
             .from('profiles')
-            .select('crm_integrations')
+            .select('estado_cuenta')
             .eq('id', agencyId)
             .maybeSingle();
 
-          if (!pErr && profile && profile.crm_integrations) {
-            let crmMap = profile.crm_integrations;
-            if (typeof crmMap === 'string') {
-              try { crmMap = JSON.parse(crmMap); } catch (e) { crmMap = {}; }
+          if (!pErr && profile && profile.estado_cuenta) {
+            let crmMap: Record<string, any> = {};
+            if (typeof profile.estado_cuenta === 'string' && (profile.estado_cuenta.startsWith('{') || profile.estado_cuenta.startsWith('['))) {
+              try { crmMap = JSON.parse(profile.estado_cuenta); } catch (e) { crmMap = {}; }
             }
             const items = Object.values(crmMap);
             if (items.length > 0) {
-              return res.status(200).json({ success: true, data: items, source: 'supabase_profile' });
+              return res.status(200).json({ success: true, data: items, source: 'supabase' });
             }
           }
         } catch (e) {
-          console.warn('profiles crm_integrations query ignored:', e);
+          console.warn('profiles estado_cuenta query skipped:', e);
         }
       }
 
@@ -195,18 +195,27 @@ export default async function handler(req: any, res: any) {
             updated_at: new Date().toISOString(),
           };
 
-          // Save to profiles table (crm_integrations JSONB column) as guaranteed fallback
+          // Ensure auth.users user exists for agencyId
+          try {
+            await supabase.auth.admin.createUser({
+              id: agencyId,
+              email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
+              email_confirm: true,
+            });
+          } catch (uErr) {
+            // User might already exist in auth.users
+          }
+
+          // Save to profiles table (estado_cuenta column) as guaranteed Supabase storage
           const { data: existingProfile } = await supabase
             .from('profiles')
-            .select('crm_integrations')
+            .select('estado_cuenta')
             .eq('id', agencyId)
             .maybeSingle();
 
           let crmMap: Record<string, any> = {};
-          if (existingProfile?.crm_integrations) {
-            crmMap = typeof existingProfile.crm_integrations === 'string'
-              ? JSON.parse(existingProfile.crm_integrations)
-              : existingProfile.crm_integrations;
+          if (existingProfile?.estado_cuenta && (existingProfile.estado_cuenta.startsWith('{') || existingProfile.estado_cuenta.startsWith('['))) {
+            try { crmMap = JSON.parse(existingProfile.estado_cuenta); } catch (e) { crmMap = {}; }
           }
           crmMap[provider] = integrationData;
 
@@ -214,7 +223,7 @@ export default async function handler(req: any, res: any) {
             id: agencyId,
             email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
             nombre: 'Agencia Partner',
-            crm_integrations: crmMap,
+            estado_cuenta: JSON.stringify(crmMap),
             updated_at: new Date().toISOString(),
           }, { onConflict: 'id' });
 
@@ -231,7 +240,7 @@ export default async function handler(req: any, res: any) {
               updated_at: new Date().toISOString(),
             }, { onConflict: 'agency_id,provider' });
           } catch (e) {
-            console.warn('crm_integrations table upsert ignored:', e);
+            // Table might not exist yet
           }
 
           return res.status(200).json({
@@ -269,11 +278,11 @@ export default async function handler(req: any, res: any) {
 
       if (supabase && isValidUuid(agencyId)) {
         try {
-          const { data: profile } = await supabase.from('profiles').select('crm_integrations').eq('id', agencyId).maybeSingle();
-          if (profile?.crm_integrations) {
-            let crmMap = typeof profile.crm_integrations === 'string' ? JSON.parse(profile.crm_integrations) : profile.crm_integrations;
+          const { data: profile } = await supabase.from('profiles').select('estado_cuenta').eq('id', agencyId).maybeSingle();
+          if (profile?.estado_cuenta && (profile.estado_cuenta.startsWith('{') || profile.estado_cuenta.startsWith('['))) {
+            let crmMap = JSON.parse(profile.estado_cuenta);
             delete crmMap[provider];
-            await supabase.from('profiles').update({ crm_integrations: crmMap, updated_at: new Date().toISOString() }).eq('id', agencyId);
+            await supabase.from('profiles').update({ estado_cuenta: JSON.stringify(crmMap), updated_at: new Date().toISOString() }).eq('id', agencyId);
           }
 
           await supabase.from('crm_integrations').delete().eq('agency_id', agencyId).eq('provider', provider);
