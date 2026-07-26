@@ -59,7 +59,7 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
           className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
         >
           <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-          <span>Agendar demo gratis</span>
+          <span>{t('hero.ctaPrimary')}</span>
           <ArrowRight className="w-4 h-4 text-slate-950" />
         </button>
 
@@ -85,16 +85,16 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
       {/* Quick Mobile Stats Strip */}
       <div className="grid grid-cols-3 gap-2 bg-slate-900/90 border border-white/10 rounded-2xl p-3 text-center">
         <div>
-          <p className="text-base font-black text-emerald-400">+350%</p>
-          <p className="text-[9px] text-slate-400">Leads Calificados</p>
+          <p className="text-base font-black text-emerald-400">0 seg</p>
+          <p className="text-[9px] text-slate-400">Demora en Respuesta</p>
         </div>
         <div className="border-x border-white/10">
-          <p className="text-base font-black text-teal-300">&lt; 3 seg</p>
+          <p className="text-base font-black text-teal-300">&lt; 5 seg</p>
           <p className="text-[9px] text-slate-400">Respuesta RAG</p>
         </div>
         <div>
           <p className="text-base font-black text-emerald-400">24 / 7</p>
-          <p className="text-[9px] text-slate-400">WhatsApp Activo</p>
+          <p className="text-[9px] text-slate-400">Atención Activa</p>
         </div>
       </div>
 

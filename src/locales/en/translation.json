@@ -54,7 +54,7 @@
     "ctaSecondary": "Watch Live Demo",
     "trust1": "No credit card required",
     "trust2": "Ready in under 3 minutes",
-    "trust3": "Tokko & EasyBroker CRM Sync"
+    "trust3": "Connect your Tokko or EasyBroker catalog"
   },
   "flowDemo": {
     "liveSequenceBadge": "Full Flow Sequence Demo (10-15s Loop)",
@@ -97,8 +97,8 @@
     "badge": "Key Differentiators",
     "title": "Why Aria Prop instead of ChatGPT or a traditional CRM?",
     "subtitle": "Aria Prop isn't a generic chatbot or a passive contact list: it is a dedicated real estate sales assistant.",
-    "card1Title": "Connected to Your Real Catalog (Zero Fake Data)",
-    "card1Desc": "Unlike generic ChatGPT, Aria Prop syncs via API Key with Tokko Broker and EasyBroker. It only answers with actual properties, current prices, and real photos.",
+    "card1Title": "Connect Your Real Catalog (Zero Hallucinated Data)",
+    "card1Desc": "Unlike generic ChatGPT, Aria Prop answers using your agency's actual inventory (via property files, PDFs, or CRM integrations). It shows real prices, specs, and current details.",
     "card2Title": "Qualifies & Schedules Automatically",
     "card2Desc": "Traditional CRMs only store contacts. Aria Prop holds real sales conversations, checks buyer budgets, and books tours on your calendar autonomously.",
     "card3Title": "Native on Web & WhatsApp (No Extra Apps)",
