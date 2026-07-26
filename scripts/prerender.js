@@ -36,8 +36,11 @@ const PUBLIC_ROUTES = [
         <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
           <header class="space-y-4">
             <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">${es.hero?.badge || 'Atención Inmobiliaria 24/7 en WhatsApp y Web'}</span>
-            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">${es.hero?.title1 || 'Nunca pierdas otro lead inmobiliario'} ${es.hero?.title2 || 'por tardar en responder'}</h1>
-            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">${es.hero?.subtitle || 'Aria Prop atiende a tus prospectos al instante, responde consultas sobre tus inmuebles, cualifica su presupuesto y agenda visitas directamente en tu calendario las 24 horas del día.'}</p>
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">${es.hero?.title1 || 'Aria Prop responde al instante por vos,'} ${es.hero?.title2 || 'así ningún lead se enfría'}</h1>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">${es.hero?.subtitle || 'Atendé consultas de inmuebles las 24 horas en WhatsApp y Web. Cualificá presupuesto y agendá visitas automáticamente en tu calendario sin mover un dedo.'}</p>
+            <div class="pt-2">
+              <span class="inline-block px-6 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-black text-sm">${es.hero?.ctaPrimary || 'Creá tu primer asistente de ventas gratis'}</span>
+            </div>
           </header>
           <section class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
             <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
