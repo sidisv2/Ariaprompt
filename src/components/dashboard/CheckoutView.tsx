@@ -22,8 +22,13 @@ import {
 import { trackPurchaseConversion } from '../../lib/analytics';
 import { PLAN_LIMITS } from '../../lib/planLimits';
 import { AppRoute } from '../../types';
+import { getPaddleInstance, openPaddleCheckout } from '../../lib/paddle';
 import {
+  VisaLogo,
+  MastercardLogo,
+  AmexLogo,
   MercadoPagoLogo,
+  PaypalLogo,
 } from '../common/PaymentLogos';
 
 interface CheckoutViewProps {
@@ -39,6 +44,9 @@ const CURRENCIES: { code: CurrencyCode; label: string; symbol: string; rate: num
   { code: 'ARS', label: 'Pesos Argentinos (ARS)', symbol: '$', rate: 1200, flag: '🇦🇷' },
   { code: 'CLP', label: 'Pesos Chilenos (CLP)', symbol: '$', rate: 940, flag: '🇨🇱' },
 ];
+
+type BillingCycle = 'annual' | 'monthly';
+type PaymentMethod = 'mercadopago' | 'card' | 'paypal' | 'google_pay' | 'apple_pay';
 
 interface PlanItem {
   id: string;
@@ -56,7 +64,7 @@ const normalizePlanId = (planId: string) => {
   return planId;
 };
 
-const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }> = {
+const OFFICIAL_PAYMENT_LINKS: Record<string, Record<BillingCycle, string>> = {
   starter: {
     monthly: 'https://mpago.la/17xmopC',
     annual: 'https://mpago.la/29pqoZr',
@@ -71,15 +79,30 @@ const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }
   },
 };
 
-const getOfficialPaymentLink = (planId: string, billingCycle: 'annual' | 'monthly') => {
+const getOfficialPaymentLink = (planId: string, billingCycle: BillingCycle) => {
   const linkConfig = OFFICIAL_PAYMENT_LINKS[normalizePlanId(planId)] || OFFICIAL_PAYMENT_LINKS.pro;
   return linkConfig[billingCycle];
+};
+
+const PADDLE_PRICE_IDS: Record<string, Partial<Record<BillingCycle, string>>> = {
+  starter: {
+    monthly: 'pri_01kyh5xs672hj75v57tyf8mqg1',
+    annual: 'pri_01kyh5zsndbhkhswrbfmwj4xvb',
+  },
+  pro: {
+    monthly: 'pri_01kyh63dg2h0jkwvd1bh6jde47',
+    annual: 'pri_01kyh64fj85g1j12vgar9ct9yz',
+  },
+};
+
+const getPaddlePriceId = (planId: string, billingCycle: BillingCycle) => {
+  return PADDLE_PRICE_IDS[normalizePlanId(planId)]?.[billingCycle];
 };
 
 export function CheckoutView({ }: CheckoutViewProps) {
   const { requireAuthForPayment, pendingPlan } = useAuth();
   const [selectedPlanId, setSelectedPlanId] = useState<string>(() => pendingPlan ? normalizePlanId(pendingPlan) : 'pro');
-  const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>(() => {
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(() => {
     return (localStorage.getItem('aria_selected_billing_cycle') as 'annual' | 'monthly') || 'annual';
   });
 
@@ -134,12 +157,14 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
   const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const activeCurrencyObj = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
   const activePlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
   const officialPaymentLink = getOfficialPaymentLink(activePlan.id, billingCycle);
+  const activePaddlePriceId = getPaddlePriceId(activePlan.id, billingCycle);
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
@@ -156,9 +181,37 @@ export function CheckoutView({ }: CheckoutViewProps) {
   };
 
   const handleOpenMercadoPagoWithAuth = () => {
+    setPaymentMethod('mercadopago');
     requireAuthForPayment({
       planId: selectedPlanId,
-      onAuthenticated: () => setShowCheckoutModal(true),
+      onAuthenticated: () => {
+        window.location.href = officialPaymentLink;
+      },
+    });
+  };
+
+  const handleOpenPaddleWithAuth = (method: Exclude<PaymentMethod, 'mercadopago'>) => {
+    setPaymentMethod(method);
+    requireAuthForPayment({
+      planId: selectedPlanId,
+      onAuthenticated: async () => {
+        if (!activePaddlePriceId) {
+          window.location.href = officialPaymentLink;
+          return;
+        }
+
+        await getPaddleInstance();
+        await openPaddleCheckout(activePaddlePriceId, {
+          planId: activePlan.id,
+          billingCycle,
+          onCompleted: (event) => {
+            const orderId = event.data?.transaction_id || `paddle-${activePlan.id}-${Date.now()}`;
+            const amount = Number(event.data?.totals?.total || activePlan.priceUsd);
+            trackPurchaseConversion(orderId, amount);
+            setPaymentCompleted(true);
+          },
+        });
+      },
     });
   };
 
@@ -344,16 +397,83 @@ export function CheckoutView({ }: CheckoutViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          {/* Mercado Pago */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <button
             onClick={handleOpenMercadoPagoWithAuth}
-            className="p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500"
+            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
+              paymentMethod === 'mercadopago'
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+                : 'bg-black/30 border-white/5 hover:border-white/15'
+            }`}
           >
             <MercadoPagoLogo className="h-6" />
             <div>
               <p className="font-bold text-white text-xs">Mercado Pago</p>
-              <p className="text-[10px] text-slate-400">Checkout oficial con link del plan seleccionado</p>
+              <p className="text-[10px] text-slate-400">Checkout Oficial LATAM</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleOpenPaddleWithAuth('card')}
+            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
+              paymentMethod === 'card'
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+                : 'bg-black/30 border-white/5 hover:border-white/15'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <VisaLogo className="h-4" />
+              <MastercardLogo className="h-4" />
+              <AmexLogo className="h-4" />
+            </div>
+            <div>
+              <p className="font-bold text-white text-xs">Tarjeta de Crédito / Débito</p>
+              <p className="text-[10px] text-slate-400">Procesado por Paddle</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleOpenPaddleWithAuth('paypal')}
+            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
+              paymentMethod === 'paypal'
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+                : 'bg-black/30 border-white/5 hover:border-white/15'
+            }`}
+          >
+            <PaypalLogo className="h-6" />
+            <div>
+              <p className="font-bold text-white text-xs">PayPal</p>
+              <p className="text-[10px] text-slate-400">Pago Global USD</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleOpenPaddleWithAuth('google_pay')}
+            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
+              paymentMethod === 'google_pay'
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+                : 'bg-black/30 border-white/5 hover:border-white/15'
+            }`}
+          >
+            <div className="text-lg font-black tracking-tight text-white">G Pay</div>
+            <div>
+              <p className="font-bold text-white text-xs">Google Pay</p>
+              <p className="text-[10px] text-slate-400">Rápido y Seguro</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handleOpenPaddleWithAuth('apple_pay')}
+            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
+              paymentMethod === 'apple_pay'
+                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
+                : 'bg-black/30 border-white/5 hover:border-white/15'
+            }`}
+          >
+            <div className="text-lg font-black tracking-tight text-white"> Pay</div>
+            <div>
+              <p className="font-bold text-white text-xs">Apple Pay</p>
+              <p className="text-[10px] text-slate-400">1-Tap Checkout</p>
             </div>
           </button>
         </div>
@@ -441,7 +561,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3 text-xs">
                   <div className="flex items-center gap-2 text-white font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Método: Mercado Pago Checkout</span>
+                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : 'Paddle Checkout Overlay'}</span>
                   </div>
 
                   {/* Payment link preview */}
