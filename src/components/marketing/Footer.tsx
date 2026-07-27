@@ -14,6 +14,18 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
     if (onRouteChange) onRouteChange(route);
   };
 
+  const legalLinks: Array<{ route: AppRoute; href: string; label: string }> = [
+    { route: 'terms', href: '/terminos', label: 'Términos de Servicio' },
+    { route: 'privacy', href: '/privacidad', label: 'Política de Privacidad' },
+    { route: 'refund', href: '/reembolso', label: 'Política de Reembolso (14 Días)' },
+  ];
+
+  const handleLegalLink = (event: React.MouseEvent<HTMLAnchorElement>, route: AppRoute) => {
+    if (!onRouteChange) return;
+    event.preventDefault();
+    handleNav(route);
+  };
+
   return (
     <footer className="bg-slate-950 text-slate-400 text-xs border-t border-white/10 pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
@@ -138,18 +150,18 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             </h4>
             <ul className="space-y-2 text-slate-400 text-[11px]">
               <li>
-                <button onClick={() => handleNav('recursos')} className="hover:text-emerald-400 transition-colors">
-                  {t('footer.privacy')}
+                <button onClick={() => handleNav('privacy')} className="hover:text-emerald-400 transition-colors text-left">
+                  Política de Privacidad
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('recursos')} className="hover:text-emerald-400 transition-colors">
-                  {t('footer.terms')}
+                <button onClick={() => handleNav('terms')} className="hover:text-emerald-400 transition-colors text-left">
+                  Términos de Servicio
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('recursos')} className="hover:text-emerald-400 transition-colors">
-                  {t('footer.security')}
+                <button onClick={() => handleNav('refund')} className="hover:text-emerald-400 transition-colors text-left">
+                  Política de Reembolso (14 Días)
                 </button>
               </li>
             </ul>
@@ -160,11 +172,18 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
         {/* Bottom Copyright & Rights */}
         <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
           <p>© {new Date().getFullYear()} Aria Prop AI. {t('footer.rights')}</p>
-          <div className="flex items-center gap-4">
-            <span>Powered by Gemini 2.5 Flash & Next.js Engine</span>
-            <span>•</span>
-            <span className="text-emerald-400 font-bold">Latency &lt; 5s</span>
-          </div>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2" aria-label="Enlaces legales">
+            {legalLinks.map((link) => (
+              <a
+                key={link.route}
+                href={link.href}
+                onClick={(event) => handleLegalLink(event, link.route)}
+                className="text-slate-400 underline-offset-4 transition-colors hover:text-emerald-400 hover:underline"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
         </div>
 
       </div>

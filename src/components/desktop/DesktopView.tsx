@@ -36,6 +36,9 @@ import { FinalCtaSection } from '../marketing/FinalCtaSection';
 import { DiscountOfferModal } from '../common/DiscountOfferModal';
 import { RoiSavingsCalculatorSection } from '../marketing/RoiSavingsCalculatorSection';
 import { ComparisonPage } from '../pages/ComparisonPage';
+import { TermsPage } from '../legal/TermsPage';
+import { PrivacyPage } from '../legal/PrivacyPage';
+import { RefundPage } from '../legal/RefundPage';
 import { useAuth } from '../../context/AuthContext';
 import { Tag, Sparkles } from 'lucide-react';
 
@@ -151,6 +154,12 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           <RecursosPage onRouteChange={onRouteChange} />
           <Footer onRouteChange={onRouteChange} />
         </main>
+      ) : currentRoute === 'terms' ? (
+        <TermsPage onRouteChange={onRouteChange} />
+      ) : currentRoute === 'privacy' ? (
+        <PrivacyPage onRouteChange={onRouteChange} />
+      ) : currentRoute === 'refund' ? (
+        <RefundPage onRouteChange={onRouteChange} />
       ) : currentRoute === 'comparar-manual' ? (
         <main className="flex-1 animate-page-fade">
           <ComparisonPage type="manual" onRouteChange={onRouteChange} />

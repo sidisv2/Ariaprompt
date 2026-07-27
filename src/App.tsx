@@ -18,6 +18,9 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('app') || path.includes('dashboard/metrics') || path.includes('panel')) return 'dashboard-metrics';
   if (path.includes('producto')) return 'producto';
   if (path.includes('soluciones')) return 'soluciones';
+  if (path.includes('terminos') || path.includes('terms')) return 'terms';
+  if (path.includes('privacidad') || path.includes('privacy')) return 'privacy';
+  if (path.includes('reembolso') || path.includes('refund')) return 'refund';
   if (path.includes('recursos')) return 'recursos';
   if (path.includes('pricing')) return 'pricing';
   if (path.includes('comparar/manual')) return 'comparar-manual';
@@ -43,6 +46,9 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'producto': return '/producto';
     case 'soluciones': return '/soluciones';
     case 'recursos': return '/recursos';
+    case 'terms': return '/terminos';
+    case 'privacy': return '/privacidad';
+    case 'refund': return '/reembolso';
     case 'pricing': return '/pricing';
     case 'comparar-manual': return '/comparar/manual';
     case 'comparar-crm': return '/comparar/crm';
