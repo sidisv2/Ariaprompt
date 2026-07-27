@@ -144,6 +144,14 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
 
       if (event === 'SIGNED_IN' && newSession?.user) {
         await mapSupabaseUserToAppUser(newSession.user);
+        // Auto-navigate to dashboard after OAuth redirect OR modal login.
+        // Guard: only redirect if the user is currently on the landing / root page
+        // to avoid forcefully ejecting someone from e.g. /dashboard/leads on reload.
+        const isOnMarketingPage =
+          window.location.pathname === '/' ||
+          window.location.pathname === '' ||
+          window.location.pathname === '/app';
+        if (isOnMarketingPage && onRouteChange) onRouteChange('dashboard-metrics');
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
@@ -375,22 +383,28 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   };
 
-  // Sign In with Google OAuth (Prominent)
+  // Sign In with Google OAuth
   const signInWithGoogle = async () => {
     setLoading(true);
     if (isSupabaseConfigured) {
       try {
+        // redirectTo: /app — so Supabase returns the user directly to the workspace.
+        // detectSessionInUrl:true (configured in supabase.ts) handles the #access_token hash.
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: `${window.location.origin}/app`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'select_account', // Always show Google account picker
+            },
           },
         });
         if (error) {
           setLoading(false);
           return { success: false, error: error.message };
         }
-        setLoading(false);
+        // Browser navigates away to Google — execution stops here.
         return { success: true };
       } catch (err: any) {
         setLoading(false);
