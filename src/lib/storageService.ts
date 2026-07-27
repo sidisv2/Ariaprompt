@@ -65,8 +65,7 @@ export async function uploadFileToSupabase(
 
       if (error) {
         console.warn('Supabase storage upload error:', error.message);
-        // Fallback to local storage if bucket doesn't exist yet on user's Supabase project
-        return uploadFileToLocalStorage(userId, file);
+        return { success: false, error: `Error en Supabase Storage: ${error.message}` };
       }
 
       // Get public URL for the file
@@ -92,8 +91,8 @@ export async function uploadFileToSupabase(
 
       return { success: true, fileData: newFile };
     } catch (err: any) {
-      console.warn('Fallback to local storage due to Supabase Storage exception:', err);
-      return uploadFileToLocalStorage(userId, file);
+      console.warn('Excepción en Supabase Storage:', err);
+      return { success: false, error: `Excepción en Supabase Storage: ${err?.message || 'Error de conexión'}` };
     }
   } else {
     return uploadFileToLocalStorage(userId, file, onProgress);

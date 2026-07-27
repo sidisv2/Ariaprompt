@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Environment variables for Supabase
 const env = (import.meta as unknown as { env: Record<string, string> }).env || {};
-const supabaseUrl = (env.VITE_SUPABASE_URL || '').trim();
-const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY || '').trim();
+const supabaseUrl = (env.VITE_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_URL : '') || '').trim();
+const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_ANON_KEY : '') || '').trim();
 
 // Fallback dummy values to prevent crashes if env vars are missing or invalid
 const dummyUrl = 'https://placeholder-supabase-project.supabase.co';
