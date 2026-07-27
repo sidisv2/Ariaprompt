@@ -108,14 +108,34 @@ async function uploadFileToLocalStorage(
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<{ success: boolean; fileData?: UserFile; error?: string }> {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     if (onProgress) onProgress(40);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (onProgress) onProgress(90);
-      const dataUrl = reader.result as string;
+    let dataUrl = '';
+    if (typeof FileReader !== 'undefined') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (onProgress) onProgress(90);
+        dataUrl = reader.result as string;
+        finishUpload(dataUrl);
+      };
+      reader.onerror = () => {
+        resolve({ success: false, error: 'Error al leer el archivo en el navegador' });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Node environment fallback using Buffer
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        dataUrl = `data:${file.type || 'application/octet-stream'};base64,${buffer.toString('base64')}`;
+        finishUpload(dataUrl);
+      } catch (err: any) {
+        resolve({ success: false, error: 'Error procesando buffer de archivo' });
+      }
+    }
 
+    function finishUpload(url: string) {
       const newFile: UserFile = {
         id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         userId,
@@ -123,7 +143,7 @@ async function uploadFileToLocalStorage(
         sizeBytes: file.size,
         type: getFileTypeCategory(file.type, file.name),
         mimeType: file.type || 'application/octet-stream',
-        url: dataUrl,
+        url: url,
         uploadedAt: new Date().toISOString(),
         storagePath: `${userId}/${file.name}`,
       };
@@ -132,15 +152,11 @@ async function uploadFileToLocalStorage(
 
       if (onProgress) onProgress(100);
       resolve({ success: true, fileData: newFile });
-    };
-
-    reader.onerror = () => {
-      resolve({ success: false, error: 'Error al leer el archivo en el navegador' });
-    };
-
-    reader.readAsDataURL(file);
+    }
   });
 }
+
+const memoryFileStore = new Map<string, UserFile[]>();
 
 /**
  * Saves file metadata to local list for persistence across sessions
@@ -150,7 +166,10 @@ function saveFileToLocalList(userId: string, newFile: UserFile) {
     const existing = fetchUserFilesFromLocalStorage(userId);
     const updated = [newFile, ...existing.filter((f) => f.id !== newFile.id)];
     const key = `${LOCAL_STORAGE_FILES_KEY}_${userId}`;
-    localStorage.setItem(key, JSON.stringify(updated));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(updated));
+    }
+    memoryFileStore.set(key, updated);
   } catch (e) {
     console.warn('Could not persist file to localStorage:', e);
   }
@@ -162,8 +181,11 @@ function saveFileToLocalList(userId: string, newFile: UserFile) {
 function fetchUserFilesFromLocalStorage(userId: string): UserFile[] {
   try {
     const key = `${LOCAL_STORAGE_FILES_KEY}_${userId}`;
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
+    if (typeof localStorage !== 'undefined') {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : [];
+    }
+    return memoryFileStore.get(key) || [];
   } catch {
     return [];
   }
@@ -235,7 +257,10 @@ export async function deleteUserFile(
     const key = `${LOCAL_STORAGE_FILES_KEY}_${userId}`;
     const local = fetchUserFilesFromLocalStorage(userId);
     const filtered = local.filter((f) => f.id !== fileId && f.storagePath !== storagePath);
-    localStorage.setItem(key, JSON.stringify(filtered));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify(filtered));
+    }
+    memoryFileStore.set(key, filtered);
   } catch (e) {
     console.warn('Error removing file from local storage:', e);
   }
