@@ -22,6 +22,8 @@ import {
   Award,
   Headphones
 } from 'lucide-react';
+import { trackPurchaseConversion } from '../../lib/analytics';
+import { PLAN_LIMITS } from '../../lib/planLimits';
 import { AppRoute } from '../../types';
 import {
   VisaLogo,
@@ -47,8 +49,6 @@ const CURRENCIES: { code: CurrencyCode; label: string; symbol: string; rate: num
   { code: 'ARS', label: 'Pesos Argentinos (ARS)', symbol: '$', rate: 1200, flag: '🇦🇷' },
   { code: 'CLP', label: 'Pesos Chilenos (CLP)', symbol: '$', rate: 940, flag: '🇨🇱' },
 ];
-
-import { PLAN_LIMITS } from '../../lib/planLimits';
 
 interface PlanItem {
   id: string;
@@ -163,6 +163,11 @@ export function CheckoutView({ }: CheckoutViewProps) {
   };
 
   const handleSimulatePayment = () => {
+    const arsCurrency = CURRENCIES.find((c) => c.code === 'ARS');
+    const orderId = `aria-${activePlan.id}-${Date.now()}`;
+    const amount = activePlan.priceUsd * (arsCurrency?.rate || 1);
+
+    trackPurchaseConversion(orderId, amount);
     setPaymentCompleted(true);
     setTimeout(() => {
       setShowCheckoutModal(false);
