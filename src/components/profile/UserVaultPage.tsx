@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { AppRoute } from '../../types';
-import { FileText, Download, Lock, ShieldCheck, Sparkles, Upload, ArrowRight, UserCheck } from 'lucide-react';
-
+import { AppRoute, UserFile } from '../../types';
+import { FileText, Download, Lock, ShieldCheck, Sparkles, Upload, ArrowRight, UserCheck, Trash2, Loader2, HardDrive } from 'lucide-react';
 import { PLAN_LIMITS } from '../../lib/planLimits';
+import {
+  getUserFiles,
+  uploadFileToSupabase,
+  deleteUserFile,
+  downloadFileToDevice,
+  formatFileSize
+} from '../../lib/storageService';
 
 interface UserVaultPageProps {
   onRouteChange: (route: AppRoute) => void;
@@ -11,48 +17,73 @@ interface UserVaultPageProps {
 
 export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) => {
   const { user, openAuthModal } = useAuth();
-  const [uploading, setUploading] = useState(false);
-  const [userFiles, setUserFiles] = useState([
-    { id: '1', name: 'Ficha_Exclusiva_El_Poblado_2026.pdf', size: '4.8 MB', date: '2026-07-23', type: 'Ficha de Inmueble' },
-    { id: '2', name: 'Analisis_Financiero_ROI_Polanco.pdf', size: '2.3 MB', date: '2026-07-22', type: 'Informe Financiero' },
-    { id: '3', name: 'Ficha_Calidades_Salamanca_Penthouse.pdf', size: '6.1 MB', date: '2026-07-20', type: 'Especificaciones' },
-  ]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [userFiles, setUserFiles] = useState<UserFile[]>([]);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const usernameSlug = user ? user.nombre.toLowerCase().replace(/\s+/g, '-') : 'invitado';
 
-  const handleSimulatedUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setTimeout(() => {
-      setUserFiles((prev) => [
-        {
-          id: `file-${Date.now()}`,
-          name: file.name,
-          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-          date: new Date().toISOString().split('T')[0],
-          type: 'Expediente IA Cargado',
-        },
-        ...prev,
-      ]);
-      setUploading(false);
-    }, 1200);
+  // Load real files from storageService for authenticated user
+  const loadFiles = async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const filesData = await getUserFiles(user.id);
+      setUserFiles(filesData);
+    } catch (err) {
+      console.warn('Error cargando archivos de bóveda privada:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDownload = (fileName: string) => {
+  useEffect(() => {
+    loadFiles();
+  }, [user]);
+
+  // Real upload to Supabase Storage / local persistent fallback
+  const handleRealUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    
+    setUploading(true);
+    setStatusMsg(null);
+
+    const res = await uploadFileToSupabase(user.id, file);
+
+    if (res.success && res.fileData) {
+      setUserFiles((prev) => [res.fileData!, ...prev.filter((f) => f.id !== res.fileData!.id)]);
+      setStatusMsg(`✅ Archivo "${file.name}" guardado exitosamente en tu bóveda privada.`);
+    } else {
+      setStatusMsg(`⚠️ Error al subir el archivo: ${res.error || 'Error desconocido'}`);
+    }
+    setUploading(false);
+  };
+
+  // Real browser download using downloadFileToDevice
+  const handleDownload = (file: UserFile) => {
     if (!user) {
       openAuthModal('signup');
       return;
     }
-    // Trigger simulated browser download
-    const element = document.createElement('a');
-    const fileContent = `PDF Dossier Privado para ${user.nombre}\n\nDocumento: ${fileName}\nGenerado por Aria Prop IA.`;
-    const file = new Blob([fileContent], { type: 'application/pdf' });
-    element.href = URL.createObjectURL(file);
-    element.download = fileName;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
+    downloadFileToDevice(file.url, file.name);
+  };
+
+  // Real file deletion
+  const handleDelete = async (file: UserFile) => {
+    if (!user) return;
+    const confirmDelete = window.confirm(`¿Confirmás que querés eliminar "${file.name}" de tu bóveda privada?`);
+    if (!confirmDelete) return;
+
+    const res = await deleteUserFile(user.id, file.id, file.storagePath);
+    if (res.success) {
+      setUserFiles((prev) => prev.filter((f) => f.id !== file.id));
+      setStatusMsg(`🗑️ Archivo "${file.name}" eliminado de tu bóveda.`);
+    }
   };
 
   return (
@@ -74,7 +105,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
               Directorio Privado de Expedientes
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Subdirección encriptada exclusiva para usuarios suscritos. Descarga fichas inmobiliarias, contratos e informes financieros.
+              Subdirección encriptada exclusiva para usuarios suscritos. Subida y descarga de fichas inmobiliarias, contratos e informes financieros con persistencia real.
             </p>
           </div>
 
@@ -95,7 +126,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
           <div className="max-w-xl mx-auto space-y-2">
             <h3 className="text-2xl font-extrabold text-white">🔒 Acceso Restringido a Documentos</h3>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Los usuarios no registrados o no suscritos no pueden recibir ni descargar expedientes privados. Cada usuario suscrito dispone de su propia subdirección privada y segura.
+              Los usuarios no registrados o no suscritos no pueden recibir ni descargar expedientes privados. Cada usuario suscrito dispone de su propia subdirección privada y segura con aislamiento multi-tenant.
             </p>
           </div>
 
@@ -128,45 +159,80 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
             </div>
 
             <label className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20">
-              <Upload className="w-4 h-4" />
-              <span>{uploading ? 'Cargando expediente...' : 'Subir Nuevo PDF'}</span>
-              <input type="file" accept=".pdf" onChange={handleSimulatedUpload} disabled={uploading} className="hidden" />
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              <span>{uploading ? 'Guardando en Storage...' : 'Subir Archivo a la Bóveda'}</span>
+              <input type="file" onChange={handleRealUpload} disabled={uploading} className="hidden" />
             </label>
           </div>
 
-          {/* Files Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {userFiles.map((file) => (
-              <div
-                key={file.id}
-                className="p-6 rounded-3xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 shadow-xl backdrop-blur-xl space-y-4 flex flex-col justify-between group transition-all"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/20">
-                      {file.type}
-                    </span>
-                  </div>
+          {/* Feedback Status Message */}
+          {statusMsg && (
+            <div className="p-3 rounded-xl bg-slate-900 border border-emerald-500/40 text-xs text-emerald-300 font-medium animate-fadeIn">
+              {statusMsg}
+            </div>
+          )}
 
-                  <div>
-                    <h4 className="text-sm font-bold text-white line-clamp-2">{file.name}</h4>
-                    <p className="text-[11px] text-slate-400 mt-1">Tamaño: {file.size} • Fecha: {file.date}</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleDownload(file.name)}
-                  className="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 font-bold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Descargar Expediente PDF</span>
-                </button>
+          {/* Loading Indicator */}
+          {loading ? (
+            <div className="p-12 text-center text-slate-400 space-y-3 bg-slate-900/50 rounded-3xl border border-white/5">
+              <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mx-auto" />
+              <p className="text-xs font-medium">Cargando tus expedientes privados desde Supabase Storage...</p>
+            </div>
+          ) : userFiles.length === 0 ? (
+            /* Empty State */
+            <div className="p-12 text-center space-y-4 bg-slate-900/50 rounded-3xl border border-white/10">
+              <HardDrive className="w-12 h-12 text-slate-500 mx-auto" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Tu bóveda privada está vacía</h3>
+                <p className="text-xs text-slate-400 mt-1">Sube un contrato, ficha o reporte para guardarlo de forma segura en tu espacio privado.</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            /* Files Grid */
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {userFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="p-6 rounded-3xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-400/60 shadow-xl backdrop-blur-xl space-y-4 flex flex-col justify-between group transition-all"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/20 uppercase">
+                          {file.type}
+                        </span>
+                        <button
+                          onClick={() => handleDelete(file)}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          title="Eliminar de la bóveda"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-bold text-white line-clamp-2" title={file.name}>{file.name}</h4>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Tamaño: {formatFileSize(file.sizeBytes)} • {new Date(file.uploadedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleDownload(file)}
+                    className="w-full py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 font-bold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Descargar Archivo Real</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
         </div>
       )}
