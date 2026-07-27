@@ -24,7 +24,7 @@ export function useUsage(agencyId?: string | null) {
 
   const fetchUsage = useCallback(async () => {
     if (!agencyId) {
-      const defaultPlan = getPlanLimits('solo_agent');
+      const defaultPlan = getPlanLimits('normal');
       setUsage({
         agency_id: 'guest',
         plan: defaultPlan,
@@ -62,7 +62,7 @@ export function useUsage(agencyId?: string | null) {
       }
 
       // Fallback if API serverless unavailable
-      const defaultPlan = getPlanLimits('solo_agent');
+      const defaultPlan = getPlanLimits('normal');
       setUsage({
         agency_id: agencyId,
         plan: defaultPlan,

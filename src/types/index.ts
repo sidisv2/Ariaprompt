@@ -1,3 +1,5 @@
+export type PlanTier = 'normal' | 'solo' | 'pro' | 'desarrolladores';
+
 export type LeadTemperature = 'hot' | 'warm' | 'cold';
 
 export type LeadStatus = 'new' | 'contacted' | 'visit_scheduled' | 'offer_made' | 'closed' | 'lost';

@@ -75,7 +75,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {currentRoute === 'dashboard-metrics' ? (
           <SummaryDashboardView leads={leads} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-properties' ? (
-          <PropertiesView properties={properties} onAddProperty={onAddProperty} />
+          <PropertiesView properties={properties} onAddProperty={onAddProperty} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-leads' ? (
           <LeadsView
             leads={leads}
@@ -84,11 +84,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
             onClearSelectedLead={onClearSelectedLead}
           />
         ) : currentRoute === 'dashboard-bot-config' ? (
-          <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
+          <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-checkout' ? (
           <CheckoutView onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-integrations' ? (
-          <CrmIntegrationsView />
+          <CrmIntegrationsView onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-roles' ? (
           <UserRolesDashboard onRouteChange={onRouteChange} />
         ) : (currentRoute === 'dashboard-files' || currentRoute === 'dashboard-profile') ? (

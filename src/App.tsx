@@ -105,6 +105,12 @@ export default function App() {
     setShowPaymentSuccess(true);
     trackPurchaseConversion(transactionId, 0);
 
+    try {
+      const pendingPlan = localStorage.getItem('aria_pending_checkout_plan');
+      if (pendingPlan) localStorage.setItem('aria_paid_plan_to_activate', pendingPlan);
+    } catch {}
+    window.dispatchEvent(new Event('aria:payment-success'));
+
     searchParams.delete('payment');
     searchParams.delete('collection_status');
     searchParams.delete('collection_id');

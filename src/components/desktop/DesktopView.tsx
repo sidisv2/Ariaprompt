@@ -106,7 +106,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
               <MetricsView leads={leads} onInterveneLead={onInterveneLead} />
             )}
             {currentRoute === 'dashboard-properties' && (
-              <PropertiesView properties={properties} onAddProperty={onAddProperty} />
+              <PropertiesView properties={properties} onAddProperty={onAddProperty} onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-leads' && (
               <LeadsView
@@ -117,13 +117,13 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
               />
             )}
             {currentRoute === 'dashboard-bot-config' && (
-              <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
+              <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-checkout' && (
               <CheckoutView onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-integrations' && (
-              <CrmIntegrationsView />
+              <CrmIntegrationsView onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-roles' && (
               <UserRolesDashboard onRouteChange={onRouteChange} />

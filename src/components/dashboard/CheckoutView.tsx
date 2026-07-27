@@ -91,27 +91,27 @@ export function CheckoutView({ }: CheckoutViewProps) {
     return [
       {
         id: 'starter',
-        name: PLAN_LIMITS.solo_agent.name,
-        priceUsd: isAnnual ? PLAN_LIMITS.solo_agent.annualPriceUsd : PLAN_LIMITS.solo_agent.monthlyPriceUsd,
-        description: PLAN_LIMITS.solo_agent.description,
+        name: PLAN_LIMITS.solo.name,
+        priceUsd: isAnnual ? PLAN_LIMITS.solo.annualPriceUsd : PLAN_LIMITS.solo.monthlyPriceUsd,
+        description: PLAN_LIMITS.solo.description,
         features: [
           '1 Agente de IA (Aria) activo',
-          `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} leads cualificados/mes`,
-          `Hasta ${PLAN_LIMITS.solo_agent.maxProperties} propiedades en catálogo`,
+          `Hasta ${PLAN_LIMITS.solo.maxLeadsPerMonth} leads cualificados/mes`,
+          `Hasta ${PLAN_LIMITS.solo.maxProperties} propiedades en catálogo`,
           'Widget Web & WhatsApp API',
           '7 Días de Prueba Gratis (Sin tarjeta)'
         ]
       },
       {
         id: 'pro',
-        name: PLAN_LIMITS.agency_pro.name,
-        priceUsd: isAnnual ? PLAN_LIMITS.agency_pro.annualPriceUsd : PLAN_LIMITS.agency_pro.monthlyPriceUsd,
+        name: PLAN_LIMITS.pro.name,
+        priceUsd: isAnnual ? PLAN_LIMITS.pro.annualPriceUsd : PLAN_LIMITS.pro.monthlyPriceUsd,
         badge: 'MÁS POPULAR',
-        description: PLAN_LIMITS.agency_pro.description,
+        description: PLAN_LIMITS.pro.description,
         features: [
           '5 Agentes de IA configurables',
-          `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} leads cualificados/mes`,
-          `Hasta ${PLAN_LIMITS.agency_pro.maxProperties} propiedades en catálogo`,
+          `Hasta ${PLAN_LIMITS.pro.maxLeadsPerMonth} leads cualificados/mes`,
+          `Hasta ${PLAN_LIMITS.pro.maxProperties} propiedades en catálogo`,
           'Sincronización Automática Tokko & EasyBroker',
           'RAG Documental (PDFs, Planos)',
           'Soporte Prioritario VIP 24/7'
@@ -119,10 +119,10 @@ export function CheckoutView({ }: CheckoutViewProps) {
       },
       {
         id: 'agency',
-        name: PLAN_LIMITS.enterprise.name,
+        name: PLAN_LIMITS.desarrolladores.name,
         priceUsd: 0,
         badge: 'SOLUCIÓN A MEDIDA',
-        description: PLAN_LIMITS.enterprise.description,
+        description: PLAN_LIMITS.desarrolladores.description,
         features: [
           'Agentes de IA Ilimitados',
           'Marca Blanca 100% (Sin logo de Aria Prop)',
