@@ -5,6 +5,8 @@ import { AppRoute } from '../../types';
 
 import { PLAN_LIMITS } from '../../lib/planLimits';
 
+const ENTERPRISE_WHATSAPP_LINK = 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.';
+
 interface PricingSwitcherProps {
   onRouteChange?: (route: AppRoute) => void;
 }
@@ -75,7 +77,13 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
   ];
 
   const handleSelectPlan = (planId: string) => {
+    console.log('Clic detectado en:', planId, 'pricing-plan');
     localStorage.setItem('aria_selected_billing_cycle', billingCycle);
+
+    if (planId === 'custom' || planId === 'enterprise' || planId === 'agency') {
+      window.open(ENTERPRISE_WHATSAPP_LINK, '_blank');
+      return;
+    }
     const passed = requireAuthForPayment({
       planId,
       targetRoute: 'dashboard-checkout',

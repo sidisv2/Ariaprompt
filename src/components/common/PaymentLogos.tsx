@@ -49,10 +49,3 @@ export const PseLogo: React.FC<{ className?: string }> = ({ className = "h-5" })
     🇨🇴 PSE
   </span>
 );
-
-export const UsdtLogo: React.FC<{ className?: string }> = ({ className = "h-6" }) => (
-  <svg className={className} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="16" cy="16" r="16" fill="#26A17B"/>
-    <path d="M17.9 14.2V11.8H23.5V8.5H8.5V11.8H14.1V14.2C10.5 14.4 7.8 15.2 7.8 16.2C7.8 17.2 10.5 18 14.1 18.2V23.5H17.9V18.2C21.5 18 24.2 17.2 24.2 16.2C24.2 15.2 21.5 14.4 17.9 14.2ZM16 17.1C13.2 17.1 10.8 16.5 10.8 16.2C10.8 15.9 13.2 15.3 16 15.3C18.8 15.3 21.2 15.9 21.2 16.2C21.2 16.5 18.8 17.1 16 17.1Z" fill="white"/>
-  </svg>
-);
