@@ -70,7 +70,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
       openAuthModal('signup');
       return;
     }
-    downloadFileToDevice(file.url, file.name);
+    downloadFileToDevice(file.url, file.name, file.storagePath);
   };
 
   // Real file deletion

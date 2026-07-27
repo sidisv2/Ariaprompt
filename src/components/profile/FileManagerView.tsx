@@ -422,7 +422,7 @@ export const FileManagerView: React.FC = () => {
                 )}
 
                 <button
-                  onClick={() => downloadFileToDevice(file.url, file.name)}
+                  onClick={() => downloadFileToDevice(file.url, file.name, file.storagePath)}
                   className="p-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                   title="Descargar archivo"
                 >

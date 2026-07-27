@@ -3,6 +3,7 @@ import { UserFile } from '../types';
 
 const BUCKET_NAME = 'user-files';
 const LOCAL_STORAGE_FILES_KEY = 'aria_user_files_db';
+const DEFAULT_SIGNED_URL_EXPIRATION = 3600; // 60 minutes
 
 /**
  * Helper to classify file types
@@ -38,7 +39,33 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * Uploads a file to Supabase Storage bucket 'user-files' under path `user-files/{userId}/{filename}`
+ * Generates a fresh temporary Signed URL for a private file in Supabase Storage.
+ * Expire token automatically after expiresInSeconds (default 60 minutes).
+ */
+export async function getSignedUrlForFile(
+  storagePath: string,
+  expiresInSeconds: number = DEFAULT_SIGNED_URL_EXPIRATION
+): Promise<string | null> {
+  if (isSupabaseConfigured && storagePath) {
+    try {
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .createSignedUrl(storagePath, expiresInSeconds);
+
+      if (!error && data?.signedUrl) {
+        return data.signedUrl;
+      } else if (error) {
+        console.warn('Error al generar Signed URL en Supabase Storage:', error.message);
+      }
+    } catch (e) {
+      console.warn('Excepción al generar Signed URL:', e);
+    }
+  }
+  return null;
+}
+
+/**
+ * Uploads a file to private Supabase Storage bucket 'user-files' under path `user-files/{userId}/{filename}`
  */
 export async function uploadFileToSupabase(
   userId: string,
@@ -53,7 +80,7 @@ export async function uploadFileToSupabase(
     try {
       if (onProgress) onProgress(30);
 
-      // Upload file to Supabase Storage bucket
+      // Upload file to PRIVATE Supabase Storage bucket
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(storagePath, file, {
@@ -68,9 +95,8 @@ export async function uploadFileToSupabase(
         return { success: false, error: `Error en Supabase Storage: ${error.message}` };
       }
 
-      // Get public URL for the file
-      const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
-      const publicUrl = urlData.publicUrl;
+      // Generate a temporary Signed URL with expiration token for initial display
+      const signedUrl = await getSignedUrlForFile(storagePath, DEFAULT_SIGNED_URL_EXPIRATION);
 
       const newFile: UserFile = {
         id: `file_${timestamp}`,
@@ -79,7 +105,7 @@ export async function uploadFileToSupabase(
         sizeBytes: file.size,
         type: getFileTypeCategory(file.type, file.name),
         mimeType: file.type || 'application/octet-stream',
-        url: publicUrl,
+        url: signedUrl || '',
         uploadedAt: new Date().toISOString(),
         storagePath,
       };
@@ -191,14 +217,15 @@ function fetchUserFilesFromLocalStorage(userId: string): UserFile[] {
 }
 
 /**
- * Fetches all files owned by a specific user from Supabase Storage and local cache
+ * Fetches all files owned by a specific user from private Supabase Storage and local cache.
+ * Generates fresh temporary Signed URLs for all files from the private bucket.
  */
 export async function getUserFiles(userId: string): Promise<UserFile[]> {
   const localFiles = fetchUserFilesFromLocalStorage(userId);
 
   if (isSupabaseConfigured) {
     try {
-      // List user's directory in bucket 'user-files'
+      // List user's private directory in bucket 'user-files'
       const { data, error } = await supabase.storage.from(BUCKET_NAME).list(userId, {
         limit: 100,
         offset: 0,
@@ -206,9 +233,10 @@ export async function getUserFiles(userId: string): Promise<UserFile[]> {
       });
 
       if (!error && data) {
-        const remoteFiles: UserFile[] = data.map((item) => {
+        const remoteFilesProms = data.map(async (item) => {
           const path = `${userId}/${item.name}`;
-          const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(path);
+          // Generate fresh Signed URL with expiration token for private file access
+          const signedUrl = await getSignedUrlForFile(path, DEFAULT_SIGNED_URL_EXPIRATION);
 
           // Remove timestamp prefix if present in name
           const cleanName = item.name.includes('_') ? item.name.substring(item.name.indexOf('_') + 1) : item.name;
@@ -220,11 +248,13 @@ export async function getUserFiles(userId: string): Promise<UserFile[]> {
             sizeBytes: item.metadata?.size || 1024 * 50,
             type: getFileTypeCategory(item.metadata?.mimetype || '', item.name),
             mimeType: item.metadata?.mimetype || 'application/octet-stream',
-            url: urlData.publicUrl,
+            url: signedUrl || '',
             uploadedAt: item.created_at || new Date().toISOString(),
             storagePath: path,
           };
         });
+
+        const remoteFiles = await Promise.all(remoteFilesProms);
 
         // Merge and deduplicate by storagePath or name
         const combined = [...remoteFiles];
@@ -244,7 +274,7 @@ export async function getUserFiles(userId: string): Promise<UserFile[]> {
 }
 
 /**
- * Deletes a file from Supabase Storage bucket 'user-files' and local list
+ * Deletes a file from private Supabase Storage bucket 'user-files' and local list
  */
 export async function deleteUserFile(
   userId: string,
@@ -280,11 +310,21 @@ export async function deleteUserFile(
 }
 
 /**
- * Trigger browser file download
+ * Trigger browser file download using a fresh temporary Signed URL from private storage.
  */
-export function downloadFileToDevice(fileUrl: string, fileName: string) {
+export async function downloadFileToDevice(fileUrl: string, fileName: string, storagePath?: string) {
+  let targetUrl = fileUrl;
+
+  // Request a fresh Signed URL on-demand right before downloading if storagePath is provided
+  if (isSupabaseConfigured && storagePath) {
+    const freshSignedUrl = await getSignedUrlForFile(storagePath, DEFAULT_SIGNED_URL_EXPIRATION);
+    if (freshSignedUrl) {
+      targetUrl = freshSignedUrl;
+    }
+  }
+
   const link = document.createElement('a');
-  link.href = fileUrl;
+  link.href = targetUrl;
   link.download = fileName;
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
@@ -294,15 +334,15 @@ export function downloadFileToDevice(fileUrl: string, fileName: string) {
 }
 
 /**
- * SQL instructions for bucket creation and Supabase RLS security policies
+ * SQL instructions for bucket creation and Supabase RLS security policies for PRIVATE storage bucket
  */
-export const SUPABASE_STORAGE_RLS_SQL = `-- 1. Crear el bucket privado 'user-files' en Supabase Storage
+export const SUPABASE_STORAGE_RLS_SQL = `-- 1. Crear el bucket PRIVADO 'user-files' en Supabase Storage (public = false)
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('user-files', 'user-files', true)
-ON CONFLICT (id) DO NOTHING;
+VALUES ('user-files', 'user-files', false)
+ON CONFLICT (id) DO UPDATE SET public = false;
 
--- 2. Habilitar la política RLS para que CADA USUARIO solo pueda LEER sus propios archivos
-CREATE POLICY "Permitir lectura solo a archivos de su propio user_id"
+-- 2. Habilitar la política RLS para que CADA USUARIO solo pueda LEER y GENERAR SIGNED URLs de sus propios archivos
+CREATE POLICY "Permitir lectura y signed URLs solo a archivos de su propio user_id"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (bucket_id = 'user-files' AND (storage.foldername(name))[1] = auth.uid()::text);
