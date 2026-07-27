@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Property, AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { Sparkles, ArrowRight, ShieldCheck, Zap, MessageSquare, Building2, Play } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, Zap, MessageSquare, Building2, Play, Loader2 } from 'lucide-react';
 import { TwitterActionCard } from '../marketing/TwitterActionCard';
 import { InteractiveSandboxWidget } from '../marketing/InteractiveSandboxWidget';
 import { HeroPromptAssistant } from '../marketing/HeroPromptAssistant';
@@ -13,14 +13,33 @@ interface MobileHeroSectionProps {
 }
 
 export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProperties, onRouteChange }) => {
-  const { requireAuthForPayment } = useAuth();
+  const { requireAuthForPayment, signIn } = useAuth();
   const { t } = useLanguage();
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
 
   const handleStartTrial = () => {
     requireAuthForPayment({
       planId: 'profesional',
       targetRoute: 'dashboard-checkout',
     });
+  };
+
+  const handleDirectDemoAccess = async () => {
+    setDemoLoading(true);
+    setDemoError(null);
+    try {
+      const res = await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
+      if (res.success) {
+        onRouteChange('dashboard-metrics');
+      } else {
+        setDemoError(res.error || 'Hubo un error al iniciar la demo en vivo. Intenta de nuevo.');
+      }
+    } catch (err: any) {
+      setDemoError(err?.message || 'Error al conectar con la demo.');
+    } finally {
+      setDemoLoading(false);
+    }
   };
 
   return (
@@ -64,16 +83,19 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
         </button>
 
         <button
-          onClick={() => {
-            const el = document.getElementById('how-it-works');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-            else onRouteChange('soluciones');
-          }}
-          className="w-full py-3 px-4 rounded-xl bg-white text-slate-900 font-extrabold text-xs border border-slate-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+          onClick={handleDirectDemoAccess}
+          disabled={demoLoading}
+          className="w-full py-3 px-4 rounded-xl bg-white text-slate-900 font-extrabold text-xs border border-slate-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
         >
-          <Zap className="w-4 h-4 text-indigo-600" />
-          <span>Ver cómo funciona</span>
+          {demoLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Zap className="w-4 h-4 text-indigo-600" />}
+          <span>{demoLoading ? 'Iniciando Demostración...' : t('hero.ctaSecondary')}</span>
         </button>
+
+        {demoError && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold animate-fadeIn text-center">
+            ⚠️ {demoError}
+          </div>
+        )}
       </div>
 
       {/* Twitter Action Card + Interactive Chat */}
