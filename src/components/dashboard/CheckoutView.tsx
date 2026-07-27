@@ -5,12 +5,9 @@ import {
   Building,
   Zap,
   CheckCircle2,
-  Copy,
-  Check,
   ExternalLink,
   ShieldCheck,
   Globe2,
-  QrCode,
   DollarSign,
   Lock,
   Sparkles,
@@ -33,7 +30,6 @@ import {
   PaypalLogo,
   SpeiLogo,
   PseLogo,
-  UsdtLogo
 } from '../common/PaymentLogos';
 
 interface CheckoutViewProps {
@@ -59,11 +55,38 @@ interface PlanItem {
   features: string[];
 }
 
+type PaymentMethod = 'card' | 'mercadopago' | 'paypal' | 'transfer';
 
+const normalizePlanId = (planId: string) => {
+  if (planId === 'solo_agent') return 'starter';
+  if (planId === 'agency_pro') return 'pro';
+  if (planId === 'custom' || planId === 'enterprise') return 'agency';
+  return planId;
+};
+
+const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }> = {
+  starter: {
+    monthly: 'https://mpago.la/17xmopC',
+    annual: 'https://mpago.la/29pqoZr',
+  },
+  pro: {
+    monthly: 'https://mpago.la/1UhRK7X',
+    annual: 'https://mpago.la/1z8gxgW',
+  },
+  agency: {
+    monthly: 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.',
+    annual: 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.',
+  },
+};
+
+const getOfficialPaymentLink = (planId: string, billingCycle: 'annual' | 'monthly') => {
+  const linkConfig = OFFICIAL_PAYMENT_LINKS[normalizePlanId(planId)] || OFFICIAL_PAYMENT_LINKS.pro;
+  return linkConfig[billingCycle];
+};
 
 export function CheckoutView({ }: CheckoutViewProps) {
-  const { requireAuthForPayment } = useAuth();
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
+  const { requireAuthForPayment, pendingPlan } = useAuth();
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(() => pendingPlan ? normalizePlanId(pendingPlan) : 'pro');
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>(() => {
     return (localStorage.getItem('aria_selected_billing_cycle') as 'annual' | 'monthly') || 'annual';
   });
@@ -119,42 +142,30 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
   const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto'>('mercadopago');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
   
-  // Custom Payment Link Configuration (Admin settings)
-  const [customLinks, setCustomLinks] = useState({
-    mercadopago: 'https://mpago.la/pos/ariaprop-checkout-latam',
-    paypal: 'https://paypal.me/ariaprop/149usd',
-    stripe: 'https://checkout.stripe.com/c/pay/ariaprop-enterprise',
-    whatsappPay: 'https://wa.me/525512345678?text=Deseo%20pagar%20el%20Plan%20Pro%20Enterprise',
-  });
-
-  const [copiedLink, setCopiedLink] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const activeCurrencyObj = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
   const activePlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
+  const officialPaymentLink = getOfficialPaymentLink(activePlan.id, billingCycle);
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
   });
 
-  const handleCopyLink = (linkUrl: string) => {
-    navigator.clipboard.writeText(linkUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
-
   const handleOpenCheckoutWithAuth = (planId: string) => {
-    setSelectedPlanId(planId);
+    setSelectedPlanId(normalizePlanId(planId));
     requireAuthForPayment({
       planId,
-      onAuthenticated: () => setShowCheckoutModal(true),
+      onAuthenticated: () => {
+        window.location.href = getOfficialPaymentLink(planId, billingCycle);
+      },
     });
   };
 
-  const handleOpenPaymentMethodWithAuth = (method: 'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto') => {
+  const handleOpenPaymentMethodWithAuth = (method: PaymentMethod) => {
     setPaymentMethod(method);
     requireAuthForPayment({
       planId: selectedPlanId,
@@ -344,7 +355,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Mercado Pago */}
           <button
             onClick={() => handleOpenPaymentMethodWithAuth('mercadopago')}
@@ -415,24 +426,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
             </div>
           </button>
 
-          {/* Crypto Binance */}
-          <button
-            onClick={() => handleOpenPaymentMethodWithAuth('crypto')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'crypto'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <UsdtLogo className="h-5" />
-              <span className="text-xs font-bold text-yellow-400">USDT</span>
-            </div>
-            <div>
-              <p className="font-bold text-white text-xs">Binance Pay / Crypto</p>
-              <p className="text-[10px] text-slate-400">USDT / USDC (TRC20)</p>
-            </div>
-          </button>
         </div>
       </div>
 
@@ -459,45 +452,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
           <div>
             <h4 className="text-xs font-bold text-white">Soporte Prioritario VIP 24/7</h4>
             <p className="text-[11px] text-slate-400 mt-0.5">Atención directa por WhatsApp y teléfono.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Admin / Custom Payment Links Box */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 sm:p-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-bold text-white text-sm">Configuración de Links de Pago Personalizados</h3>
-          </div>
-          <span className="px-2.5 py-0.5 rounded text-[10px] bg-white/10 text-slate-300 font-mono">
-            Administrador de Enlaces
-          </span>
-        </div>
-
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Puedes pegar aquí tus propios enlaces de pago (Stripe Checkout, Mercado Pago Link, PayPal Me o enlace de WhatsApp) para que tus clientes se dirijan a tu pasarela directa:
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-          <div>
-            <label className="block text-slate-400 mb-1">Enlace Mercado Pago Checkout:</label>
-            <input
-              type="text"
-              value={customLinks.mercadopago}
-              onChange={(e) => setCustomLinks({ ...customLinks, mercadopago: e.target.value })}
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-slate-400 mb-1">Enlace PayPal / Stripe Custom:</label>
-            <input
-              type="text"
-              value={customLinks.paypal}
-              onChange={(e) => setCustomLinks({ ...customLinks, paypal: e.target.value })}
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-[11px] focus:outline-none focus:border-emerald-500"
-            />
           </div>
         </div>
       </div>
@@ -557,7 +511,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3 text-xs">
                   <div className="flex items-center gap-2 text-white font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : paymentMethod === 'transfer' ? 'Transferencia Bancaria SPEI / PSE' : 'Binance Pay / USDT'}</span>
+                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : 'Transferencia Bancaria SPEI / PSE'}</span>
                   </div>
 
                   {paymentMethod === 'transfer' && (
@@ -569,16 +523,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
                     </div>
                   )}
 
-                  {paymentMethod === 'crypto' && (
-                    <div className="p-3 bg-black/50 rounded-xl space-y-1 font-mono text-[11px] text-slate-300 border border-white/5 flex items-center justify-between">
-                      <div>
-                        <p><strong className="text-yellow-400">Red:</strong> TRC20 (USDT)</p>
-                        <p><strong className="text-yellow-400">Wallet:</strong> T9xZ2aPq8R7mK1sL3vN5bY4cW6u</p>
-                      </div>
-                      <QrCode className="w-10 h-10 text-yellow-400 shrink-0" />
-                    </div>
-                  )}
-
                   {/* Payment link preview */}
                   <div className="pt-2">
                     <label className="block text-[11px] text-slate-400 mb-1">Enlace de Pago Generado:</label>
@@ -586,16 +530,9 @@ export function CheckoutView({ }: CheckoutViewProps) {
                       <input
                         type="text"
                         readOnly
-                        value={customLinks.mercadopago}
+                        value={officialPaymentLink}
                         className="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 font-mono text-[10px] text-emerald-400"
                       />
-                      <button
-                        onClick={() => handleCopyLink(customLinks.mercadopago)}
-                        className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                      >
-                        {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiedLink ? 'Copiado' : 'Copiar'}</span>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -603,7 +540,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                 {/* Modal Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <a
-                    href={customLinks.mercadopago}
+                    href={officialPaymentLink}
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
