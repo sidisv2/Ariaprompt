@@ -228,7 +228,6 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
           <span className="px-2 py-1 rounded bg-sky-500/10 border border-sky-500/20 text-sky-300">Mercado Pago</span>
           <span className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-blue-300">PayPal</span>
           <span className="px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300">SPEI / PSE</span>
-          <span className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">Binance Pay</span>
         </div>
       </div>
 
