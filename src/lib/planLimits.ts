@@ -5,6 +5,10 @@ export interface PlanLimits {
   maxProperties: number;
   annualPriceUsd: number;
   monthlyPriceUsd: number;
+  paddleProductId?: string;
+  paddleMonthlyPriceId?: string;
+  paddleAnnualPriceId?: string;
+  checkoutType?: 'paddle' | 'contact';
   description: string;
 }
 
@@ -14,8 +18,12 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     name: 'Solo Agent',
     maxLeadsPerMonth: 100,
     maxProperties: 20,
-    annualPriceUsd: 29,
+    annualPriceUsd: 348,
     monthlyPriceUsd: 35,
+    paddleProductId: 'pro_01kyh5v65p257b3z7g8ez1z0y7',
+    paddleMonthlyPriceId: 'pri_01kyh5xs672hj75v57tyf8mqg1',
+    paddleAnnualPriceId: 'pri_01kyh5zsndbhkhswrbfmwj4xvb',
+    checkoutType: 'paddle',
     description: 'Ideal para corredores y agentes inmobiliarios independientes.',
   },
   agency_pro: {
@@ -23,18 +31,23 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     name: 'Agency Pro',
     maxLeadsPerMonth: 500,
     maxProperties: 100,
-    annualPriceUsd: 79,
+    annualPriceUsd: 948,
     monthlyPriceUsd: 99,
+    paddleProductId: 'pro_01kyh6139a37ta2r7axc2qh5k8',
+    paddleMonthlyPriceId: 'pri_01kyh63dg2h0jkwvd1bh6jde47',
+    paddleAnnualPriceId: 'pri_01kyh64fj85g1j12vgar9ct9yz',
+    checkoutType: 'paddle',
     description: 'Para agencias en crecimiento con WhatsApp y sincronización CRM.',
   },
   enterprise: {
     id: 'enterprise',
-    name: 'Enterprise',
+    name: 'Desarrolladores / Colaboradores',
     maxLeadsPerMonth: 999999,
     maxProperties: 999999,
     annualPriceUsd: 0,
     monthlyPriceUsd: 0,
-    description: 'Para desarrolladoras, promotoras y redes inmobiliarias multi-sucursal.',
+    checkoutType: 'contact',
+    description: 'Para desarrolladores y colaboradores que quieren aportar al proyecto AriaPrompt.',
   },
 };
 
@@ -42,7 +55,7 @@ export function getPlanLimits(planId?: string | null): PlanLimits {
   if (!planId) return PLAN_LIMITS.solo_agent;
   const normalized = planId.toLowerCase().trim();
   if (normalized.includes('pro')) return PLAN_LIMITS.agency_pro;
-  if (normalized.includes('enterprise')) return PLAN_LIMITS.enterprise;
+  if (normalized.includes('enterprise') || normalized.includes('developer') || normalized.includes('custom') || normalized.includes('desarroll')) return PLAN_LIMITS.enterprise;
   return PLAN_LIMITS.solo_agent;
 }
 
@@ -75,3 +88,12 @@ export function checkPropertyLimit(planId: string | null | undefined, currentPro
   }
   return { allowed: true };
 }
+
+export type BillingCycle = 'monthly' | 'annual';
+
+export function getPaddlePriceId(planId: string, billingCycle: BillingCycle): string | undefined {
+  const plan = getPlanLimits(planId);
+  return billingCycle === 'annual' ? plan.paddleAnnualPriceId : plan.paddleMonthlyPriceId;
+}
+
+export const DEVELOPER_WHATSAPP_URL = 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20unirme%20al%20Programa%20de%20Suscripci%C3%B3n%20para%20Desarrolladores%20y%20Colaboradores%20de%20AriaPrompt.%20Quisiera%20m%C3%A1s%20informaci%C3%B3n%20sobre%20c%C3%B3mo%20aportar%20al%20proyecto.';

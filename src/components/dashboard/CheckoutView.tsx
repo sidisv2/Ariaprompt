@@ -22,6 +22,8 @@ import {
   Award,
   Headphones
 } from 'lucide-react';
+import { trackPurchaseConversion } from '../../lib/analytics';
+import { DEVELOPER_WHATSAPP_URL, getPaddlePriceId, PLAN_LIMITS } from '../../lib/planLimits';
 import { AppRoute } from '../../types';
 import {
   VisaLogo,
@@ -48,12 +50,13 @@ const CURRENCIES: { code: CurrencyCode; label: string; symbol: string; rate: num
   { code: 'CLP', label: 'Pesos Chilenos (CLP)', symbol: '$', rate: 940, flag: '🇨🇱' },
 ];
 
-import { PLAN_LIMITS } from '../../lib/planLimits';
-
 interface PlanItem {
   id: string;
   name: string;
   priceUsd: number;
+  paddleProductId?: string;
+  paddleMonthlyPriceId?: string;
+  paddleAnnualPriceId?: string;
   badge?: string;
   description: string;
   features: string[];
@@ -63,7 +66,9 @@ interface PlanItem {
 
 export function CheckoutView({ }: CheckoutViewProps) {
   const { requireAuthForPayment } = useAuth();
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(() => {
+    return localStorage.getItem('aria_selected_plan_id') || 'agency_pro';
+  });
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>(() => {
     return (localStorage.getItem('aria_selected_billing_cycle') as 'annual' | 'monthly') || 'annual';
   });
@@ -72,9 +77,12 @@ export function CheckoutView({ }: CheckoutViewProps) {
     const isAnnual = billingCycle === 'annual';
     return [
       {
-        id: 'starter',
+        id: 'solo_agent',
         name: PLAN_LIMITS.solo_agent.name,
         priceUsd: isAnnual ? PLAN_LIMITS.solo_agent.annualPriceUsd : PLAN_LIMITS.solo_agent.monthlyPriceUsd,
+        paddleProductId: PLAN_LIMITS.solo_agent.paddleProductId,
+        paddleMonthlyPriceId: PLAN_LIMITS.solo_agent.paddleMonthlyPriceId,
+        paddleAnnualPriceId: PLAN_LIMITS.solo_agent.paddleAnnualPriceId,
         description: PLAN_LIMITS.solo_agent.description,
         features: [
           '1 Agente de IA (Aria) activo',
@@ -85,9 +93,12 @@ export function CheckoutView({ }: CheckoutViewProps) {
         ]
       },
       {
-        id: 'pro',
+        id: 'agency_pro',
         name: PLAN_LIMITS.agency_pro.name,
         priceUsd: isAnnual ? PLAN_LIMITS.agency_pro.annualPriceUsd : PLAN_LIMITS.agency_pro.monthlyPriceUsd,
+        paddleProductId: PLAN_LIMITS.agency_pro.paddleProductId,
+        paddleMonthlyPriceId: PLAN_LIMITS.agency_pro.paddleMonthlyPriceId,
+        paddleAnnualPriceId: PLAN_LIMITS.agency_pro.paddleAnnualPriceId,
         badge: 'MÁS POPULAR',
         description: PLAN_LIMITS.agency_pro.description,
         features: [
@@ -100,7 +111,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
         ]
       },
       {
-        id: 'agency',
+        id: 'developer',
         name: PLAN_LIMITS.enterprise.name,
         priceUsd: 0,
         badge: 'SOLUCIÓN A MEDIDA',
@@ -134,7 +145,10 @@ export function CheckoutView({ }: CheckoutViewProps) {
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const activeCurrencyObj = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
-  const activePlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
+  const normalizedSelectedPlanId = selectedPlanId === 'starter' ? 'solo_agent' : selectedPlanId === 'pro' ? 'agency_pro' : selectedPlanId;
+  const activePlan = PLANS.find((p) => p.id === normalizedSelectedPlanId) || PLANS[1];
+
+  const selectedPaddlePriceId = getPaddlePriceId(normalizedSelectedPlanId, billingCycle);
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
@@ -147,9 +161,18 @@ export function CheckoutView({ }: CheckoutViewProps) {
   };
 
   const handleOpenCheckoutWithAuth = (planId: string) => {
-    setSelectedPlanId(planId);
+    const normalizedPlanId = planId === 'starter' ? 'solo_agent' : planId === 'pro' ? 'agency_pro' : planId;
+    if (normalizedPlanId === 'developer') {
+      window.open(DEVELOPER_WHATSAPP_URL, '_blank');
+      return;
+    }
+
+    setSelectedPlanId(normalizedPlanId);
+    localStorage.setItem('aria_selected_plan_id', normalizedPlanId);
+    const paddlePriceId = getPaddlePriceId(normalizedPlanId, billingCycle);
+    if (paddlePriceId) localStorage.setItem('aria_selected_paddle_price_id', paddlePriceId);
     requireAuthForPayment({
-      planId,
+      planId: normalizedPlanId,
       onAuthenticated: () => setShowCheckoutModal(true),
     });
   };
@@ -162,7 +185,23 @@ export function CheckoutView({ }: CheckoutViewProps) {
     });
   };
 
+  const handleOpenPaddleCheckout = () => {
+    if (selectedPaddlePriceId && window.Paddle?.Checkout?.open) {
+      window.Paddle.Checkout.open({
+        items: [{ priceId: selectedPaddlePriceId, quantity: 1 }],
+      });
+      return;
+    }
+
+    window.open(customLinks.stripe, '_blank');
+  };
+
   const handleSimulatePayment = () => {
+    const arsCurrency = CURRENCIES.find((c) => c.code === 'ARS');
+    const orderId = `aria-${activePlan.id}-${Date.now()}`;
+    const amount = activePlan.priceUsd * (arsCurrency?.rate || 1);
+
+    trackPurchaseConversion(orderId, amount);
     setPaymentCompleted(true);
     setTimeout(() => {
       setShowCheckoutModal(false);
@@ -312,7 +351,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
-                <span>{isSelected ? 'Proceder al Pago Seguro' : 'Seleccionar Plan'}</span>
+                <span>{plan.id === 'developer' ? 'Unirse como Desarrollador' : isSelected ? 'Proceder al Pago Seguro' : 'Seleccionar Plan'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -543,7 +582,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                   <div className="flex justify-between text-slate-300 pt-2 border-t border-white/5 text-sm">
                     <span className="font-bold text-white">Total a Pagar:</span>
                     <span className="font-extrabold text-emerald-400 font-mono">
-                      {activeCurrencyObj.symbol}{formattedPrice} {activeCurrencyObj.code} / mes
+                      {activeCurrencyObj.symbol}{formattedPrice} {activeCurrencyObj.code} / {billingCycle === 'annual' ? 'año' : 'mes'}
                     </span>
                   </div>
                 </div>
@@ -574,6 +613,12 @@ export function CheckoutView({ }: CheckoutViewProps) {
                     </div>
                   )}
 
+                  {selectedPaddlePriceId && (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 font-mono">
+                      Paddle Price ID: {selectedPaddlePriceId}
+                    </div>
+                  )}
+
                   {/* Payment link preview */}
                   <div className="pt-2">
                     <label className="block text-[11px] text-slate-400 mb-1">Enlace de Pago Generado:</label>
@@ -597,15 +642,14 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
                 {/* Modal Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <a
-                    href={customLinks.mercadopago}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={handleOpenPaddleCheckout}
                     className="flex-1 py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
                   >
-                    <span>Abrir Pasarela Directa</span>
+                    <span>Abrir Checkout Paddle</span>
                     <ExternalLink className="w-4 h-4" />
-                  </a>
+                  </button>
 
                   <button
                     onClick={handleSimulatePayment}

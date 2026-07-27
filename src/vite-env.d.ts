@@ -9,3 +9,12 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  gtag?: (...args: any[]) => void;
+  Paddle?: {
+    Checkout?: {
+      open: (options: { items: Array<{ priceId: string; quantity: number }> }) => void;
+    };
+  };
+}

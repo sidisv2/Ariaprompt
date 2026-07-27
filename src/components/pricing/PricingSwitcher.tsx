@@ -3,7 +3,7 @@ import { Check, Sparkles, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { AppRoute } from '../../types';
 
-import { PLAN_LIMITS } from '../../lib/planLimits';
+import { DEVELOPER_WHATSAPP_URL, getPaddlePriceId, PLAN_LIMITS } from '../../lib/planLimits';
 
 interface PricingSwitcherProps {
   onRouteChange?: (route: AppRoute) => void;
@@ -17,7 +17,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
 
   const plans = [
     {
-      id: 'starter',
+      id: 'solo_agent',
       name: PLAN_LIMITS.solo_agent.name,
       tagline: PLAN_LIMITS.solo_agent.description,
       monthlyPrice: PLAN_LIMITS.solo_agent.monthlyPriceUsd,
@@ -35,7 +35,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       color: 'border-slate-800 bg-slate-900/60',
     },
     {
-      id: 'pro',
+      id: 'agency_pro',
       name: PLAN_LIMITS.agency_pro.name,
       tagline: PLAN_LIMITS.agency_pro.description,
       monthlyPrice: PLAN_LIMITS.agency_pro.monthlyPriceUsd,
@@ -54,8 +54,8 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       color: 'border-emerald-500/50 bg-slate-900/90 shadow-2xl shadow-emerald-500/10',
     },
     {
-      id: 'custom',
-      name: `${PLAN_LIMITS.enterprise.name} / Desarrolladores`,
+      id: 'developer',
+      name: PLAN_LIMITS.enterprise.name,
       tagline: PLAN_LIMITS.enterprise.description,
       isCustom: true,
       monthlyPrice: 0,
@@ -69,13 +69,22 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       ],
       popular: false,
       badge: 'Solución a Medida',
-      buttonText: 'Contactar Ventas',
+      buttonText: 'Unirse como Desarrollador',
       color: 'border-cyan-500/30 bg-slate-900/60',
     },
   ];
 
   const handleSelectPlan = (planId: string) => {
+    if (planId === 'developer' || planId === 'custom') {
+      window.open(DEVELOPER_WHATSAPP_URL, '_blank');
+      return;
+    }
+
+    const paddlePriceId = getPaddlePriceId(planId, billingCycle);
+
+    localStorage.setItem('aria_selected_plan_id', planId);
     localStorage.setItem('aria_selected_billing_cycle', billingCycle);
+    if (paddlePriceId) localStorage.setItem('aria_selected_paddle_price_id', paddlePriceId);
     const passed = requireAuthForPayment({
       planId,
       targetRoute: 'dashboard-checkout',
@@ -112,9 +121,9 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <span>Facturación Anual ($29 / $79)</span>
+            <span>Facturación Anual ($348 / $948)</span>
             <span className="px-2 py-0.5 rounded-full bg-slate-950 text-[10px] text-emerald-300 font-extrabold border border-emerald-400/40">
-              -20%
+              Ahorro
             </span>
           </button>
         </div>
@@ -170,15 +179,15 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
                         <span className="line-through text-xs text-slate-400 font-mono ml-1">${rawPrice}</span>
                       )}
                       <span className="text-xs text-slate-400 font-medium ml-1">
-                        USD / mes
+                        {billingCycle === 'annual' ? 'USD / año' : 'USD / mes'}
                       </span>
                     </div>
                   )}
                   <p className="text-[11px] text-slate-400 mt-1.5">
                     {plan.isCustom
-                      ? 'Cotización personalizada por volumen de sucursales'
+                      ? 'Contacto directo por WhatsApp, sin pasarela de pago'
                       : billingCycle === 'annual'
-                      ? 'Facturado anualmente (-20% ahorro)'
+                      ? 'Facturado anualmente'
                       : 'Facturado mensualmente'}
                   </p>
                 </div>

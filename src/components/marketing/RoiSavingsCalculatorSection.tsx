@@ -27,7 +27,7 @@ export const RoiSavingsCalculatorSection: React.FC<RoiSavingsCalculatorSectionPr
   const recoveredToursMonthly = Math.round(lostLeadsMonthly * 0.45);
   const potentialClosedDeals = Math.max(1, Math.round(recoveredToursMonthly * 0.12));
   const lostCommissionUsd = potentialClosedDeals * avgCommissionUsd;
-  const annualAriaCostUsd = PLAN_LIMITS.solo_agent.annualPriceUsd * 12;
+  const annualAriaCostUsd = PLAN_LIMITS.solo_agent.annualPriceUsd;
   const estimatedRoiMultiplier = Math.round((lostCommissionUsd / annualAriaCostUsd) * 10) / 10;
 
   return (
