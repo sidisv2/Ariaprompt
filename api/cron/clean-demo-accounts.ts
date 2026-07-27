@@ -1,23 +1,33 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
-const SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const CRON_SECRET = (process.env.CRON_SECRET || '').trim();
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // 1. Verify Vercel Cron authorization header if CRON_SECRET is configured
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  const cronSecret = (process.env.CRON_SECRET || '').trim();
+
+  // 1. STRICT MANDATORY SECURITY CHECK: Reject by default if CRON_SECRET is missing or token is invalid
   const authHeader = req.headers.authorization;
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}` && req.query.key !== CRON_SECRET) {
-    return res.status(401).json({ error: 'No autorizado para ejecutar el cron job de limpieza demo' });
+  const providedKey = req.query.key;
+
+  if (!cronSecret) {
+    console.error('[Cron Security Error]: CRON_SECRET no está configurado en las variables de entorno.');
+    return res.status(401).json({ error: 'Acceso denegado: CRON_SECRET no está configurado en el servidor.' });
   }
 
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+  const isValidBearer = authHeader === `Bearer ${cronSecret}`;
+  const isValidQueryKey = providedKey === cronSecret;
+
+  if (!isValidBearer && !isValidQueryKey) {
+    return res.status(401).json({ error: 'No autorizado: Token de autorización Vercel Cron inválido o ausente.' });
+  }
+
+  if (!supabaseUrl || !serviceRoleKey) {
     return res.status(500).json({ error: 'Faltan variables de entorno SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY' });
   }
 
   try {
-    const adminSupabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const adminSupabase = createClient(supabaseUrl, serviceRoleKey);
 
     // 2. Fetch all users from Supabase Auth via admin API
     const { data: usersData, error: listErr } = await adminSupabase.auth.admin.listUsers({
