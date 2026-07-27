@@ -13,9 +13,9 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
   const { user, openAuthModal } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [userFiles, setUserFiles] = useState([
-    { id: '1', name: 'Dossier_Exclusivo_El_Poblado_2026.pdf', size: '4.8 MB', date: '2026-07-23', type: 'Dossier RAG' },
+    { id: '1', name: 'Ficha_Exclusiva_El_Poblado_2026.pdf', size: '4.8 MB', date: '2026-07-23', type: 'Ficha de Inmueble' },
     { id: '2', name: 'Analisis_Financiero_ROI_Polanco.pdf', size: '2.3 MB', date: '2026-07-22', type: 'Informe Financiero' },
-    { id: '3', name: 'Memoria_Calidades_Salamanca_Penthouse.pdf', size: '6.1 MB', date: '2026-07-20', type: 'Plano & Especificaciones' },
+    { id: '3', name: 'Ficha_Calidades_Salamanca_Penthouse.pdf', size: '6.1 MB', date: '2026-07-20', type: 'Especificaciones' },
   ]);
 
   const usernameSlug = user ? user.nombre.toLowerCase().replace(/\s+/g, '-') : 'invitado';
@@ -68,13 +68,13 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase">
               <Lock className="w-3.5 h-3.5" />
-              <span>Bóveda Privada de Archivos PDF</span>
+              <span>Bóveda Privada de Documentos</span>
             </div>
             <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              Directorio Privado de Expedientes PDF
+              Directorio Privado de Expedientes
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Subdirección encriptada exclusiva para usuarios suscritos. Descarga dossiers RAG, planos e informes financieros.
+              Subdirección encriptada exclusiva para usuarios suscritos. Descarga fichas inmobiliarias, contratos e informes financieros.
             </p>
           </div>
 
@@ -93,9 +93,9 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
           </div>
 
           <div className="max-w-xl mx-auto space-y-2">
-            <h3 className="text-2xl font-extrabold text-white">🔒 Acceso Restringido a Dossiers PDF</h3>
+            <h3 className="text-2xl font-extrabold text-white">🔒 Acceso Restringido a Documentos</h3>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Los usuarios no registrados o no suscritos no pueden recibir ni descargar expedientes PDF privados. Cada usuario suscrito dispone de su propia subdirección privada y segura.
+              Los usuarios no registrados o no suscritos no pueden recibir ni descargar expedientes privados. Cada usuario suscrito dispone de su propia subdirección privada y segura.
             </p>
           </div>
 

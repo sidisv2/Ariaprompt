@@ -64,7 +64,7 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
         metrics: t('prompt.metric3'),
         details: [
           { label: 'Estado', value: 'Atendido fuera de horario' },
-          { label: 'Ficha Técnica PDF', value: 'Enviada automáticamente' },
+          { label: 'Ficha Técnica', value: 'Enviada automáticamente' },
         ],
       },
     },
@@ -102,7 +102,7 @@ export const HeroPromptAssistant: React.FC<{ onStartDemo?: () => void }> = ({ on
         metrics: 'Lead Calificado • Score 95/100',
         details: [
           { label: 'Respuesta IA', value: 'Generada en 3.8s' },
-          { label: 'Acción Siguiente', value: 'Enviar Ficha PDF por WhatsApp' },
+          { label: 'Acción Siguiente', value: 'Enviar Ficha Comercial por WhatsApp' },
         ],
       },
     });

@@ -47,10 +47,10 @@ const SOLUTIONS: SolutionItem[] = [
     id: '4',
     role: 'Compradores',
     title: 'Consulta RAG de Planos & Dossier',
-    description: 'Responde consultas técnicas precisas sobre acabados, distribuciones y memoria de calidades consultando el PDF subido.',
-    samplePrompt: '¿Qué tipo de suelo tiene la cocina y cuál es el metraje total según la memoria técnica?',
+    description: 'Responde consultas técnicas precisas sobre acabados, distribuciones y ficha de calidades consultando el catálogo sincronizado.',
+    samplePrompt: '¿Qué tipo de suelo tiene la cocina y cuál es el metraje total según la ficha técnica?',
     icon: <UserCheck className="w-5 h-5 text-emerald-400" />,
-    badge: 'Lector Documental PDF',
+    badge: 'Fichas de Inmuebles',
   },
   {
     id: '5',

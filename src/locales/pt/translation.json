@@ -18,7 +18,7 @@
     "forInvestorsAgents": "Para Investidores e Corretores",
     "playgroundLive": "Playground Aria AI Live",
     "ariaEngine": "Aria AI Engine",
-    "ragDocs": "Documentação RAG",
+    "ragDocs": "Documentação do Catálogo",
     "workspaceSubtitle": "Workspace IA Imobiliário"
   },
   "sidebar": {
@@ -29,7 +29,7 @@
     "leads": "CRM Leads & Chat",
     "botConfig": "Configurador Aria Prop",
     "files": "Meus Arquivos & Perfil",
-    "vault": "Cofre Privado PDF",
+    "vault": "Cofre Privado de Arquivos",
     "checkout": "Planos & Pagamentos LATAM",
     "activeAgency": "Agência Enterprise LATAM",
     "activeQuota": "Pro LATAM Ativo",
@@ -142,7 +142,7 @@
   },
   "properties": {
     "title": "Gestor de Catálogo de Imóveis",
-    "subtitle": "Gestão de imóveis e envio de documentos RAG para indexação em tempo real por IA.",
+    "subtitle": "Gestão de imóveis e integração de catálogo para atendimento em tempo real por IA.",
     "syncAI": "Sincronizar com IA",
     "syncing": "Sincronizando...",
     "addProperty": "Adicionar Novo Imóvel",
@@ -205,7 +205,7 @@
   "chat": {
     "title": "Aria — Assistente IA 24/7",
     "typing": "Aria está respondendo...",
-    "placeholder": "Digite sua mensagem ou consulta RAG...",
+    "placeholder": "Digite sua mensagem ou consulta sobre imóveis...",
     "welcomeDefault": "Olá! Sou Aria. Como posso ajudar você hoje com a busca, ROI ou visitas para seus imóveis?",
     "devAdmin": "Dev Admin (Mensagens Ilimitadas)",
     "freeTrial": "Teste Grátis: {{count}}/2 mensagens usadas",
@@ -218,11 +218,11 @@
       "limitReachedProperties": "Você atingiu o limite de imóveis do seu plano. Atualize para o plano Agency Pro para publicar mais imóveis.",
       "upgradeCta": "Atualizar Plano"
     },
-    "dragDrop": "Arraste ou envie seus memoriais descritivos em PDF",
-    "dragSub": "Processe dossiês de edifícios, plantas e condições comerciais instantaneamente",
-    "processingDoc": "Processando documento PDF...",
-    "indexedDocs": "Documentos Indexados no RAG",
-    "readyRAG": "Motor RAG Pronto para Consultas",
+    "dragDrop": "Sincronize fichas de imóveis",
+    "dragSub": "Atualize fichas, preços e disponibilidades instantaneamente",
+    "processingDoc": "Atualizando catálogo...",
+    "indexedDocs": "Imóveis no Catálogo",
+    "readyRAG": "Motor Pronto para Consultas",
     "inputPlaceholder": "Digite sua mensagem ou consulta sobre imóveis...",
     "sending": "Enviando...",
     "sendBtn": "Enviar"
@@ -231,8 +231,8 @@
     "summary": "Visão Geral",
     "general": "Agente Comercial",
     "finance": "Finanças e ROI",
-    "rag": "Busca RAG",
-    "files": "Enviar PDFs"
+    "rag": "Busca Catálogo",
+    "files": "Gestor Catálogo"
   },
   "dashboard": {
     "welcomeTitle": "Bem-vindo de volta",
@@ -267,14 +267,14 @@
     "title": "Como o Aria Prop funciona na sua agência?",
     "subtitle": "Quatro passos simples para transformar visitantes em visitas agendadas e vendas fechadas.",
     "step1Title": "Conexão de Catálogo e CRM",
-    "step1Desc": "Sincronize seus imóveis a partir do Tokko Broker, EasyBroker ou envio direto de PDFs.",
+    "step1Desc": "Sincronize seus imóveis a partir do Tokko Broker, EasyBroker ou integração direta do catálogo.",
     "step2Title": "Atendimento Instantâneo 24/7",
     "step2Desc": "Aria responde aos clientes em menos de 5 segundos no WhatsApp e Web, esclarecendo detalhes e preços.",
     "step3Title": "Qualificação de Orçamento",
     "step3Desc": "O agente IA analisa o orçamento, urgência de compra e localização, filtrando curiosos automaticamente.",
     "step4Title": "Agendamento no Calendário",
     "step4Desc": "Leads qualificados agendam visitas presenciais diretamente no Google Calendar com o corretor responsável.",
-    "cta": "Ver o Motor RAG em Ação"
+    "cta": "Ver o Assistente em Ação"
   },
   "flowDemo": {
     "liveSequenceBadge": "Demonstração de Fluxo Inteligente",
@@ -335,12 +335,12 @@
   },
   "demo": {
     "badge": "Demonstração Interativa",
-    "title": "Experimente a velocidade do Assistente RAG",
+    "title": "Experimente a velocidade do Assistente Imobiliário",
     "subtitle": "Interaja ao vivo com nosso playground imobiliário e comprove a qualificação automática de leads.",
     "tab1": "Playground Ao Vivo",
     "tab2": "Vídeo de Apresentação",
     "videoTitle": "Demonstração em Vídeo do Motor Aria Prop",
-    "videoDesc": "Veja como Aria analisa memoriais descritivos PDF e coordena visitas em menos de 2 minutos."
+    "videoDesc": "Veja como Aria analisa fichas técnicas do catálogo e coordena visitas em menos de 2 minutos."
   },
   "problem": {
     "badge": "O Desafío Imobiliário",

@@ -142,7 +142,7 @@
   },
   "properties": {
     "title": "Gestor de Catálogo de Propiedades",
-    "subtitle": "Gestión de inmuebles y carga de documentos RAG para alimentarse en tiempo real por la IA.",
+    "subtitle": "Gestión de inmuebles e integración de catálogo para atención en tiempo real por la IA.",
     "syncAI": "Sincronizar con IA",
     "syncing": "Sincronizando...",
     "addProperty": "Añadir Nueva Propiedad",
@@ -205,7 +205,7 @@
   "chat": {
     "title": "Aria — Asistente IA 24/7",
     "typing": "Aria está respondiendo...",
-    "placeholder": "Escribe tu mensaje o consulta RAG...",
+    "placeholder": "Escribe tu mensaje o consulta de inmuebles...",
     "welcomeDefault": "¡Hola! Soy Aria. ¿En qué puedo ayudarte hoy con la búsqueda, ROI o visitas de tus inmuebles?",
     "devAdmin": "Dev Admin (Mensajes Ilimitados)",
     "freeTrial": "Prueba Gratis: {{count}}/2 mensajes utilizados",
@@ -219,11 +219,11 @@
       "limitReachedProperties": "Alcanzaste el límite de propiedades de tu plan. Actualizá tu plan para publicar más inmuebles.",
       "upgradeCta": "Actualizar Plan"
     },
-    "dragDrop": "Arrastra o sube tus memorias técnicas PDF",
-    "dragSub": "Procesa dossieres de edificios, planos y condiciones comerciales al instante",
-    "processingDoc": "Procesando documento PDF...",
-    "indexedDocs": "Documentos Indexados en RAG",
-    "readyRAG": "Motor RAG Listo para Consultas",
+    "dragDrop": "Sincroniza fichas de inmuebles",
+    "dragSub": "Actualiza fichas, precios y disponibilidades al instante",
+    "processingDoc": "Actualizando catálogo...",
+    "indexedDocs": "Inmuebles en Catálogo",
+    "readyRAG": "Motor Listo para Consultas",
     "inputPlaceholder": "Escribe tu mensaje o consulta sobre inmuebles...",
     "sending": "Enviando...",
     "sendBtn": "Enviar"
@@ -232,8 +232,8 @@
     "summary": "Resumen General",
     "general": "Agente Comercial",
     "finance": "Finanzas & ROI",
-    "rag": "Búsqueda RAG",
-    "files": "Subir PDFs"
+    "rag": "Búsqueda Catálogo",
+    "files": "Gestor Catálogo"
   },
   "dashboard": {
     "welcomeTitle": "¡Bienvenido de nuevo",
@@ -268,14 +268,14 @@
     "title": "¿Cómo funciona Aria Prop en tu agencia?",
     "subtitle": "Cuatro sencillos pasos para convertir visitantes en visitas agendadas y cierres inmobiliarios.",
     "step1Title": "Conexión de Catálogo y CRM",
-    "step1Desc": "Sincroniza tus propiedades desde Tokko Broker, EasyBroker o mediante carga directa de PDF con memorias de calidades.",
+    "step1Desc": "Sincroniza tus propiedades desde Tokko Broker, EasyBroker o mediante carga de catálogo directo de la agencia.",
     "step2Title": "Atención Instantánea 24/7",
     "step2Desc": "Aria responde a los prospectos en menos de 5 segundos en WhatsApp y Web, aclarando detalles técnicos y precios.",
     "step3Title": "Cualificación de Presupuesto",
     "step3Desc": "El agente IA analiza el presupuesto, la urgencia de compra y la zona deseada, filtrando curiosos automáticamente.",
     "step4Title": "Agendado en Tu Calendario",
     "step4Desc": "Los leads calificados coordinan la visita presencial directamente en Google Calendar con el corredor asignado.",
-    "cta": "Ver el Motor RAG en Acción"
+    "cta": "Ver el Asistente en Acción"
   },
   "flowDemo": {
     "liveSequenceBadge": "Demostración del Flujo Inteligente",
@@ -336,12 +336,12 @@
   },
   "demo": {
     "badge": "Prueba Interactiva",
-    "title": "Experimenta la velocidad del Asistente RAG",
+    "title": "Experimenta la velocidad del Asistente Inmobiliario",
     "subtitle": "Interactúa en vivo con nuestro playground inmobiliario y comprueba la cualificación automática de leads.",
     "tab1": "Playground En Vivo",
     "tab2": "Video Recorrido",
     "videoTitle": "Demostración en Video del Motor Aria Prop",
-    "videoDesc": "Mira cómo Aria analiza memorias descriptivas PDF y coordina citas en menos de 2 minutos."
+    "videoDesc": "Mira cómo Aria analiza las fichas técnicas del catálogo y coordina citas en menos de 2 minutos."
   },
   "problem": {
     "badge": "El Desafío Inmobiliario",

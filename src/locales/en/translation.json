@@ -18,7 +18,7 @@
     "forInvestorsAgents": "For Investors & Agents",
     "playgroundLive": "Playground Aria AI Live",
     "ariaEngine": "Aria AI Engine",
-    "ragDocs": "RAG Documentation",
+    "ragDocs": "Property Documentation",
     "workspaceSubtitle": "Real Estate AI Workspace"
   },
   "sidebar": {
@@ -29,7 +29,7 @@
     "leads": "Lead CRM & Chat",
     "botConfig": "Aria Prop Configurator",
     "files": "My Files & Profile",
-    "vault": "Private PDF Vault",
+    "vault": "Private File Vault",
     "checkout": "Plans & Payments LATAM",
     "activeAgency": "Enterprise Agency LATAM",
     "activeQuota": "Pro LATAM Active",
@@ -142,7 +142,7 @@
   },
   "properties": {
     "title": "Property Catalog Manager",
-    "subtitle": "Manage real estate listings and upload RAG documents for real-time AI indexing.",
+    "subtitle": "Manage real estate listings and sync property data for real-time AI engagement.",
     "syncAI": "Sync with AI",
     "syncing": "Syncing...",
     "addProperty": "Add New Property",
@@ -205,7 +205,7 @@
   "chat": {
     "title": "Aria — 24/7 AI Assistant",
     "typing": "Aria is responding...",
-    "placeholder": "Type your message or RAG query...",
+    "placeholder": "Type your message or property query...",
     "welcomeDefault": "Hello! I'm Aria. How can I help you today with searching, ROI, or scheduling visits for your properties?",
     "devAdmin": "Dev Admin (Unlimited Messages)",
     "freeTrial": "Free Trial: {{count}}/2 messages used",
@@ -218,11 +218,11 @@
       "limitReachedProperties": "You have reached your active property limit. Upgrade to Agency Pro to list more properties.",
       "upgradeCta": "Upgrade Plan"
     },
-    "dragDrop": "Drag & drop your PDF property spec sheets",
-    "dragSub": "Process building dossiers, floor plans, and pricing instantly",
-    "processingDoc": "Processing PDF document...",
-    "indexedDocs": "Documents Indexed in RAG",
-    "readyRAG": "RAG Engine Ready for Queries",
+    "dragDrop": "Sync property listings",
+    "dragSub": "Update spec sheets, pricing, and availability instantly",
+    "processingDoc": "Updating catalog...",
+    "indexedDocs": "Listings in Catalog",
+    "readyRAG": "Engine Ready for Queries",
     "inputPlaceholder": "Type your message or property inquiry...",
     "sending": "Sending...",
     "sendBtn": "Send"
@@ -231,8 +231,8 @@
     "summary": "Overview",
     "general": "Sales Agent",
     "finance": "Finance & ROI",
-    "rag": "RAG Search",
-    "files": "Upload PDFs"
+    "rag": "Catalog Search",
+    "files": "Catalog Manager"
   },
   "dashboard": {
     "welcomeTitle": "Welcome back",
@@ -267,14 +267,14 @@
     "title": "How does Aria Prop work for your agency?",
     "subtitle": "Four simple steps to turn property inquiries into scheduled tours and closed deals.",
     "step1Title": "Catalog & CRM Sync",
-    "step1Desc": "Sync your listings from Tokko Broker, EasyBroker, or via direct PDF upload with specification sheets.",
+    "step1Desc": "Sync your listings from Tokko Broker, EasyBroker, or via direct catalog sync.",
     "step2Title": "24/7 Instant Engagement",
     "step2Desc": "Aria responds to prospects in under 5 seconds on WhatsApp and Web, clarifying specs and pricing.",
     "step3Title": "Budget Qualification",
     "step3Desc": "The AI agent analyzes budget, buying timeline, and desired zone, filtering tire-kickers automatically.",
     "step4Title": "Calendar Scheduling",
     "step4Desc": "Qualified leads coordinate in-person property tours directly on Google Calendar with the assigned broker.",
-    "cta": "See RAG Engine in Action"
+    "cta": "See AI Assistant in Action"
   },
   "flowDemo": {
     "liveSequenceBadge": "Smart Conversational Flow Demo",
@@ -335,12 +335,12 @@
   },
   "demo": {
     "badge": "Interactive Demo",
-    "title": "Experience the speed of the RAG Assistant",
+    "title": "Experience the speed of the Real Estate Assistant",
     "subtitle": "Interact live with our real estate playground and test automated lead qualification.",
     "tab1": "Live Playground",
     "tab2": "Video Walkthrough",
     "videoTitle": "Aria Prop Engine Video Demo",
-    "videoDesc": "Watch how Aria parses PDF spec sheets and coordinates viewings in under 2 minutes."
+    "videoDesc": "Watch how Aria analyzes catalog spec sheets and coordinates viewings in under 2 minutes."
   },
   "problem": {
     "badge": "The Real Estate Challenge",

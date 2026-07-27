@@ -51,13 +51,13 @@ export const BentoGridFeatures: React.FC = () => {
                 <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
                   Respuesta Instantánea (&lt;1s)
                 </span>
-                <span className="text-xs text-slate-400">Sincronización RAG</span>
+                <span className="text-xs text-slate-400">Sincronización de Catálogo</span>
               </div>
               <h3 className="text-xl font-bold text-white">
-                La IA conoce todo tu inventario en PDF, Excel y Planos
+                La IA conoce todo tu inventario desde Tokko Broker y EasyBroker
               </h3>
               <p className="text-slate-400 text-sm leading-relaxed max-w-xl">
-                Sube las escrituras, listas de precios en Excel, planos en PDF o memorias de acabados de tus propiedades. La IA analiza el inventario en tiempo real para responder con precisión exacta sobre superficies, ubicaciones y precios en USD o moneda local.
+                Conecta tus fichas inmobiliarias, precios y disponibilidades en tiempo real. La IA analiza el catálogo de tu agencia para responder con precisión exacta sobre superficies, ambientes, ubicaciones y precios en USD o moneda local.
               </p>
             </div>
 
@@ -65,9 +65,9 @@ export const BentoGridFeatures: React.FC = () => {
             <div className="mt-8 p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3 font-mono text-xs">
               <div className="flex items-center justify-between text-slate-400 text-[11px]">
                 <span className="flex items-center gap-1.5 text-emerald-400">
-                  <Bot className="w-4 h-4" /> Aria Prop / RAG Motor IA
+                  <Bot className="w-4 h-4" /> Aria Prop / Motor de Catálogo IA
                 </span>
-                <span className="text-emerald-400 font-bold">Documentos Inyectados: 12 PDFs / Excel</span>
+                <span className="text-emerald-400 font-bold">Inmuebles Sincronizados: 12 Propiedades Activas</span>
               </div>
               <div className="p-3 rounded-xl bg-black/30 border border-emerald-500/20 text-slate-300">
                 <p className="text-emerald-400 font-semibold mb-1">🔍 Consulta del Cliente:</p>
