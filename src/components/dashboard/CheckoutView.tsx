@@ -8,7 +8,6 @@ import {
   ExternalLink,
   ShieldCheck,
   Globe2,
-  QrCode,
   DollarSign,
   Lock,
   Sparkles,
@@ -31,7 +30,6 @@ import {
   PaypalLogo,
   SpeiLogo,
   PseLogo,
-  UsdtLogo
 } from '../common/PaymentLogos';
 
 interface CheckoutViewProps {
@@ -57,6 +55,15 @@ interface PlanItem {
   features: string[];
 }
 
+type PaymentMethod = 'card' | 'mercadopago' | 'paypal' | 'transfer';
+
+const normalizePlanId = (planId: string) => {
+  if (planId === 'solo_agent') return 'starter';
+  if (planId === 'agency_pro') return 'pro';
+  if (planId === 'custom' || planId === 'enterprise') return 'agency';
+  return planId;
+};
+
 const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }> = {
   starter: {
     monthly: 'https://mpago.la/17xmopC',
@@ -73,8 +80,8 @@ const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }
 };
 
 export function CheckoutView({ }: CheckoutViewProps) {
-  const { requireAuthForPayment } = useAuth();
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
+  const { requireAuthForPayment, pendingPlan } = useAuth();
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(() => pendingPlan ? normalizePlanId(pendingPlan) : 'pro');
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>(() => {
     return (localStorage.getItem('aria_selected_billing_cycle') as 'annual' | 'monthly') || 'annual';
   });
@@ -130,13 +137,18 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
   const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto'>('mercadopago');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
   
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const activeCurrencyObj = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
   const activePlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
+  const getOfficialPaymentLink = (planId: string) => {
+    const linkConfig = OFFICIAL_PAYMENT_LINKS[normalizePlanId(planId)] || OFFICIAL_PAYMENT_LINKS.pro;
+    return linkConfig[billingCycle];
+  };
+  const officialPaymentLink = getOfficialPaymentLink(activePlan.id);
   const officialPaymentLink = OFFICIAL_PAYMENT_LINKS[activePlan.id][billingCycle];
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
@@ -144,14 +156,16 @@ export function CheckoutView({ }: CheckoutViewProps) {
   });
 
   const handleOpenCheckoutWithAuth = (planId: string) => {
-    setSelectedPlanId(planId);
+    setSelectedPlanId(normalizePlanId(planId));
     requireAuthForPayment({
       planId,
-      onAuthenticated: () => setShowCheckoutModal(true),
+      onAuthenticated: () => {
+        window.location.href = getOfficialPaymentLink(planId);
+      },
     });
   };
 
-  const handleOpenPaymentMethodWithAuth = (method: 'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto') => {
+  const handleOpenPaymentMethodWithAuth = (method: PaymentMethod) => {
     setPaymentMethod(method);
     requireAuthForPayment({
       planId: selectedPlanId,
@@ -341,7 +355,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Mercado Pago */}
           <button
             onClick={() => handleOpenPaymentMethodWithAuth('mercadopago')}
@@ -412,24 +426,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
             </div>
           </button>
 
-          {/* Crypto Binance */}
-          <button
-            onClick={() => handleOpenPaymentMethodWithAuth('crypto')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'crypto'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <UsdtLogo className="h-5" />
-              <span className="text-xs font-bold text-yellow-400">USDT</span>
-            </div>
-            <div>
-              <p className="font-bold text-white text-xs">Binance Pay / Crypto</p>
-              <p className="text-[10px] text-slate-400">USDT / USDC (TRC20)</p>
-            </div>
-          </button>
         </div>
       </div>
 
@@ -515,7 +511,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3 text-xs">
                   <div className="flex items-center gap-2 text-white font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : paymentMethod === 'transfer' ? 'Transferencia Bancaria SPEI / PSE' : 'Binance Pay / USDT'}</span>
+                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : 'Transferencia Bancaria SPEI / PSE'}</span>
                   </div>
 
                   {paymentMethod === 'transfer' && (
@@ -524,16 +520,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
                       <p><strong className="text-emerald-400">CLABE / SPEI (México):</strong> 012180015432987654</p>
                       <p><strong className="text-emerald-400">CBU (Argentina):</strong> 0000003100098765432100</p>
                       <p><strong className="text-emerald-400">Concepto:</strong> Suscripción Aria Prop - {activePlan.name}</p>
-                    </div>
-                  )}
-
-                  {paymentMethod === 'crypto' && (
-                    <div className="p-3 bg-black/50 rounded-xl space-y-1 font-mono text-[11px] text-slate-300 border border-white/5 flex items-center justify-between">
-                      <div>
-                        <p><strong className="text-yellow-400">Red:</strong> TRC20 (USDT)</p>
-                        <p><strong className="text-yellow-400">Wallet:</strong> T9xZ2aPq8R7mK1sL3vN5bY4cW6u</p>
-                      </div>
-                      <QrCode className="w-10 h-10 text-yellow-400 shrink-0" />
                     </div>
                   )}
 
