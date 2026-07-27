@@ -3,7 +3,7 @@ import { Check, Sparkles, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { AppRoute } from '../../types';
 
-import { DEVELOPER_WHATSAPP_URL, getPaddlePriceId, PLAN_LIMITS } from '../../lib/planLimits';
+import { DEVELOPER_WHATSAPP_URL, getMercadoPagoCheckoutUrl, getPaddlePriceId, PLAN_LIMITS } from '../../lib/planLimits';
 
 interface PricingSwitcherProps {
   onRouteChange?: (route: AppRoute) => void;
@@ -81,10 +81,18 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
     }
 
     const paddlePriceId = getPaddlePriceId(planId, billingCycle);
+    const mercadoPagoUrl = getMercadoPagoCheckoutUrl(planId, billingCycle);
 
     localStorage.setItem('aria_selected_plan_id', planId);
     localStorage.setItem('aria_selected_billing_cycle', billingCycle);
     if (paddlePriceId) localStorage.setItem('aria_selected_paddle_price_id', paddlePriceId);
+    if (mercadoPagoUrl) localStorage.setItem('aria_selected_mercadopago_url', mercadoPagoUrl);
+
+    if (mercadoPagoUrl) {
+      window.open(mercadoPagoUrl, '_blank');
+      return;
+    }
+
     const passed = requireAuthForPayment({
       planId,
       targetRoute: 'dashboard-checkout',

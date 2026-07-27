@@ -23,7 +23,7 @@ import {
   Headphones
 } from 'lucide-react';
 import { trackPurchaseConversion } from '../../lib/analytics';
-import { DEVELOPER_WHATSAPP_URL, getPaddlePriceId, PLAN_LIMITS } from '../../lib/planLimits';
+import { DEVELOPER_WHATSAPP_URL, getMercadoPagoCheckoutUrl, getPaddlePriceId, PLAN_LIMITS } from '../../lib/planLimits';
 import { AppRoute } from '../../types';
 import {
   VisaLogo,
@@ -33,7 +33,6 @@ import {
   PaypalLogo,
   SpeiLogo,
   PseLogo,
-  UsdtLogo
 } from '../common/PaymentLogos';
 
 interface CheckoutViewProps {
@@ -130,7 +129,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
   const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto'>('mercadopago');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'mercadopago' | 'paypal' | 'transfer'>('mercadopago');
   
   // Custom Payment Link Configuration (Admin settings)
   const [customLinks, setCustomLinks] = useState({
@@ -149,6 +148,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
   const activePlan = PLANS.find((p) => p.id === normalizedSelectedPlanId) || PLANS[1];
 
   const selectedPaddlePriceId = getPaddlePriceId(normalizedSelectedPlanId, billingCycle);
+  const selectedMercadoPagoUrl = getMercadoPagoCheckoutUrl(normalizedSelectedPlanId, billingCycle);
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
@@ -170,18 +170,33 @@ export function CheckoutView({ }: CheckoutViewProps) {
     setSelectedPlanId(normalizedPlanId);
     localStorage.setItem('aria_selected_plan_id', normalizedPlanId);
     const paddlePriceId = getPaddlePriceId(normalizedPlanId, billingCycle);
+    const mercadoPagoUrl = getMercadoPagoCheckoutUrl(normalizedPlanId, billingCycle);
     if (paddlePriceId) localStorage.setItem('aria_selected_paddle_price_id', paddlePriceId);
+    if (mercadoPagoUrl) localStorage.setItem('aria_selected_mercadopago_url', mercadoPagoUrl);
     requireAuthForPayment({
       planId: normalizedPlanId,
-      onAuthenticated: () => setShowCheckoutModal(true),
+      onAuthenticated: () => {
+        if (mercadoPagoUrl) {
+          window.open(mercadoPagoUrl, '_blank');
+          return;
+        }
+        setShowCheckoutModal(true);
+      },
     });
   };
 
-  const handleOpenPaymentMethodWithAuth = (method: 'card' | 'mercadopago' | 'paypal' | 'transfer' | 'crypto') => {
+  const handleOpenPaymentMethodWithAuth = (method: 'card' | 'mercadopago' | 'paypal' | 'transfer') => {
     setPaymentMethod(method);
     requireAuthForPayment({
       planId: selectedPlanId,
-      onAuthenticated: () => setShowCheckoutModal(true),
+      onAuthenticated: () => {
+        if (method === 'mercadopago' && selectedMercadoPagoUrl) {
+          localStorage.setItem('aria_selected_mercadopago_url', selectedMercadoPagoUrl);
+          window.open(selectedMercadoPagoUrl, '_blank');
+          return;
+        }
+        setShowCheckoutModal(true);
+      },
     });
   };
 
@@ -378,7 +393,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Mercado Pago */}
           <button
             onClick={() => handleOpenPaymentMethodWithAuth('mercadopago')}
@@ -449,24 +464,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
             </div>
           </button>
 
-          {/* Crypto Binance */}
-          <button
-            onClick={() => handleOpenPaymentMethodWithAuth('crypto')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'crypto'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <UsdtLogo className="h-5" />
-              <span className="text-xs font-bold text-yellow-400">USDT</span>
-            </div>
-            <div>
-              <p className="font-bold text-white text-xs">Binance Pay / Crypto</p>
-              <p className="text-[10px] text-slate-400">USDT / USDC (TRC20)</p>
-            </div>
-          </button>
         </div>
       </div>
 
@@ -591,7 +588,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3 text-xs">
                   <div className="flex items-center gap-2 text-white font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : paymentMethod === 'transfer' ? 'Transferencia Bancaria SPEI / PSE' : 'Binance Pay / USDT'}</span>
+                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : 'Transferencia Bancaria SPEI / PSE'}</span>
                   </div>
 
                   {paymentMethod === 'transfer' && (
@@ -603,15 +600,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
                     </div>
                   )}
 
-                  {paymentMethod === 'crypto' && (
-                    <div className="p-3 bg-black/50 rounded-xl space-y-1 font-mono text-[11px] text-slate-300 border border-white/5 flex items-center justify-between">
-                      <div>
-                        <p><strong className="text-yellow-400">Red:</strong> TRC20 (USDT)</p>
-                        <p><strong className="text-yellow-400">Wallet:</strong> T9xZ2aPq8R7mK1sL3vN5bY4cW6u</p>
-                      </div>
-                      <QrCode className="w-10 h-10 text-yellow-400 shrink-0" />
-                    </div>
-                  )}
 
                   {selectedPaddlePriceId && (
                     <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 font-mono">
@@ -626,11 +614,11 @@ export function CheckoutView({ }: CheckoutViewProps) {
                       <input
                         type="text"
                         readOnly
-                        value={customLinks.mercadopago}
+                        value={selectedMercadoPagoUrl || customLinks.mercadopago}
                         className="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 font-mono text-[10px] text-emerald-400"
                       />
                       <button
-                        onClick={() => handleCopyLink(customLinks.mercadopago)}
+                        onClick={() => handleCopyLink(selectedMercadoPagoUrl || customLinks.mercadopago)}
                         className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
                       >
                         {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}

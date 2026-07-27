@@ -31,8 +31,7 @@ import {
   MercadoPagoLogo,
   PaypalLogo,
   SpeiLogo,
-  PseLogo,
-  UsdtLogo
+  PseLogo
 } from '../common/PaymentLogos';
 
 interface PricingSectionProps {
@@ -63,7 +62,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
     },
     {
       q: '¿Qué pasarelas de pago puedo ofrecer a mis clientes?',
-      a: 'Soportamos Stripe, Mercado Pago, PayPal Express, transferencias SPEI/PSE y pagos en USDT/USDC.',
+      a: 'Soportamos Mercado Pago, PayPal Express, tarjetas de crédito/débito y transferencias SPEI/PSE/CBU.',
     },
     {
       q: '¿Puedo cambiar de plan más adelante?',
@@ -122,21 +121,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
         </div>
       ),
       badge: 'Sin Tarjeta'
-    },
-    {
-      id: 'crypto',
-      name: 'Binance Pay & USDT Crypto',
-      category: 'crypto',
-      description: 'Pagos descentralizados en USDT (TRC20 / Polygon) y USDC con cero comisiones.',
-      speed: 'Confirmación Blockchain (1 min)',
-      currencies: 'USDT, USDC, BUSD',
-      icon: (
-        <div className="flex items-center gap-2">
-          <UsdtLogo className="h-6" />
-          <span className="text-xs font-bold text-yellow-400">Binance Pay</span>
-        </div>
-      ),
-      badge: 'Web3 & Crypto'
     }
   ];
 
@@ -249,16 +233,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
                 }`}
               >
                 💳 Tarjeta / Global
-              </button>
-              <button
-                onClick={() => setSelectedGateway('crypto')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  selectedGateway === 'crypto'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                🪙 Crypto / USDT
               </button>
             </div>
           </div>

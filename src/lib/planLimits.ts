@@ -8,7 +8,9 @@ export interface PlanLimits {
   paddleProductId?: string;
   paddleMonthlyPriceId?: string;
   paddleAnnualPriceId?: string;
-  checkoutType?: 'paddle' | 'contact';
+  mercadoPagoMonthlyUrl?: string;
+  mercadoPagoAnnualUrl?: string;
+  checkoutType?: 'mercadopago' | 'paddle' | 'contact';
   description: string;
 }
 
@@ -23,7 +25,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     paddleProductId: 'pro_01kyh5v65p257b3z7g8ez1z0y7',
     paddleMonthlyPriceId: 'pri_01kyh5xs672hj75v57tyf8mqg1',
     paddleAnnualPriceId: 'pri_01kyh5zsndbhkhswrbfmwj4xvb',
-    checkoutType: 'paddle',
+    mercadoPagoMonthlyUrl: 'https://mpago.la/17xmopC',
+    mercadoPagoAnnualUrl: 'https://mpago.la/29pqoZr',
+    checkoutType: 'mercadopago',
     description: 'Ideal para corredores y agentes inmobiliarios independientes.',
   },
   agency_pro: {
@@ -36,7 +40,9 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     paddleProductId: 'pro_01kyh6139a37ta2r7axc2qh5k8',
     paddleMonthlyPriceId: 'pri_01kyh63dg2h0jkwvd1bh6jde47',
     paddleAnnualPriceId: 'pri_01kyh64fj85g1j12vgar9ct9yz',
-    checkoutType: 'paddle',
+    mercadoPagoMonthlyUrl: 'https://mpago.la/1UhRK7X',
+    mercadoPagoAnnualUrl: 'https://mpago.la/1z8gxgW',
+    checkoutType: 'mercadopago',
     description: 'Para agencias en crecimiento con WhatsApp y sincronización CRM.',
   },
   enterprise: {
@@ -96,4 +102,9 @@ export function getPaddlePriceId(planId: string, billingCycle: BillingCycle): st
   return billingCycle === 'annual' ? plan.paddleAnnualPriceId : plan.paddleMonthlyPriceId;
 }
 
-export const DEVELOPER_WHATSAPP_URL = 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20unirme%20al%20Programa%20de%20Suscripci%C3%B3n%20para%20Desarrolladores%20y%20Colaboradores%20de%20AriaPrompt.%20Quisiera%20m%C3%A1s%20informaci%C3%B3n%20sobre%20c%C3%B3mo%20aportar%20al%20proyecto.';
+export function getMercadoPagoCheckoutUrl(planId: string, billingCycle: BillingCycle): string | undefined {
+  const plan = getPlanLimits(planId);
+  return billingCycle === 'annual' ? plan.mercadoPagoAnnualUrl : plan.mercadoPagoMonthlyUrl;
+}
+
+export const DEVELOPER_WHATSAPP_URL = 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.%20Quisiera%20recibir%20m%C3%A1s%20informaci%C3%B3n.';
