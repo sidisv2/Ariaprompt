@@ -375,5 +375,15 @@
     "cancel": "Cancel",
     "close": "Close",
     "loading": "Loading..."
+  },
+  "betaBanner": {
+    "label": "Beta",
+    "message": "Aria Prop is in early testing. We're building something real — and your feedback matters more than a donation.",
+    "helpText": "Message us on WhatsApp to share feedback, report an issue, or just let us know what you think.",
+    "whatsapp": "Share feedback on WhatsApp",
+    "donatePrefix": "If you also want to support us financially,",
+    "donateLink": "you can make a voluntary donation here",
+    "donateSuffix": "(completely optional).",
+    "close": "Close notice"
   }
 }

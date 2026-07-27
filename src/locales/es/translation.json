@@ -376,5 +376,15 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "loading": "Cargando..."
+  },
+  "betaBanner": {
+    "label": "Beta",
+    "message": "Aria Prop está en fase de prueba. Estamos construyendo algo serio — y tu opinión cuenta más que una donación.",
+    "helpText": "Escribinos por WhatsApp para dar feedback, reportar algo o simplemente decirnos qué te parece.",
+    "whatsapp": "Dar feedback por WhatsApp",
+    "donatePrefix": "Si además querés apoyar económicamente,",
+    "donateLink": "podés hacer una donación voluntaria aquí",
+    "donateSuffix": "(completamente opcional).",
+    "close": "Cerrar aviso"
   }
 }
