@@ -149,7 +149,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
     return linkConfig[billingCycle];
   };
   const officialPaymentLink = getOfficialPaymentLink(activePlan.id);
-  const officialPaymentLink = OFFICIAL_PAYMENT_LINKS[activePlan.id][billingCycle];
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
