@@ -1,3 +1,6 @@
+// Re-export PlanTier so components can import from a single place
+export type { PlanTier } from '../lib/planLimits';
+
 export type LeadTemperature = 'hot' | 'warm' | 'cold';
 
 export type LeadStatus = 'new' | 'contacted' | 'visit_scheduled' | 'offer_made' | 'closed' | 'lost';

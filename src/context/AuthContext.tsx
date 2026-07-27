@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured, saveUserProfile, UserProfile, getUserProfile } from '../lib/supabase';
 import { AppRoute, UserPreferences } from '../types';
+import { PlanTier, mapEstadoCuentaToPlanTier } from '../lib/planLimits';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 
 export interface AppUser {
@@ -11,6 +12,8 @@ export interface AppUser {
   avatarUrl?: string;
   createdAt: string;
   role?: 'user' | 'admin';
+  /** Real plan tier from public.profiles.estado_cuenta mapped through mapEstadoCuentaToPlanTier(). Defaults to 'normal'. */
+  plan: PlanTier;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -44,6 +47,8 @@ interface AuthContextType {
   requireAuthForPayment: (options?: { planId?: string; targetRoute?: AppRoute; onAuthenticated?: () => void }) => boolean;
   openAuthModal: (tab?: 'login' | 'signup', planId?: string, targetRoute?: AppRoute) => void;
   closeAuthModal: () => void;
+  /** Returns a human-readable label for the current user plan badge. */
+  getPlanBadgeLabel: () => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -164,25 +169,51 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
   }, []);
 
   const mapSupabaseUserToAppUser = async (sbUser: SupabaseUser) => {
-    const nombre =
-      (sbUser.user_metadata as any)?.nombre ||
-      (sbUser.user_metadata as any)?.full_name ||
-      (sbUser.user_metadata as any)?.name ||
-      sbUser.email?.split('@')[0] ||
-      'Usuario';
-
+    const meta = sbUser.user_metadata as Record<string, string | undefined>;
+    const nombre = meta?.nombre ?? meta?.full_name ?? meta?.name ?? sbUser.email?.split('@')[0] ?? 'Usuario';
     const avatarUrl =
-      (sbUser.user_metadata as any)?.avatar_url ||
-      (sbUser.user_metadata as any)?.picture ||
+      meta?.avatar_url ??
+      meta?.picture ??
       `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=10b981&color=fff`;
+
+    // Fetch real plan from public.profiles — always defaults to 'normal'
+    let plan: PlanTier = 'normal';
+    if (isSupabaseConfigured) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('estado_cuenta')
+          .eq('id', sbUser.id)
+          .maybeSingle();
+
+        if (profile) {
+          plan = mapEstadoCuentaToPlanTier(profile.estado_cuenta as string | null);
+        } else {
+          // First login (Google or email) — create profile row with 'normal' plan
+          plan = 'normal';
+          await saveUserProfile({
+            id: sbUser.id,
+            email: sbUser.email ?? '',
+            nombre,
+            fecha_registro: sbUser.created_at ?? new Date().toISOString(),
+            avatar_url: avatarUrl,
+            estado_cuenta: 'gratis', // Supabase column value for 'normal'
+          });
+        }
+      } catch (e) {
+        console.warn('Could not fetch plan from profiles, defaulting to normal:', e);
+        plan = 'normal';
+      }
+    }
 
     const appUser: AppUser = {
       id: sbUser.id,
-      email: sbUser.email || '',
+      email: sbUser.email ?? '',
       nombre,
       avatarUrl,
-      createdAt: sbUser.created_at || new Date().toISOString(),
-      role: 'user', // Always user for public signups
+      createdAt: sbUser.created_at ?? new Date().toISOString(),
+      role: 'user',
+      plan,
     };
 
     setUser(appUser);
@@ -245,7 +276,8 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         nombre: nombre || email.split('@')[0],
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || email)}&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
-        role: 'user', // STRICTLY REGULAR USER
+        role: 'user',
+        plan: 'normal', // Default plan for all new signups
       };
 
       setUser(mockUser);
@@ -296,6 +328,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'normal',
       };
 
       setUser(mockUser);
@@ -371,6 +404,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: `https://ui-avatars.com/api/?name=Demo+LATAM&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'normal',
       };
 
       setUser(mockDemoUser);
@@ -420,6 +454,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'normal',
       };
 
       setUser(mockUser);
@@ -441,17 +476,24 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     setUser(null);
     setSession(null);
     try {
-      localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
-      localStorage.removeItem('aria_partner_crm_connections_v1');
-      localStorage.removeItem('aria_partner_synced_properties_v1');
+      // Clear all auth-related and plan-related keys
+      const KEYS_TO_REMOVE = [
+        LOCAL_STORAGE_SESSION_KEY,
+        LOCAL_STORAGE_PREFS_KEY,
+        'aria_partner_crm_connections_v1',
+        'aria_partner_synced_properties_v1',
+        'aria_selected_plan',
+        'aria_user_profile',
+        'aria_has_connected_crm',
+        'aria_agency_id',
+      ];
+      KEYS_TO_REMOVE.forEach((k) => { try { localStorage.removeItem(k); } catch {} });
       sessionStorage.clear();
     } catch (e) {
       console.warn('Error clearing storage on logout:', e);
     }
     setLoading(false);
-    if (onRouteChange) {
-      onRouteChange('marketing');
-    }
+    if (onRouteChange) onRouteChange('marketing');
   };
 
   // Request Sign Out (Triggers Confirmation Modal)
@@ -495,6 +537,18 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     setAuthModalOpen(false);
   };
 
+  /** Maps PlanTier to a short human-readable badge label. */
+  const getPlanBadgeLabel = (): string => {
+    if (!user) return '';
+    switch (user.plan) {
+      case 'pro':            return 'Pro';
+      case 'solo':           return 'Solo';
+      case 'desarrolladores': return 'Dev';
+      case 'normal':
+      default:               return 'Gratis';
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -520,6 +574,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         requireAuthForPayment,
         openAuthModal,
         closeAuthModal,
+        getPlanBadgeLabel,
       }}
     >
       {children}

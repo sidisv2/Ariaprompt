@@ -12,7 +12,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRouteChange, agencyName = 'Aria Prop' }) => {
-  const { user, openAuthModal, signOut, requestSignOut } = useAuth();
+  const { user, openAuthModal, signOut, requestSignOut, getPlanBadgeLabel } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
   const [activeDropdown, setActiveDropdown] = useState<'producto' | 'soluciones' | 'recursos' | null>(null);
 
@@ -60,9 +60,17 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
               <span className="hidden sm:inline-block truncate max-w-[70px] text-white font-bold">
                 {user ? user.nombre.split(' ')[0] : t('nav.account')}
               </span>
-              <span className="px-1.5 py-0.2 rounded-full bg-emerald-400 text-slate-950 text-[9px] font-black uppercase">
-                {user ? 'Pro' : t('nav.guest')}
-              </span>
+              {/* Plan badge — reads real PlanTier from AuthContext, never hardcoded */}
+              {(() => {
+                if (!user) return <span className="px-1.5 py-0.2 rounded-full bg-slate-600 text-slate-200 text-[9px] font-black uppercase">{t('nav.guest')}</span>;
+                const label = getPlanBadgeLabel();
+                const badgeCls =
+                  label === 'Pro'  ? 'bg-emerald-400 text-slate-950' :
+                  label === 'Solo' ? 'bg-blue-400 text-slate-950' :
+                  label === 'Dev'  ? 'bg-violet-400 text-white' :
+                                     'bg-slate-600 text-slate-100'; // Gratis / normal
+                return <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase ${badgeCls}`}>{label}</span>;
+              })()}
             </div>
 
           </div>

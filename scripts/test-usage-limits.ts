@@ -68,7 +68,7 @@ async function runUsageLimitsTest() {
     console.log('\nStep 3: Testing Property Limit Enforcement for Agency A (Solo Agent: Max 20)...');
     for (let i = 1; i <= 20; i++) {
       const { count } = await adminSupabase.from('propiedades').select('id', { count: 'exact', head: true }).eq('agency_id', agencyAId);
-      const check = checkPropertyLimit('solo_agent', count || 0);
+      const check = checkPropertyLimit('solo', count || 0);
       if (!check.allowed) {
         console.error(`❌ Unexpected rejection at prop ${i}:`, check.error);
       } else {
@@ -90,7 +90,7 @@ async function runUsageLimitsTest() {
     console.log(`📊 Agency A active properties count in Supabase: ${agencyACount}/20`);
 
     // Attempt 21st Property for Agency A
-    const attempt21Prop = checkPropertyLimit('solo_agent', agencyACount || 0);
+    const attempt21Prop = checkPropertyLimit('solo', agencyACount || 0);
     if (!attempt21Prop.allowed) {
       console.log('✅ BACKEND ENFORCEMENT SUCCESS: 21st Property Creation for Agency A was REJECTED!');
       console.log(`   Rejection Payload Error Message: "${attempt21Prop.error}"`);
@@ -113,7 +113,7 @@ async function runUsageLimitsTest() {
     console.log(`📊 Agency A current month leads count in usage_records: ${leadsCount}/100`);
 
     // Attempt 101st Lead Creation for Agency A
-    const attempt101Lead = checkLeadLimit('solo_agent', leadsCount);
+    const attempt101Lead = checkLeadLimit('solo', leadsCount);
     if (!attempt101Lead.allowed) {
       console.log('✅ BACKEND ENFORCEMENT SUCCESS: 101st Lead Creation for Agency A was REJECTED!');
       console.log(`   Rejection Payload Error Message: "${attempt101Lead.error}"`);
@@ -124,8 +124,8 @@ async function runUsageLimitsTest() {
     // 6. Test Multi-tenant Isolation: Agency B (Agency Pro) should NOT be blocked
     console.log('\nStep 5: Testing Multi-Tenant Isolation with Agency B (Agency Pro)...');
     const { count: agencyBCount } = await adminSupabase.from('propiedades').select('id', { count: 'exact', head: true }).eq('agency_id', agencyBId);
-    const agencyBCheck = checkPropertyLimit('agency_pro', agencyBCount || 0);
-    const agencyBLeadCheck = checkLeadLimit('agency_pro', 100);
+    const agencyBCheck = checkPropertyLimit('pro', agencyBCount || 0);
+    const agencyBLeadCheck = checkLeadLimit('pro', 100);
 
     if (agencyBCheck.allowed && agencyBLeadCheck.allowed) {
       console.log('✅ MULTI-TENANT ISOLATION SUCCESS: Agency B (Agency Pro) is allowed up to 100 properties & 500 leads while Agency A is blocked!');

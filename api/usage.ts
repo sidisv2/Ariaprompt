@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!supabase || !agencyId) {
     // Return default plan limits info for unauthenticated or memory mode
-    const defaultLimits = getPlanLimits('solo_agent');
+    const defaultLimits = getPlanLimits('normal');
     return res.status(200).json({
       success: true,
       data: {
