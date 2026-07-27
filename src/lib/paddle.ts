@@ -22,6 +22,7 @@ type PaddleInstance = {
         locale?: string;
       };
       customData?: Record<string, string>;
+      eventCallback?: (event: PaddleCheckoutEvent) => void;
     }) => void;
   };
 };

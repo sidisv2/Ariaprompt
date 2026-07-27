@@ -43,7 +43,14 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const { openAuthModal, requireAuthForPayment } = useAuth();
 
-  const handlePlanSelection = (planId: string = 'pro') => {
+  const handlePlanSelection = (planId: string = 'pro', method = 'checkout') => {
+    console.log('Clic detectado en:', planId, method);
+
+    if (planId === 'custom' || planId === 'enterprise' || planId === 'agency') {
+      window.open('https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.', '_blank');
+      return;
+    }
+
     const passed = requireAuthForPayment({
       planId,
       targetRoute: 'dashboard-checkout',
@@ -240,9 +247,11 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
           {/* Payment Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredMethods.map((method) => (
-              <div
+              <button
                 key={method.id}
-                className="rounded-2xl bg-black/40 border border-white/5 hover:border-emerald-500/40 p-6 space-y-4 transition-all duration-300 hover:bg-black/60 group flex flex-col justify-between"
+                type="button"
+                onClick={() => handlePlanSelection('pro', method.id)}
+                className="rounded-2xl bg-black/40 border border-white/5 hover:border-emerald-500/40 p-6 space-y-4 transition-all duration-300 hover:bg-black/60 group flex flex-col justify-between text-left cursor-pointer"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -274,7 +283,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
                     <span className="font-mono text-slate-300">{method.currencies}</span>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
 
@@ -291,7 +300,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onRouteChange })
             </div>
 
             <button
-              onClick={() => handlePlanSelection('profesional')}
+              onClick={() => handlePlanSelection('pro', 'cta')}
               className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer shrink-0"
             >
               <span>Ir a la Pasarela de Pago</span>

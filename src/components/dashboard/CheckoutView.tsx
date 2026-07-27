@@ -22,7 +22,7 @@ import {
 import { trackPurchaseConversion } from '../../lib/analytics';
 import { PLAN_LIMITS } from '../../lib/planLimits';
 import { AppRoute } from '../../types';
-import { getPaddleInstance, openPaddleCheckout } from '../../lib/paddle';
+import { getPaddleInstance } from '../../lib/paddle';
 import {
   VisaLogo,
   MastercardLogo,
@@ -164,54 +164,82 @@ export function CheckoutView({ }: CheckoutViewProps) {
   const activeCurrencyObj = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
   const activePlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
   const officialPaymentLink = getOfficialPaymentLink(activePlan.id, billingCycle);
-  const activePaddlePriceId = getPaddlePriceId(activePlan.id, billingCycle);
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
   });
 
+  const handlePaddlePay = async (priceId: string, planId = selectedPlanId, method: PaymentMethod = paymentMethod) => {
+    console.log('Clic detectado en:', planId, method);
+
+    try {
+      const paddle = await getPaddleInstance();
+      if (paddle) {
+        paddle.Checkout.open({
+          items: [{ priceId, quantity: 1 }],
+          settings: { displayMode: 'overlay', theme: 'dark', locale: 'es' },
+          eventCallback: (data: any) => {
+            if (data.name === 'checkout.completed') {
+              trackPurchaseConversion(data.data.id, parseFloat(data.data.totals.grand_total) / 100);
+            }
+          },
+        });
+      } else {
+        window.open(getOfficialPaymentLink(planId, billingCycle), '_blank');
+      }
+    } catch (error) {
+      console.error('Error al abrir Paddle:', error);
+      window.open(getOfficialPaymentLink(planId, billingCycle), '_blank');
+    }
+  };
+
+  const runPaymentAction = (planId: string, method: PaymentMethod) => {
+    const normalizedPlanId = normalizePlanId(planId);
+    const selectedBillingCycle = billingCycle;
+    console.log('Clic detectado en:', normalizedPlanId, method);
+    setSelectedPlanId(normalizedPlanId);
+    setPaymentMethod(method);
+
+    if (normalizedPlanId === 'agency') {
+      window.open(getOfficialPaymentLink(normalizedPlanId, selectedBillingCycle), '_blank');
+      return;
+    }
+
+    if (method === 'mercadopago') {
+      window.open(getOfficialPaymentLink(normalizedPlanId, selectedBillingCycle), '_blank');
+      return;
+    }
+
+    const priceId = getPaddlePriceId(normalizedPlanId, selectedBillingCycle);
+    if (priceId) {
+      void handlePaddlePay(priceId, normalizedPlanId, method);
+      return;
+    }
+
+    window.open(getOfficialPaymentLink(normalizedPlanId, selectedBillingCycle), '_blank');
+  };
+
   const handleOpenCheckoutWithAuth = (planId: string) => {
-    setSelectedPlanId(normalizePlanId(planId));
+    console.log('Clic detectado en:', planId, paymentMethod);
     requireAuthForPayment({
       planId,
-      onAuthenticated: () => {
-        window.location.href = getOfficialPaymentLink(planId, billingCycle);
-      },
+      onAuthenticated: () => runPaymentAction(planId, paymentMethod),
     });
   };
 
   const handleOpenMercadoPagoWithAuth = () => {
-    setPaymentMethod('mercadopago');
+    console.log('Clic detectado en:', selectedPlanId, 'mercadopago');
     requireAuthForPayment({
       planId: selectedPlanId,
-      onAuthenticated: () => {
-        window.location.href = officialPaymentLink;
-      },
+      onAuthenticated: () => runPaymentAction(selectedPlanId, 'mercadopago'),
     });
   };
 
   const handleOpenPaddleWithAuth = (method: Exclude<PaymentMethod, 'mercadopago'>) => {
-    setPaymentMethod(method);
+    console.log('Clic detectado en:', selectedPlanId, method);
     requireAuthForPayment({
       planId: selectedPlanId,
-      onAuthenticated: async () => {
-        if (!activePaddlePriceId) {
-          window.location.href = officialPaymentLink;
-          return;
-        }
-
-        await getPaddleInstance();
-        await openPaddleCheckout(activePaddlePriceId, {
-          planId: activePlan.id,
-          billingCycle,
-          onCompleted: (event) => {
-            const orderId = event.data?.transaction_id || `paddle-${activePlan.id}-${Date.now()}`;
-            const amount = Number(event.data?.totals?.total || activePlan.priceUsd);
-            trackPurchaseConversion(orderId, amount);
-            setPaymentCompleted(true);
-          },
-        });
-      },
+      onAuthenticated: () => runPaymentAction(selectedPlanId, method),
     });
   };
 
