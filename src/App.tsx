@@ -9,6 +9,7 @@ import { MobileView } from './components/mobile/MobileView';
 import { DeviceSwitcherBadge } from './components/common/DeviceSwitcherBadge';
 import { FloatingAssistant } from './components/common/FloatingAssistant';
 import { ChatSlideOver } from './components/chat/ChatSlideOver';
+import { BetaBanner } from './components/common/BetaBanner';
 
 const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
@@ -206,6 +207,8 @@ export default function App() {
   return (
     <LanguageProvider>
       <AuthProvider onRouteChange={handleNavigate}>
+        {/* Beta testing banner — shown on first visit */}
+        <BetaBanner />
         {effectiveDevice === 'mobile' ? (
           <MobileView
             currentRoute={currentRoute}

@@ -1,20 +1,58 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_SUPABASE_URL = 'https://qdadkcpqzpvdiqxdnjuf.supabase.co';
-const DEFAULT_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkYWRrY3BxenB2ZGlxeGRuanVmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDkzODkyNSwiZXhwIjoyMTAwNTE0OTI1fQ.kWqOKIhNwaKTAugbRZ8I2-qxAx7NakaxdYF665nf9-g';
-
-function getBackendSupabaseClient() {
-  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).trim();
-  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SERVICE_ROLE_KEY).trim();
-  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
-    return null;
-  }
+/**
+ * Creates a backend Supabase client (service role) for admin operations.
+ * NEVER uses hardcoded fallback keys — env vars only.
+ */
+function getAdminSupabaseClient() {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!supabaseUrl || !supabaseKey) return null;
   try {
     return createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Creates an anon Supabase client to verify the user's JWT.
+ * Uses the anon key so auth.getUser() works with the user's Bearer token.
+ */
+function getAnonSupabaseClient() {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const anonKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  if (!supabaseUrl || !anonKey) return null;
+  try {
+    return createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * Verifies the user's Bearer JWT and returns their agency_id (= their Supabase user id = profile.id).
+ * Returns null if token is missing, invalid, or cannot be verified.
+ */
+async function getAuthenticatedAgencyId(req: VercelRequest): Promise<string | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+
+  const anonClient = getAnonSupabaseClient();
+  if (!anonClient) return null;
+
+  try {
+    const { data: { user }, error } = await anonClient.auth.getUser(token);
+    if (error || !user) return null;
+    return user.id; // agency_id is always the auth user id
+  } catch {
     return null;
   }
 }
@@ -92,57 +130,53 @@ async function validateEasyBrokerApiKey(apiKey: string) {
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-agency-id');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // ─── MANDATORY JWT AUTHENTICATION ───────────────────────────────────────────
+  // Extract agency_id exclusively from the verified JWT — never from request params.
+  const agencyId = await getAuthenticatedAgencyId(req);
+  if (!agencyId) {
+    return res.status(401).json({
+      success: false,
+      error: 'No autorizado. Debés iniciar sesión para acceder a esta sección.',
+    });
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
   try {
-    const supabase = getBackendSupabaseClient();
+    const supabase = getAdminSupabaseClient();
 
     // Safe Body Parsing
     let body = req.body || {};
     if (typeof body === 'string') {
-      try {
-        body = JSON.parse(body);
-      } catch (parseErr) {
-        body = {};
-      }
+      try { body = JSON.parse(body); } catch { body = {}; }
     }
 
     if (req.method === 'GET') {
-      const agencyId = (req.query?.agency_id as string) || (req.headers?.['x-agency-id'] as string);
-
-      if (!agencyId) {
-        return res.status(400).json({ success: false, error: 'agency_id es requerido.' });
-      }
-
+      // agencyId comes from JWT — request param is IGNORED for security
       if (!supabase) {
         return res.status(500).json({ success: false, error: 'Error de conexión con la base de datos Supabase.' });
-      }
-
-      if (!isValidUuid(agencyId)) {
-        return res.status(400).json({ success: false, error: 'agency_id debe ser un UUID válido.' });
       }
 
       try {
         let items: any[] = [];
 
-        // 1. Try querying crm_integrations table (strictly by agency_id)
+        // 1. Try querying crm_integrations table (strictly by authenticated agency_id)
         try {
           const { data, error } = await supabase
             .from('crm_integrations')
             .select('id, provider, status, last_sync_at, last_error, synced_count, created_at')
             .eq('agency_id', agencyId);
 
-          if (!error && data && data.length > 0) {
-            items = data;
-          }
+          if (!error && data && data.length > 0) items = data;
         } catch (e) {
           console.warn('crm_integrations table query skipped:', e);
         }
 
-        // 2. Query profiles table (estado_cuenta column holding CRM JSON for agency_id) if items empty
+        // 2. Fallback: profiles.estado_cuenta column
         if (items.length === 0) {
           try {
             const { data: profile, error: pErr } = await supabase
@@ -151,10 +185,13 @@ export default async function handler(req: any, res: any) {
               .eq('id', agencyId)
               .maybeSingle();
 
-            if (!pErr && profile && profile.estado_cuenta) {
+            if (!pErr && profile?.estado_cuenta) {
               let crmMap: Record<string, any> = {};
-              if (typeof profile.estado_cuenta === 'string' && (profile.estado_cuenta.startsWith('{') || profile.estado_cuenta.startsWith('['))) {
-                try { crmMap = JSON.parse(profile.estado_cuenta); } catch (e) { crmMap = {}; }
+              const raw = profile.estado_cuenta;
+              if (typeof raw === 'string' && (raw.startsWith('{') || raw.startsWith('['))) {
+                try { crmMap = JSON.parse(raw); } catch { crmMap = {}; }
+              } else if (typeof raw === 'object') {
+                crmMap = raw;
               }
               items = Object.values(crmMap);
             }
@@ -163,17 +200,13 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        // Sanitize and mask API keys for frontend responses
+        // Mask API keys before returning to frontend
         const sanitizedItems = items.map((item: any) => {
           const rawKey = item.api_key || item.apiKey || '';
           const { api_key, apiKey, ...rest } = item;
-          return {
-            ...rest,
-            api_key_preview: maskApiKey(rawKey),
-          };
+          return { ...rest, api_key_preview: maskApiKey(rawKey) };
         });
 
-        // ALWAYS return source: "supabase"
         return res.status(200).json({ success: true, data: sanitizedItems, source: 'supabase' });
       } catch (err: any) {
         return res.status(500).json({
@@ -184,14 +217,14 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method === 'POST') {
-      const agencyId = (body.agency_id as string) || (req.headers?.['x-agency-id'] as string) || (req.query?.agency_id as string);
+      // agencyId already verified from JWT above — body.agency_id is IGNORED
       const provider = body.provider || req.query?.provider;
       const apiKey = body.apiKey || body.api_key;
 
-      if (!agencyId || !provider || !apiKey) {
+      if (!provider || !apiKey) {
         return res.status(400).json({
           success: false,
-          error: 'Campos requeridos faltantes: agency_id, provider y apiKey.',
+          error: 'Campos requeridos faltantes: provider y apiKey.',
         });
       }
 
@@ -199,13 +232,6 @@ export default async function handler(req: any, res: any) {
         return res.status(500).json({
           success: false,
           error: 'Error de conexión con la base de datos Supabase.',
-        });
-      }
-
-      if (!isValidUuid(agencyId)) {
-        return res.status(400).json({
-          success: false,
-          error: 'agency_id debe ser un UUID válido.',
         });
       }
 
@@ -240,17 +266,6 @@ export default async function handler(req: any, res: any) {
           updated_at: new Date().toISOString(),
         };
 
-        // Ensure auth.users user exists for agencyId
-        try {
-          await supabase.auth.admin.createUser({
-            id: agencyId,
-            email: `agency_${agencyId.slice(0, 8)}@ariaprompt.internal`,
-            email_confirm: true,
-          });
-        } catch (uErr) {
-          // User might already exist in auth.users
-        }
-
         // Save to profiles table (estado_cuenta column) as guaranteed Supabase storage
         const { data: existingProfile } = await supabase
           .from('profiles')
@@ -259,8 +274,11 @@ export default async function handler(req: any, res: any) {
           .maybeSingle();
 
         let crmMap: Record<string, any> = {};
-        if (existingProfile?.estado_cuenta && (existingProfile.estado_cuenta.startsWith('{') || existingProfile.estado_cuenta.startsWith('['))) {
-          try { crmMap = JSON.parse(existingProfile.estado_cuenta); } catch (e) { crmMap = {}; }
+        const rawExisting = existingProfile?.estado_cuenta;
+        if (typeof rawExisting === 'string' && (rawExisting.startsWith('{') || rawExisting.startsWith('['))) {
+          try { crmMap = JSON.parse(rawExisting); } catch { crmMap = {}; }
+        } else if (typeof rawExisting === 'object' && rawExisting !== null) {
+          crmMap = rawExisting;
         }
         crmMap[provider] = integrationData;
 
@@ -308,18 +326,19 @@ export default async function handler(req: any, res: any) {
     }
 
     if (req.method === 'DELETE') {
-      const agencyId = (body.agency_id as string) || (req.query?.agency_id as string) || (req.headers?.['x-agency-id'] as string);
+      // agencyId already verified from JWT above — body/query params are IGNORED
       const provider = body.provider || req.query?.provider;
 
-      if (!agencyId || !provider) {
-        return res.status(400).json({ success: false, error: 'agency_id y provider son requeridos para desvincular.' });
+      if (!provider) {
+        return res.status(400).json({ success: false, error: 'provider es requerido para desvincular.' });
       }
 
-      if (supabase && isValidUuid(agencyId)) {
+      if (supabase) {
         try {
           const { data: profile } = await supabase.from('profiles').select('estado_cuenta').eq('id', agencyId).maybeSingle();
-          if (profile?.estado_cuenta && (profile.estado_cuenta.startsWith('{') || profile.estado_cuenta.startsWith('['))) {
-            let crmMap = JSON.parse(profile.estado_cuenta);
+          const rawDel = profile?.estado_cuenta;
+          if (rawDel && (typeof rawDel === 'string' ? (rawDel.startsWith('{') || rawDel.startsWith('[')) : true)) {
+            let crmMap = typeof rawDel === 'string' ? JSON.parse(rawDel) : rawDel;
             delete crmMap[provider];
             await supabase.from('profiles').update({ estado_cuenta: JSON.stringify(crmMap), updated_at: new Date().toISOString() }).eq('id', agencyId);
           }

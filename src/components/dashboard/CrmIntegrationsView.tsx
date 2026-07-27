@@ -17,6 +17,17 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { validateTokkoApiKey, validateEasyBrokerApiKey } from '../../lib/crmClients';
+import { supabase } from '../../lib/supabase';
+
+/** Retrieves the current session JWT for API calls. Returns null if not authenticated. */
+async function getSessionToken(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 interface CrmIntegrationState {
   provider: 'tokko' | 'easybroker';
@@ -67,7 +78,11 @@ export const CrmIntegrationsView: React.FC = () => {
     setLoadingIntegrations(true);
     const agencyId = user?.id || 'demo-agency';
     try {
-      const res = await fetch(`/api/crm-credentials?agency_id=${agencyId}`);
+      const token = await getSessionToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/crm-credentials', { headers });
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
@@ -124,11 +139,14 @@ export const CrmIntegrationsView: React.FC = () => {
 
     try {
       // Send validation directly to Vercel Serverless Function (runs server-to-server, avoiding CORS restrictions)
+      const token = await getSessionToken();
       const res = await fetch('/api/crm-credentials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          agency_id: agencyId,
           provider: selectedModalProvider,
           apiKey: inputApiKey.trim(),
         }),
@@ -225,10 +243,14 @@ export const CrmIntegrationsView: React.FC = () => {
     if (!confirm(`¿Desvincular la cuenta de ${provider === 'tokko' ? 'Tokko Broker' : 'EasyBroker'}?`)) return;
 
     try {
+      const token = await getSessionToken();
       await fetch('/api/crm-credentials', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agency_id: agencyId, provider }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ provider }),
       });
     } catch (err) {
       console.warn('Disconnect error:', err);
