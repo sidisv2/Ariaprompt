@@ -223,6 +223,32 @@ export const MobileAuthBottomSheet: React.FC = () => {
           <span>Continuar con Google</span>
         </button>
 
+        {/* Demo Quick Access Button */}
+        <button
+          type="button"
+          onClick={async () => {
+            setSubmitting(true);
+            setFeedback(null);
+            try {
+              const res = await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
+              if (res.success) {
+                closeAuthModal();
+              } else {
+                setFeedback({ type: 'error', message: res.error || 'Hubo un problema al ingresar a la demo. Intenta de nuevo.' });
+              }
+            } catch (err: any) {
+              setFeedback({ type: 'error', message: err?.message || 'Error al conectar con la demo.' });
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          disabled={submitting}
+          className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-extrabold text-xs transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+        >
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <span>⚡ Acceso Demo Instantáneo (Sin Registro)</span>
+        </button>
+
         <div className="relative flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-white/10" />

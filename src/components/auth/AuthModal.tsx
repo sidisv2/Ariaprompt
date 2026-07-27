@@ -37,12 +37,15 @@ export const AuthModal: React.FC<{
     setLoading(true);
     setErrorMsg(null);
     try {
-      await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
-      onAuthSuccess?.();
-      onClose();
-    } catch {
-      onAuthSuccess?.();
-      onClose();
+      const res = await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
+      if (res.success) {
+        onAuthSuccess?.();
+        onClose();
+      } else {
+        setErrorMsg(res.error || 'Hubo un problema al ingresar con la cuenta demo. Intenta de nuevo.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Hubo un problema al iniciar la demostración. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }

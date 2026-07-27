@@ -96,6 +96,34 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
         />
       )}
 
+      {/* Demo Account Welcome Onboarding Banner */}
+      {user?.email?.includes('demo') && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-950/90 via-slate-900 to-indigo-950/90 border-2 border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-page-fade">
+          <div className="flex items-start gap-3.5">
+            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <Sparkles className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div className="space-y-1 text-left">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-extrabold border border-emerald-500/30">
+                <span>👋 ¡Bienvenido al Workspace de Demostración!</span>
+              </div>
+              <h3 className="text-sm sm:text-base font-black text-white">
+                Estás interactuando con la cuenta demo de Aria Prop 24/7
+              </h3>
+              <p className="text-xs text-slate-300 max-w-xl">
+                Esta es una cuenta de prueba 24/7. Probá el chat de Aria en la pestaña <strong>"Agente Comercial"</strong> para ver cómo responde a tus prospectos o revisá las métricas y citas agendadas en tu agenda.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onSelectTool?.('general')}
+            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all shrink-0 cursor-pointer shadow-lg shadow-emerald-500/20"
+          >
+            <span>Probar Agente Comercial</span>
+          </button>
+        </div>
+      )}
+
       {/* Guided Empty State Banner: Prompt to connect Tokko or EasyBroker */}
       {!hasConnectedCrm && (
         <div className="p-5 rounded-3xl bg-gradient-to-r from-teal-950/80 via-slate-900 to-emerald-950/80 border-2 border-emerald-500/50 shadow-2xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-page-fade">

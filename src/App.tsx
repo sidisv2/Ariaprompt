@@ -205,7 +205,7 @@ export default function App() {
 
   return (
     <LanguageProvider>
-      <AuthProvider>
+      <AuthProvider onRouteChange={handleNavigate}>
         {effectiveDevice === 'mobile' ? (
           <MobileView
             currentRoute={currentRoute}
