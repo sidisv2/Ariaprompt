@@ -18,6 +18,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { validateTokkoApiKey, validateEasyBrokerApiKey } from '../../lib/crmClients';
 import { supabase } from '../../lib/supabase';
+import { AppRoute } from '../../types';
+import { UpgradeRequiredCard } from '../common/UpgradeRequiredCard';
 
 /** Retrieves the current session JWT for API calls. Returns null if not authenticated. */
 async function getSessionToken(): Promise<string | null> {
@@ -51,9 +53,15 @@ const getAgencyId = (userId?: string | null): string => {
   return stored;
 };
 
-export const CrmIntegrationsView: React.FC = () => {
+interface CrmIntegrationsViewProps {
+  onRouteChange?: (route: AppRoute) => void;
+}
+
+export const CrmIntegrationsView: React.FC<CrmIntegrationsViewProps> = ({ onRouteChange }) => {
   const { user, loading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const isNormalPlan = (user?.plan || 'normal') === 'normal';
+  const goToCheckout = () => onRouteChange?.('dashboard-checkout');
 
   const [loadingIntegrations, setLoadingIntegrations] = useState(true);
   const [integrations, setIntegrations] = useState<Record<string, CrmIntegrationState>>({

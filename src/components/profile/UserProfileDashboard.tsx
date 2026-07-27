@@ -95,7 +95,7 @@ export const UserProfileDashboard: React.FC<UserProfileDashboardProps> = ({
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'files' && <FileManagerView />}
+      {activeTab === 'files' && <FileManagerView onRouteChange={onRouteChange} />}
 
       {activeTab === 'profile' && <ProfileSettingsView />}
 

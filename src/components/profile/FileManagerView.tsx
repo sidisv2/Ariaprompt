@@ -21,7 +21,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { UserFile } from '../../types';
+import { AppRoute, UserFile } from '../../types';
 import {
   getUserFiles,
   uploadFileToSupabase,
@@ -29,9 +29,16 @@ import {
   downloadFileToDevice,
   formatFileSize
 } from '../../lib/storageService';
+import { UpgradeRequiredCard } from '../common/UpgradeRequiredCard';
 
-export const FileManagerView: React.FC = () => {
+interface FileManagerViewProps {
+  onRouteChange?: (route: AppRoute) => void;
+}
+
+export const FileManagerView: React.FC<FileManagerViewProps> = ({ onRouteChange }) => {
   const { user, openAuthModal } = useAuth();
+  const isNormalPlan = (user?.plan || 'normal') === 'normal';
+  const goToCheckout = () => onRouteChange?.('dashboard-checkout');
   const [files, setFiles] = useState<UserFile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -101,6 +108,11 @@ export const FileManagerView: React.FC = () => {
   };
 
   const handleUpload = async (file: File) => {
+    if (isNormalPlan) {
+      goToCheckout();
+      return;
+    }
+
     if (!user) {
       openAuthModal('login');
       return;
@@ -187,6 +199,13 @@ export const FileManagerView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {isNormalPlan && (
+        <UpgradeRequiredCard
+          title="Bóveda PDF / RAG bloqueada"
+          description="El plan Gratuito / Prueba no incluye carga de PDFs, documentos RAG ni almacenamiento de expedientes. Actualiza tu plan para activar la bóveda inmobiliaria."
+          onUpgrade={goToCheckout}
+        />
+      )}
       {/* Top Banner / Storage Summary */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl relative overflow-hidden">
         <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />

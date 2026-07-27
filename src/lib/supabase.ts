@@ -1,5 +1,6 @@
 /// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js';
+import { PlanTier } from '../types';
 
 // Environment variables for Supabase
 const env = (import.meta as unknown as { env: Record<string, string> }).env || {};
@@ -55,7 +56,7 @@ export interface UserProfile {
   fecha_registro: string;
   avatar_url?: string;
   estado_cuenta?: 'gratis' | 'prueba_activa' | 'prueba_7dias' | 'pro_basico' | 'plan_activo';
-  plan_id?: string;
+  plan_id?: PlanTier;
   fecha_fin_prueba?: string;
 }
 

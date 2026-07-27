@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured, saveUserProfile, UserProfile, getUserProfile } from '../lib/supabase';
-import { AppRoute, UserPreferences } from '../types';
+import { AppRoute, PlanTier, UserPreferences } from '../types';
+import { normalizePlanTier } from '../lib/planLimits';
 import { LogoutConfirmModal } from '../components/common/LogoutConfirmModal';
 
 export interface AppUser {
@@ -11,6 +12,7 @@ export interface AppUser {
   avatarUrl?: string;
   createdAt: string;
   role?: 'user' | 'admin';
+  plan: PlanTier;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -50,6 +52,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_SESSION_KEY = 'aria_prop_mock_session_user';
 const LOCAL_STORAGE_PREFS_KEY = 'aria_user_preferences';
+const LOCAL_STORAGE_PENDING_PLAN_KEY = 'aria_pending_checkout_plan';
 
 export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (route: AppRoute) => void }> = ({
   children,
@@ -125,7 +128,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
           const stored = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
           if (stored && mounted) {
             const parsed = JSON.parse(stored);
-            setUser({ ...parsed, role: 'user' });
+            setUser({ ...parsed, role: parsed.role || 'user', plan: normalizePlanTier(parsed.plan) });
           }
         } catch (err) {
           console.warn('Error reading local mock auth session:', err);
@@ -176,6 +179,44 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       (sbUser.user_metadata as any)?.picture ||
       `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=10b981&color=fff`;
 
+    const existingProfile = await getUserProfile(sbUser.id);
+    let paidPlanToActivate: PlanTier = 'normal';
+    try {
+      paidPlanToActivate = normalizePlanTier(localStorage.getItem('aria_paid_plan_to_activate'));
+    } catch {}
+    const plan = paidPlanToActivate !== 'normal' ? paidPlanToActivate : normalizePlanTier(existingProfile?.plan_id || 'normal');
+
+    if (!existingProfile) {
+      await saveUserProfile({
+        id: sbUser.id,
+        email: sbUser.email || '',
+        nombre,
+        fecha_registro: sbUser.created_at || new Date().toISOString(),
+        avatar_url: avatarUrl,
+        estado_cuenta: plan === 'normal' ? 'gratis' : 'plan_activo',
+        plan_id: plan,
+      });
+    }
+
+    if (!existingProfile && paidPlanToActivate !== 'normal') {
+      try {
+        localStorage.removeItem('aria_paid_plan_to_activate');
+        localStorage.removeItem(LOCAL_STORAGE_PENDING_PLAN_KEY);
+      } catch {}
+    }
+
+    if (existingProfile && paidPlanToActivate !== 'normal') {
+      await saveUserProfile({
+        ...existingProfile,
+        plan_id: paidPlanToActivate,
+        estado_cuenta: 'plan_activo',
+      });
+      try {
+        localStorage.removeItem('aria_paid_plan_to_activate');
+        localStorage.removeItem(LOCAL_STORAGE_PENDING_PLAN_KEY);
+      } catch {}
+    }
+
     const appUser: AppUser = {
       id: sbUser.id,
       email: sbUser.email || '',
@@ -183,9 +224,13 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       avatarUrl,
       createdAt: sbUser.created_at || new Date().toISOString(),
       role: 'user', // Always user for public signups
+      plan,
     };
 
     setUser(appUser);
+    try {
+      localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(appUser));
+    } catch {}
   };
 
   const handlePostAuthAction = () => {
@@ -246,6 +291,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || email)}&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
         role: 'user', // STRICTLY REGULAR USER
+        plan: 'normal',
       };
 
       setUser(mockUser);
@@ -296,6 +342,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(email)}&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'normal',
       };
 
       setUser(mockUser);
@@ -371,6 +418,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: `https://ui-avatars.com/api/?name=Demo+LATAM&background=10b981&color=fff`,
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'normal',
       };
 
       setUser(mockDemoUser);
@@ -420,6 +468,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
         createdAt: new Date().toISOString(),
         role: 'user',
+        plan: 'normal',
       };
 
       setUser(mockUser);
@@ -475,7 +524,11 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       return true;
     }
 
-    if (options?.planId) setPendingPlan(options.planId);
+    if (options?.planId) {
+      const normalizedPlan = normalizePlanTier(options.planId);
+      setPendingPlan(normalizedPlan);
+      try { localStorage.setItem(LOCAL_STORAGE_PENDING_PLAN_KEY, normalizedPlan); } catch {}
+    }
     if (options?.targetRoute) setPendingRoute(options.targetRoute);
     if (options?.onAuthenticated) setPendingCallback(() => options.onAuthenticated!);
 
@@ -486,7 +539,11 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
 
   const openAuthModal = (tab: 'login' | 'signup' = 'login', planId?: string, targetRoute?: AppRoute) => {
     setModalTab(tab);
-    if (planId) setPendingPlan(planId);
+    if (planId) {
+      const normalizedPlan = normalizePlanTier(planId);
+      setPendingPlan(normalizedPlan);
+      try { localStorage.setItem(LOCAL_STORAGE_PENDING_PLAN_KEY, normalizedPlan); } catch {}
+    }
     if (targetRoute) setPendingRoute(targetRoute);
     setAuthModalOpen(true);
   };
@@ -494,6 +551,37 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
   const closeAuthModal = () => {
     setAuthModalOpen(false);
   };
+
+  useEffect(() => {
+    const handlePlanActivated = async () => {
+      if (!user) return;
+      let paidPlan: PlanTier = 'normal';
+      try {
+        paidPlan = normalizePlanTier(localStorage.getItem('aria_paid_plan_to_activate'));
+      } catch {}
+      if (paidPlan === 'normal') return;
+
+      const updatedUser = { ...user, plan: paidPlan };
+      setUser(updatedUser);
+      try {
+        localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(updatedUser));
+        localStorage.removeItem('aria_paid_plan_to_activate');
+        localStorage.removeItem(LOCAL_STORAGE_PENDING_PLAN_KEY);
+      } catch {}
+      await saveUserProfile({
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        fecha_registro: user.createdAt,
+        avatar_url: user.avatarUrl,
+        estado_cuenta: 'plan_activo',
+        plan_id: paidPlan,
+      });
+    };
+
+    window.addEventListener('aria:payment-success', handlePlanActivated);
+    return () => window.removeEventListener('aria:payment-success', handlePlanActivated);
+  }, [user]);
 
   return (
     <AuthContext.Provider

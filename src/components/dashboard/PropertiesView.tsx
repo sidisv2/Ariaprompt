@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Property } from '../../types';
+import { AppRoute, Property, PlanTier } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { 
   Building2, 
@@ -17,20 +17,34 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { UpgradeRequiredCard } from '../common/UpgradeRequiredCard';
+import { getPlanLimits } from '../../lib/planLimits';
 
 interface PropertiesViewProps {
   properties: Property[];
   onAddProperty: (newProp: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => void;
+  onRouteChange?: (route: AppRoute) => void;
 }
 
-export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAddProperty }) => {
+export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAddProperty, onRouteChange }) => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const userPlan: PlanTier = user?.plan || 'normal';
+  const planLimits = getPlanLimits(userPlan);
+  const isNormalPlan = userPlan === 'normal';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isSyncingAI, setIsSyncingAI] = useState(false);
 
+  const goToCheckout = () => onRouteChange?.('dashboard-checkout');
+
   const handleSyncAI = () => {
+    if (isNormalPlan) {
+      goToCheckout();
+      return;
+    }
     setIsSyncingAI(true);
     setTimeout(() => {
       setIsSyncingAI(false);
@@ -65,6 +79,10 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
 
   const handleSubmitProperty = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isNormalPlan || properties.length >= planLimits.maxProperties) {
+      goToCheckout();
+      return;
+    }
     if (!formTitle.trim()) return;
 
     onAddProperty({
@@ -122,7 +140,13 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
           </button>
 
           <button
-            onClick={() => setIsWizardOpen(true)}
+            onClick={() => {
+              if (isNormalPlan || properties.length >= planLimits.maxProperties) {
+                goToCheckout();
+                return;
+              }
+              setIsWizardOpen(true);
+            }}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -130,6 +154,14 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
           </button>
         </div>
       </div>
+
+      {isNormalPlan && (
+        <UpgradeRequiredCard
+          title="Publicación de catálogo limitada"
+          description="Tu plan Gratuito / Prueba permite hasta 3 propiedades de demo. Para cargar inventario real, sincronizar IA y escalar el catálogo necesitas actualizar a Solo, Pro o Desarrolladores."
+          onUpgrade={goToCheckout}
+        />
+      )}
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/[0.03] backdrop-blur-sm p-3 rounded-2xl border border-white/5">

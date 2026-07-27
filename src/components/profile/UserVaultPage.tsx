@@ -10,6 +10,7 @@ import {
   downloadFileToDevice,
   formatFileSize
 } from '../../lib/storageService';
+import { UpgradeRequiredCard } from '../common/UpgradeRequiredCard';
 
 interface UserVaultPageProps {
   onRouteChange: (route: AppRoute) => void;
@@ -22,6 +23,7 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
   const [userFiles, setUserFiles] = useState<UserFile[]>([]);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
+  const isNormalPlan = (user?.plan || 'normal') === 'normal';
   const usernameSlug = user ? user.nombre.toLowerCase().replace(/\s+/g, '-') : 'invitado';
 
   // Load real files from storageService for authenticated user
@@ -49,6 +51,10 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
   const handleRealUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
+    if (isNormalPlan) {
+      onRouteChange('dashboard-checkout');
+      return;
+    }
     
     setUploading(true);
     setStatusMsg(null);
@@ -142,11 +148,17 @@ export const UserVaultPage: React.FC<UserVaultPageProps> = ({ onRouteChange }) =
               onClick={() => onRouteChange('pricing')}
               className="px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-white/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Ver Planes de Suscripción (desde ${PLAN_LIMITS.solo_agent.annualPriceUsd}/mes)</span>
+              <span>Ver Planes de Suscripción (desde ${PLAN_LIMITS.solo.annualPriceUsd}/mes)</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
+      ) : isNormalPlan ? (
+        <UpgradeRequiredCard
+          title="Bóveda PDF / RAG bloqueada"
+          description="Tu cuenta gratuita no incluye expedientes privados, RAG documental ni carga de PDFs. Actualiza tu plan para activar la bóveda con almacenamiento seguro por usuario."
+          onUpgrade={() => onRouteChange('dashboard-checkout')}
+        />
       ) : (
         /* Subscribed User File Vault List */
         <div className="space-y-6">

@@ -63,15 +63,15 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
           <div className="snap-center shrink-0 w-[85vw] max-w-xs bg-slate-900 border border-white/10 rounded-3xl p-5 space-y-4 flex flex-col justify-between shadow-xl">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-slate-400">{PLAN_LIMITS.solo_agent.name}</span>
+                <span className="text-xs font-bold uppercase text-slate-400">{PLAN_LIMITS.solo.name}</span>
                 <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-300 font-semibold">1 Agente IA</span>
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.solo_agent.annualPriceUsd}</span>
+                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.solo.annualPriceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.solo_agent.description}</p>
+                <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.solo.description}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-white/5 text-xs text-slate-300">
@@ -79,13 +79,13 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Hasta {PLAN_LIMITS.solo_agent.maxProperties} inmuebles en catálogo</span>
+                  <span>Hasta {PLAN_LIMITS.solo.maxProperties} inmuebles en catálogo</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Hasta {PLAN_LIMITS.solo_agent.maxLeadsPerMonth} leads/mes</span>
+                  <span>Hasta {PLAN_LIMITS.solo.maxLeadsPerMonth} leads/mes</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
@@ -112,16 +112,16 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
 
             <div className="space-y-3 pt-1">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-emerald-400">{PLAN_LIMITS.agency_pro.name}</span>
+                <span className="text-xs font-bold uppercase text-emerald-400">{PLAN_LIMITS.pro.name}</span>
                 <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded-full text-emerald-300 font-semibold">5 Agentes IA</span>
               </div>
 
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.agency_pro.annualPriceUsd}</span>
+                  <span className="text-3xl font-black text-white">${PLAN_LIMITS.pro.annualPriceUsd}</span>
                   <span className="text-xs text-slate-400">/mes</span>
                 </div>
-                <p className="text-[11px] text-slate-300 mt-1">{PLAN_LIMITS.agency_pro.description}</p>
+                <p className="text-[11px] text-slate-300 mt-1">{PLAN_LIMITS.pro.description}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-emerald-500/20 text-xs text-slate-200">
@@ -129,13 +129,13 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Hasta {PLAN_LIMITS.agency_pro.maxProperties} inmuebles en catálogo</span>
+                  <span>Hasta {PLAN_LIMITS.pro.maxProperties} inmuebles en catálogo</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </div>
-                  <span>Hasta {PLAN_LIMITS.agency_pro.maxLeadsPerMonth} leads/mes</span>
+                  <span>Hasta {PLAN_LIMITS.pro.maxLeadsPerMonth} leads/mes</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center shrink-0 font-bold">
@@ -165,7 +165,7 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
           <div className="snap-center shrink-0 w-[85vw] max-w-xs bg-slate-900 border border-white/10 rounded-3xl p-5 space-y-4 flex flex-col justify-between shadow-xl">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-bold uppercase text-slate-400">{PLAN_LIMITS.enterprise.name}</span>
+                <span className="text-xs font-bold uppercase text-slate-400">{PLAN_LIMITS.desarrolladores.name}</span>
                 <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-300 font-semibold">Ilimitado</span>
               </div>
 
@@ -173,7 +173,7 @@ export const MobilePricingSection: React.FC<MobilePricingSectionProps> = ({ onRo
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-black text-white">A Medida</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.enterprise.description}</p>
+                <p className="text-[11px] text-slate-400 mt-1">{PLAN_LIMITS.desarrolladores.description}</p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-white/5 text-xs text-slate-300">

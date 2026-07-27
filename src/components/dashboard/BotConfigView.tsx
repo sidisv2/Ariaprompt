@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BotConfig } from '../../types';
+import { AppRoute, BotConfig } from '../../types';
 import { 
   Bot, 
   Code, 
@@ -13,13 +13,19 @@ import {
   Eye,
   Zap
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { UpgradeRequiredCard } from '../common/UpgradeRequiredCard';
 
 interface BotConfigViewProps {
   botConfig: BotConfig;
   onUpdateBotConfig: (updated: Partial<BotConfig>) => void;
+  onRouteChange?: (route: AppRoute) => void;
 }
 
-export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdateBotConfig }) => {
+export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdateBotConfig, onRouteChange }) => {
+  const { user } = useAuth();
+  const isNormalPlan = (user?.plan || 'normal') === 'normal';
+  const goToCheckout = () => onRouteChange?.('dashboard-checkout');
   const [copied, setCopied] = useState(false);
   const [agentName, setAgentName] = useState(botConfig.agentName);
   const [agencyName, setAgencyName] = useState(botConfig.agencyName);
@@ -31,6 +37,10 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   const embedScript = `<script src="${window.location.origin}/aria-widget.js" data-agent-id="${botConfig.agentId}" async></script>`;
 
   const handleCopyScript = () => {
+    if (isNormalPlan) {
+      goToCheckout();
+      return;
+    }
     navigator.clipboard.writeText(embedScript);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -38,6 +48,10 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
 
   const handleSaveConfig = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isNormalPlan) {
+      goToCheckout();
+      return;
+    }
     onUpdateBotConfig({
       agentName,
       agencyName,
@@ -68,6 +82,14 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
           <span>Aria AI Engine Active</span>
         </div>
       </div>
+
+      {isNormalPlan && (
+        <UpgradeRequiredCard
+          title="Agentes reales bloqueados en el plan gratuito"
+          description="El plan Gratuito / Prueba permite explorar el asistente en modo demo. Para crear agentes activos, generar scripts embebibles y conectar canales necesitas actualizar tu suscripción."
+          onUpgrade={goToCheckout}
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         

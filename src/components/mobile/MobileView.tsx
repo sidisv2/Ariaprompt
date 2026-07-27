@@ -34,6 +34,9 @@ import { TechStackSection } from '../marketing/TechStackSection';
 import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
+import { TermsPage } from '../legal/TermsPage';
+import { PrivacyPage } from '../legal/PrivacyPage';
+import { RefundPage } from '../legal/RefundPage';
 
 interface MobileViewProps {
   currentRoute: AppRoute;
@@ -72,7 +75,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {currentRoute === 'dashboard-metrics' ? (
           <SummaryDashboardView leads={leads} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-properties' ? (
-          <PropertiesView properties={properties} onAddProperty={onAddProperty} />
+          <PropertiesView properties={properties} onAddProperty={onAddProperty} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-leads' ? (
           <LeadsView
             leads={leads}
@@ -81,11 +84,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
             onClearSelectedLead={onClearSelectedLead}
           />
         ) : currentRoute === 'dashboard-bot-config' ? (
-          <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
+          <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-checkout' ? (
           <CheckoutView onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-integrations' ? (
-          <CrmIntegrationsView />
+          <CrmIntegrationsView onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-roles' ? (
           <UserRolesDashboard onRouteChange={onRouteChange} />
         ) : (currentRoute === 'dashboard-files' || currentRoute === 'dashboard-profile') ? (
@@ -96,18 +99,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
         ) : (currentRoute === 'aria-ai' || currentRoute === 'producto') ? (
           <div>
             <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
-            <Footer />
+            <Footer onRouteChange={onRouteChange} />
           </div>
         ) : currentRoute === 'soluciones' ? (
           <div>
             <SolucionesPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
-            <Footer />
+            <Footer onRouteChange={onRouteChange} />
           </div>
         ) : currentRoute === 'recursos' ? (
           <div>
             <RecursosPage onRouteChange={onRouteChange} />
-            <Footer />
+            <Footer onRouteChange={onRouteChange} />
           </div>
+        ) : currentRoute === 'terms' ? (
+          <TermsPage onRouteChange={onRouteChange} />
+        ) : currentRoute === 'privacy' ? (
+          <PrivacyPage onRouteChange={onRouteChange} />
+        ) : currentRoute === 'refund' ? (
+          <RefundPage onRouteChange={onRouteChange} />
         ) : currentRoute === 'embed-preview' ? (
           <div className="p-4 space-y-4 text-center">
             <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/30">
@@ -119,7 +128,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           <div>
             <MobilePricingSection onRouteChange={onRouteChange} />
             <FAQ />
-            <Footer />
+            <Footer onRouteChange={onRouteChange} />
           </div>
         ) : (
           <div className="space-y-8 animate-page-fade">
@@ -169,7 +178,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <FinalCtaSection />
 
             {/* Section 14: Footer Completo */}
-            <Footer />
+            <Footer onRouteChange={onRouteChange} />
           </div>
         )}
       </main>
