@@ -23,13 +23,7 @@ import { trackPurchaseConversion } from '../../lib/analytics';
 import { PLAN_LIMITS } from '../../lib/planLimits';
 import { AppRoute } from '../../types';
 import {
-  VisaLogo,
-  MastercardLogo,
-  AmexLogo,
   MercadoPagoLogo,
-  PaypalLogo,
-  SpeiLogo,
-  PseLogo,
 } from '../common/PaymentLogos';
 
 interface CheckoutViewProps {
@@ -54,8 +48,6 @@ interface PlanItem {
   description: string;
   features: string[];
 }
-
-type PaymentMethod = 'card' | 'mercadopago' | 'paypal' | 'transfer';
 
 const normalizePlanId = (planId: string) => {
   if (planId === 'solo_agent') return 'starter';
@@ -142,8 +134,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
   const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
-  
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
 
@@ -165,8 +155,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
     });
   };
 
-  const handleOpenPaymentMethodWithAuth = (method: PaymentMethod) => {
-    setPaymentMethod(method);
+  const handleOpenMercadoPagoWithAuth = () => {
     requireAuthForPayment({
       planId: selectedPlanId,
       onAuthenticated: () => setShowCheckoutModal(true),
@@ -355,77 +344,18 @@ export function CheckoutView({ }: CheckoutViewProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {/* Mercado Pago */}
           <button
-            onClick={() => handleOpenPaymentMethodWithAuth('mercadopago')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'mercadopago'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
+            onClick={handleOpenMercadoPagoWithAuth}
+            className="p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500"
           >
             <MercadoPagoLogo className="h-6" />
             <div>
               <p className="font-bold text-white text-xs">Mercado Pago</p>
-              <p className="text-[10px] text-slate-400">MXN, ARS, COP, CLP, PEN</p>
+              <p className="text-[10px] text-slate-400">Checkout oficial con link del plan seleccionado</p>
             </div>
           </button>
-
-          {/* Credit/Debit Card */}
-          <button
-            onClick={() => handleOpenPaymentMethodWithAuth('card')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'card'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <VisaLogo className="h-4" />
-              <MastercardLogo className="h-4" />
-            </div>
-            <div>
-              <p className="font-bold text-white text-xs">Tarjeta Crédito / Débito</p>
-              <p className="text-[10px] text-slate-400">Visa, Mastercard, Amex</p>
-            </div>
-          </button>
-
-          {/* PayPal */}
-          <button
-            onClick={() => handleOpenPaymentMethodWithAuth('paypal')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'paypal'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
-          >
-            <PaypalLogo className="h-6" />
-            <div>
-              <p className="font-bold text-white text-xs">PayPal Internacional</p>
-              <p className="text-[10px] text-slate-400">Pago Global en USD</p>
-            </div>
-          </button>
-
-          {/* Transfer Bank SPEI / PSE */}
-          <button
-            onClick={() => handleOpenPaymentMethodWithAuth('transfer')}
-            className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
-              paymentMethod === 'transfer'
-                ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
-                : 'bg-black/30 border-white/5 hover:border-white/15'
-            }`}
-          >
-            <div className="flex items-center gap-1">
-              <SpeiLogo />
-              <PseLogo />
-            </div>
-            <div>
-              <p className="font-bold text-white text-xs">SPEI / PSE / CBU</p>
-              <p className="text-[10px] text-slate-400">Transferencia Directa</p>
-            </div>
-          </button>
-
         </div>
       </div>
 
@@ -511,17 +441,8 @@ export function CheckoutView({ }: CheckoutViewProps) {
                 <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3 text-xs">
                   <div className="flex items-center gap-2 text-white font-bold">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : 'Transferencia Bancaria SPEI / PSE'}</span>
+                    <span>Método: Mercado Pago Checkout</span>
                   </div>
-
-                  {paymentMethod === 'transfer' && (
-                    <div className="p-3 bg-black/50 rounded-xl space-y-1 font-mono text-[11px] text-slate-300 border border-white/5">
-                      <p><strong className="text-emerald-400">Banco:</strong> Banco Santander LATAM</p>
-                      <p><strong className="text-emerald-400">CLABE / SPEI (México):</strong> 012180015432987654</p>
-                      <p><strong className="text-emerald-400">CBU (Argentina):</strong> 0000003100098765432100</p>
-                      <p><strong className="text-emerald-400">Concepto:</strong> Suscripción Aria Prop - {activePlan.name}</p>
-                    </div>
-                  )}
 
                   {/* Payment link preview */}
                   <div className="pt-2">
