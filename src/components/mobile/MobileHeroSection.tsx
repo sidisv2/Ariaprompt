@@ -13,7 +13,7 @@ interface MobileHeroSectionProps {
 }
 
 export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProperties, onRouteChange }) => {
-  const { requireAuthForPayment, signIn } = useAuth();
+  const { requireAuthForPayment, signInAsDemoUser } = useAuth();
   const { t } = useLanguage();
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
     setDemoLoading(true);
     setDemoError(null);
     try {
-      const res = await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
+      const res = await signInAsDemoUser();
       if (res.success) {
         onRouteChange('dashboard-metrics');
       } else {

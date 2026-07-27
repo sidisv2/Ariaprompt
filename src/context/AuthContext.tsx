@@ -33,6 +33,7 @@ interface AuthContextType {
   pendingRoute: AppRoute | null;
   signUp: (data: { email: string; password: string; nombre: string }) => Promise<{ success: boolean; error?: string }>;
   signIn: (data: { email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
+  signInAsDemoUser: () => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   requestSignOut: () => void;
@@ -299,6 +300,81 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     }
   };
 
+  // Sign In as Demo User: Creates an isolated, unique ephemeral demo account per visitor
+  const signInAsDemoUser = async () => {
+    setLoading(true);
+    const demoTimestamp = Date.now();
+    const demoRandom = Math.random().toString(36).substring(2, 7);
+    const ephemeralDemoEmail = `demo_${demoTimestamp}_${demoRandom}@ariaprop.com`;
+    const ephemeralDemoPassword = `DemoPassword_${demoTimestamp}!`;
+
+    if (isSupabaseConfigured) {
+      try {
+        // Create an isolated ephemeral user in Supabase Auth with a unique UUID / agency_id
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+          email: ephemeralDemoEmail,
+          password: ephemeralDemoPassword,
+          options: {
+            data: {
+              nombre: 'Inmobiliaria Demo (Modo Prueba)',
+              is_demo_account: true,
+            },
+          },
+        });
+
+        if (!signUpErr && signUpData.user) {
+          await mapSupabaseUserToAppUser(signUpData.user);
+          setAuthModalOpen(false);
+          handlePostAuthAction();
+          setLoading(false);
+          return { success: true };
+        }
+
+        // Fallback to primary demo account if signUp limits are reached
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email: 'demo@ariaprop.com',
+          password: 'demo',
+        });
+
+        if (signInErr) {
+          setLoading(false);
+          return { success: false, error: signInErr.message };
+        }
+
+        if (signInData.user) {
+          await mapSupabaseUserToAppUser(signInData.user);
+        }
+
+        setAuthModalOpen(false);
+        handlePostAuthAction();
+        setLoading(false);
+        return { success: true };
+      } catch (err: any) {
+        setLoading(false);
+        return { success: false, error: err.message || 'Error iniciando sesión de demostración' };
+      }
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const mockDemoUser: AppUser = {
+        id: `usr_demo_${demoTimestamp}_${demoRandom}`,
+        email: ephemeralDemoEmail,
+        nombre: 'Inmobiliaria Demo LATAM',
+        avatarUrl: `https://ui-avatars.com/api/?name=Demo+LATAM&background=10b981&color=fff`,
+        createdAt: new Date().toISOString(),
+        role: 'user',
+      };
+
+      setUser(mockDemoUser);
+      localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(mockDemoUser));
+
+      setAuthModalOpen(false);
+      handlePostAuthAction();
+      setLoading(false);
+      return { success: true };
+    }
+  };
+
   // Sign In with Google OAuth (Prominent)
   const signInWithGoogle = async () => {
     setLoading(true);
@@ -419,6 +495,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         pendingRoute,
         signUp,
         signIn,
+        signInAsDemoUser,
         signInWithGoogle,
         signOut,
         requestSignOut,

@@ -12,7 +12,7 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRouteChange }) => {
-  const { openAuthModal, requireAuthForPayment, signIn } = useAuth();
+  const { openAuthModal, requireAuthForPayment, signInAsDemoUser } = useAuth();
   const { t } = useLanguage();
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
     setDemoLoading(true);
     setDemoError(null);
     try {
-      const res = await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
+      const res = await signInAsDemoUser();
       if (res.success) {
         onRouteChange('dashboard-metrics');
       } else {

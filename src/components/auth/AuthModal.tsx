@@ -18,7 +18,7 @@ export const AuthModal: React.FC<{
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInAsDemoUser, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     setTab(initialTab);
@@ -37,7 +37,7 @@ export const AuthModal: React.FC<{
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await signIn({ email: 'demo@ariaprop.com', password: 'demo' });
+      const res = await signInAsDemoUser();
       if (res.success) {
         onAuthSuccess?.();
         onClose();
