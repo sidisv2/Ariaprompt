@@ -1,66 +1,46 @@
-/// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js';
 
-// Environment variables for Supabase
-const env = (import.meta as unknown as { env: Record<string, string> }).env || {};
-const supabaseUrl = (env.VITE_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_URL : '') || '').trim();
-const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.VITE_SUPABASE_ANON_KEY : '') || '').trim();
+// Configuration check
+const supabaseUrl = (
+  import.meta.env?.VITE_SUPABASE_URL ||
+  (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) ||
+  ''
+).trim();
 
-// Fallback dummy values to prevent crashes if env vars are missing or invalid
-const dummyUrl = 'https://placeholder-supabase-project.supabase.co';
-const dummyKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
+const supabaseAnonKey = (
+  import.meta.env?.VITE_SUPABASE_ANON_KEY ||
+  (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) ||
+  ''
+).trim();
 
-const isValidHttpUrl = (urlStr: string) => {
-  if (!urlStr) return false;
-  try {
-    const parsed = new URL(urlStr);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
+export const isSupabaseConfigured =
+  Boolean(supabaseUrl && supabaseAnonKey) &&
+  !supabaseUrl.includes('placeholder') &&
+  !supabaseUrl.includes('your-supabase');
 
-export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  supabaseUrl !== 'https://your-supabase-url.supabase.co' &&
-  supabaseUrl !== 'https://your-supabase-project.supabase.co' &&
-  isValidHttpUrl(supabaseUrl)
-);
-
-let _supabase: ReturnType<typeof createClient> | null = null;
-try {
-  const validUrl = isSupabaseConfigured && isValidHttpUrl(supabaseUrl) ? supabaseUrl : dummyUrl;
-  const validKey = isSupabaseConfigured ? supabaseAnonKey : dummyKey;
-
-  _supabase = createClient(validUrl, validKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  });
-} catch (err) {
-  // eslint-disable-next-line no-console
-  console.warn('Supabase client initialization failed, falling back to mock. Error:', err);
-  _supabase = null as any;
-}
-
-export const supabase = _supabase as any;
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : null;
 
 export interface UserProfile {
   id: string;
   email: string;
   nombre: string;
-  fecha_registro: string;
-  avatar_url?: string;
-  estado_cuenta?: 'gratis' | 'prueba_activa' | 'prueba_7dias' | 'pro_basico' | 'plan_activo';
+  agency_name?: string;
+  estado_cuenta?: string;
   plan_id?: string;
-  fecha_fin_prueba?: string;
+  fecha_registro?: string;
+  avatar_url?: string;
 }
 
 /**
- * Gets user profile from Supabase 'profiles' or 'usuarios' table or localStorage.
+ * Gets user profile from Supabase 'profiles' table or localStorage.
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   if (!isSupabaseConfigured || !supabase) {
@@ -76,24 +56,18 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   try {
     const { data: pData } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
     if (pData) return pData as UserProfile;
-
-    const { data: uData } = await supabase.from('usuarios').select('*').eq('id', userId).maybeSingle();
-    if (uData) return uData as UserProfile;
-
     return null;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.warn('getUserProfile error', e);
     return null;
   }
 }
 
 /**
- * Saves or updates user profile in Supabase 'profiles' or 'usuarios' table.
+ * Saves or updates user profile in Supabase 'profiles' table.
  */
 export async function saveUserProfile(profile: UserProfile): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseConfigured || !supabase) {
-    // Local storage fallback for seamless testing
     try {
       const stored = localStorage.getItem('aria_user_profiles') || '{}';
       const profilesMap = JSON.parse(stored);
@@ -106,33 +80,27 @@ export async function saveUserProfile(profile: UserProfile): Promise<{ success: 
   }
 
   try {
-    const payload: any = {
+    // Only send fields that match the public.profiles schema columns exactly:
+    // id, email, nombre, agency_name, estado_cuenta, plan_id, fecha_registro, updated_at
+    const payload: Record<string, any> = {
       id: profile.id,
       email: profile.email,
       nombre: profile.nombre,
-      fecha_registro: profile.fecha_registro,
-      avatar_url: profile.avatar_url,
-      ...(profile.estado_cuenta ? { estado_cuenta: profile.estado_cuenta } : {}),
-      ...(profile.plan_id ? { plan_id: profile.plan_id } : {}),
-      ...(profile.fecha_fin_prueba ? { fecha_fin_prueba: profile.fecha_fin_prueba } : {}),
+      updated_at: new Date().toISOString(),
     };
 
-    // Try saving to 'profiles' table first
+    if (profile.agency_name) payload.agency_name = profile.agency_name;
+    if (profile.estado_cuenta) payload.estado_cuenta = profile.estado_cuenta;
+    if (profile.plan_id) payload.plan_id = profile.plan_id;
+    if (profile.fecha_registro) payload.fecha_registro = profile.fecha_registro;
+
     const { error: errorProfiles } = await supabase
       .from('profiles')
       .upsert(payload, { onConflict: 'id' });
 
     if (errorProfiles) {
-      // Fallback try 'usuarios' table
-      const { error: errorUsuarios } = await supabase
-        .from('usuarios')
-        .upsert(payload, { onConflict: 'id' });
-
-      if (errorUsuarios) {
-        // eslint-disable-next-line no-console
-        console.warn('Could not save to profiles or usuarios table in Supabase:', errorUsuarios.message);
-        return { success: false, error: errorUsuarios.message };
-      }
+      console.warn('Could not save to profiles table in Supabase:', errorProfiles.message);
+      return { success: false, error: errorProfiles.message };
     }
 
     return { success: true };
