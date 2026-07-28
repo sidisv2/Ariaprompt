@@ -26,7 +26,20 @@ import {
   syncEasyBrokerProperties,
 } from '../../services/crmIntegrationService';
 
-export const IntegrationsView: React.FC = () => {
+import { AppRoute } from '../../types';
+import { useAuth } from '../../context/AuthContext';
+import { getPlanLimits } from '../../lib/planLimits';
+import { UpgradePromptBanner } from '../common/UpgradePromptBanner';
+
+interface IntegrationsViewProps {
+  onRouteChange?: (route: AppRoute) => void;
+}
+
+export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onRouteChange }) => {
+  const { user } = useAuth();
+  const planLimits = getPlanLimits(user?.plan);
+  const isCrmSyncLocked = !planLimits.crmSyncEnabled;
+
   const [connections, setConnections] = useState<CrmConnection[]>([]);
   const [syncedProperties, setSyncedProperties] = useState<PartnerProperty[]>([]);
   
@@ -172,6 +185,15 @@ export const IntegrationsView: React.FC = () => {
       </div>
 
       {/* Banners Feedback */}
+      {isCrmSyncLocked && (
+        <UpgradePromptBanner
+          feature="crm"
+          requiredPlan="pro"
+          inline={true}
+          onUpgrade={() => onRouteChange?.('dashboard-checkout')}
+        />
+      )}
+
       {successMsg && (
         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-3 animate-fade-in">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />

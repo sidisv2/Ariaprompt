@@ -1,5 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { PLAN_LIMITS, PlanTier, PlanLimits } from '../src/lib/planLimits';
+
+function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefined): PlanTier {
+  if (!estadoCuenta) return 'normal';
+  const v = estadoCuenta.toLowerCase().trim();
+  if (v === 'normal' || v === 'gratis') return 'normal';
+  if (v === 'solo' || v === 'solo_agent') return 'solo';
+  if (v === 'pro' || v === 'pro_basico' || v === 'agency_pro' || v === 'plan_activo') return 'pro';
+  if (v === 'desarrolladores' || v === 'enterprise') return 'desarrolladores';
+  if (v.includes('prueba')) return 'normal';
+  return 'normal';
+}
+
+function getPlanLimits(tier: PlanTier | null | undefined): PlanLimits {
+  return PLAN_LIMITS[tier ?? 'normal'];
+}
 
 /**
  * Creates a backend Supabase client (service role) for admin operations.
@@ -239,6 +255,25 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({
           success: false,
           error: 'Proveedor no soportado. Debe ser "tokko" o "easybroker".',
+        });
+      }
+
+      // 1.5 Check plan permissions (crmSyncEnabled must be true)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan_id, estado_cuenta')
+        .eq('id', agencyId)
+        .maybeSingle();
+
+      const rawPlan = profile?.plan_id || profile?.estado_cuenta;
+      const userPlanTier = mapEstadoCuentaToPlanTier(rawPlan);
+      const planLimits = getPlanLimits(userPlanTier);
+
+      if (!planLimits.crmSyncEnabled) {
+        return res.status(403).json({
+          error: 'FEATURE_LOCKED',
+          code: 403,
+          message: `La sincronización con CRM (${provider === 'tokko' ? 'Tokko Broker' : 'EasyBroker'}) requiere el plan Agency Pro ($99/mes). Tu plan actual (${planLimits.name}) no incluye esta función.`,
         });
       }
 
