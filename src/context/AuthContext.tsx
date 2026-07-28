@@ -205,6 +205,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
             fecha_registro: sbUser.created_at ?? new Date().toISOString(),
             avatar_url: avatarUrl,
             estado_cuenta: 'gratis', // Supabase column value for 'normal'
+            plan_id: 'normal',
           });
         }
       } catch (e) {
