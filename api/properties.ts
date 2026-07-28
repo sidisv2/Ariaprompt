@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { INITIAL_PROPERTIES } from '../src/data/mockData';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (
@@ -46,6 +45,38 @@ interface PlanLimits {
   maxProperties: number;
   pdfVaultEnabled: boolean;
   crmSyncEnabled: boolean;
+}
+
+interface Property {
+  id: string;
+  title: string;
+  code: string;
+  type: string;
+  status: string;
+  price: number;
+  location: {
+    address: string;
+    city: string;
+    zone: string;
+    lat: number;
+    lng: number;
+  };
+  features: {
+    bedrooms: number;
+    bathrooms: number;
+    areaM2: number;
+    terraceM2: number;
+    pool: boolean;
+    garage: boolean;
+    elevator: boolean;
+    airConditioning: boolean;
+    yearBuilt: number;
+  };
+  description: string;
+  images: string[];
+  documents: { id: string; name: string; sizeKb: number; type: string; url: string; uploadedAt: string }[];
+  featured: boolean;
+  createdAt: string;
 }
 
 const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimits> = {
@@ -99,6 +130,119 @@ const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimits> = {
   },
 };
 
+const INITIAL_PROPERTIES: Property[] = [
+  {
+    id: 'prop-101',
+    title: 'Penthouse de Ultra Lujo con Terraza Privada y Vista a Campo de Golf',
+    code: 'CDMX-POL-01',
+    type: 'penthouse',
+    status: 'available',
+    price: 1850000,
+    location: {
+      address: 'Av. Campos Elíseos 345',
+      city: 'Ciudad de México',
+      zone: 'Polanco',
+      lat: 19.428,
+      lng: -99.191,
+    },
+    features: {
+      bedrooms: 4,
+      bathrooms: 5,
+      areaM2: 520,
+      terraceM2: 110,
+      pool: true,
+      garage: true,
+      elevator: true,
+      airConditioning: true,
+      yearBuilt: 2024,
+    },
+    description: 'Espectacular Penthouse en el corazón de Polanco. Acabados en mármol de Carrara, cocina italiana Dada, helipuerto en torre, doble filtro de seguridad 24/7 y terraza solárium con jacuzzi privado.',
+    images: [
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=80',
+    ],
+    documents: [
+      { id: 'doc-1', name: 'Plano_Arquitectonico_Polanco.pdf', sizeKb: 3420, type: 'blueprint', url: '#', uploadedAt: '2026-06-10' },
+      { id: 'doc-2', name: 'Dossier_Informativo_Calidades.pdf', sizeKb: 8900, type: 'dossier', url: '#', uploadedAt: '2026-06-11' },
+    ],
+    featured: true,
+    createdAt: '2026-06-01',
+  },
+  {
+    id: 'prop-102',
+    title: 'Casa Campestre Moderna con Piscina Climatizada y Vista Panorámica',
+    code: 'MDE-POB-02',
+    type: 'villa',
+    status: 'available',
+    price: 950000,
+    location: {
+      address: 'Loma del Campestre 88',
+      city: 'Medellín',
+      zone: 'El Poblado',
+      lat: 6.208,
+      lng: -75.567,
+    },
+    features: {
+      bedrooms: 5,
+      bathrooms: 6,
+      areaM2: 680,
+      terraceM2: 150,
+      pool: true,
+      garage: true,
+      elevator: false,
+      airConditioning: true,
+      yearBuilt: 2023,
+    },
+    description: 'Residencia inteligente en las lomas de El Poblado con vista abierta sobre el valle de Aburrá. Diseño bioclimático, domótica Lutron, piscina infinita climatizada y cava de vinos subterránea.',
+    images: [
+      'https://images.unsplash.com/photo-1600585154497-12c8ab7fb75d?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=80',
+    ],
+    documents: [
+      { id: 'doc-3', name: 'Plano_ElPoblado_Medellin.pdf', sizeKb: 2150, type: 'blueprint', url: '#', uploadedAt: '2026-06-15' },
+    ],
+    featured: true,
+    createdAt: '2026-06-05',
+  },
+  {
+    id: 'prop-103',
+    title: 'Departamento Exclusivo Frente al Golf con Acabados Finos',
+    code: 'LIM-SIS-03',
+    type: 'apartment',
+    status: 'available',
+    price: 620000,
+    location: {
+      address: 'Av. Pezet 540',
+      city: 'Lima',
+      zone: 'San Isidro',
+      lat: -12.097,
+      lng: -77.037,
+    },
+    features: {
+      bedrooms: 3,
+      bathrooms: 4,
+      areaM2: 280,
+      terraceM2: 45,
+      pool: true,
+      garage: true,
+      elevator: true,
+      airConditioning: true,
+      yearBuilt: 2022,
+    },
+    description: 'Elegante departamento con ascensor directo a piso en la zona más prestigiosa de San Isidro. Vista despejada al Lima Golf Club, acabados en madera estructurada y 3 estacionamientos subterráneos.',
+    images: [
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
+      'https://images.unsplash.com/photo-1600566753366-12c8ab7fb75b?auto=format&fit=crop&w=1200&q=80',
+    ],
+    documents: [
+      { id: 'doc-4', name: 'Memoria_Calidades_SanIsidro.pdf', sizeKb: 4100, type: 'dossier', url: '#', uploadedAt: '2026-06-20' },
+    ],
+    featured: false,
+    createdAt: '2026-06-12',
+  },
+];
+
 function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefined): PlanTier {
   if (!estadoCuenta) return 'normal';
   const v = estadoCuenta.toLowerCase().trim();
@@ -123,7 +267,7 @@ function checkPropertyLimit(
     const nextPlan = tier === 'normal' ? 'Solo Agent' : tier === 'solo' ? 'Agency Pro' : 'Desarrolladores';
     return {
       allowed: false,
-      error: `Alcanzaste el l\u00edmite de ${plan.maxProperties} propiedades en tu plan ${plan.name}. Actualiz\u00e1 a ${nextPlan} para publicar m\u00e1s.`,
+      error: `Alcanzaste el límite de ${plan.maxProperties} propiedades en tu plan ${plan.name}. Actualizá a ${nextPlan} para publicar más.`,
     };
   }
   return { allowed: true };

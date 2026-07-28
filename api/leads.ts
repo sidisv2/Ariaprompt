@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { INITIAL_LEADS } from '../src/data/mockData';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (
@@ -46,6 +45,25 @@ interface PlanLimits {
   maxProperties: number;
   pdfVaultEnabled: boolean;
   crmSyncEnabled: boolean;
+}
+
+interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  temperature: 'hot' | 'warm' | 'cold';
+  status: string;
+  budgetMin: number;
+  budgetMax: number;
+  preferredZone: string;
+  notes: string;
+  score: number;
+  lastInteraction: string;
+  createdAt: string;
+  agentId: string;
+  chatMessagesCount: number;
+  chatHistorySummary: string;
 }
 
 const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimits> = {
@@ -99,6 +117,81 @@ const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimits> = {
   },
 };
 
+const INITIAL_LEADS: Lead[] = [
+  {
+    id: 'lead-01',
+    name: 'Mateo Morales',
+    email: 'mmorales@investments.mx',
+    phone: '+52 55 4123 9876',
+    temperature: 'hot',
+    status: 'visit_scheduled',
+    budgetMin: 1500000,
+    budgetMax: 2200000,
+    preferredZone: 'Polanco / Lomas de Chapultepec (CDMX)',
+    notes: 'Inversor privado buscando Penthouse en CDMX. Ha solicitado visitar la propiedad CDMX-POL-01 este viernes a las 11:00 AM.',
+    score: 95,
+    lastInteraction: 'Hace 8 min',
+    createdAt: '2026-07-20',
+    agentId: 'prop-agent-001',
+    chatMessagesCount: 18,
+    chatHistorySummary: 'Preguntó por la cuota de mantenimiento de la torre y los estacionamientos. Confirmó visita presencial con Aria Prop.',
+  },
+  {
+    id: 'lead-02',
+    name: 'Camila Restrepo',
+    email: 'camila.restrepo@techcapital.co',
+    phone: '+57 300 882 1900',
+    temperature: 'hot',
+    status: 'offer_made',
+    budgetMin: 800000,
+    budgetMax: 1100000,
+    preferredZone: 'El Poblado / Llanogrande (Medellín)',
+    notes: 'Directora de Fondo Regional. Interesada en la Casa MDE-POB-02. Solicitó borradores de escrituración.',
+    score: 91,
+    lastInteraction: 'Hace 30 min',
+    createdAt: '2026-07-18',
+    agentId: 'prop-agent-001',
+    chatMessagesCount: 22,
+    chatHistorySummary: 'Consultó sobre el área del lote y avalúo catastral. Coordinó llamada con el dueño.',
+  },
+  {
+    id: 'lead-03',
+    name: 'Gonzalo Silva',
+    email: 'gsilva@patrimonios.cl',
+    phone: '+56 9 8765 4321',
+    temperature: 'warm',
+    status: 'contacted',
+    budgetMin: 500000,
+    budgetMax: 750000,
+    preferredZone: 'San Isidro (Lima) / Vitacura (Santiago)',
+    notes: 'Busca departamento de inversión de renta alta en Lima o Santiago.',
+    score: 72,
+    lastInteraction: 'Hace 2 horas',
+    createdAt: '2026-07-21',
+    agentId: 'prop-agent-001',
+    chatMessagesCount: 11,
+    chatHistorySummary: 'Consultó el retorno anual de alquileres en San Isidro y gastos comunes.',
+  },
+  {
+    id: 'lead-04',
+    name: 'Sofía Benítez',
+    email: 'sbenitez@grupo.ar',
+    phone: '+54 9 11 5432 1098',
+    temperature: 'cold',
+    status: 'new',
+    budgetMin: 300000,
+    budgetMax: 500000,
+    preferredZone: 'Puerto Madero / Nordelta (Buenos Aires)',
+    notes: 'Entró por widget buscando catálogo general. Aún evaluando opciones de inversión.',
+    score: 38,
+    lastInteraction: 'Hace 1 día',
+    createdAt: '2026-07-21',
+    agentId: 'prop-agent-001',
+    chatMessagesCount: 5,
+    chatHistorySummary: 'Consultó formas de pago y transferencias internacionales.',
+  },
+];
+
 function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefined): PlanTier {
   if (!estadoCuenta) return 'normal';
   const v = estadoCuenta.toLowerCase().trim();
@@ -128,7 +221,7 @@ function checkLeadLimit(
   if (currentLeadsCount >= plan.maxLeadsPerMonth) {
     return {
       allowed: false,
-      error: `Alcanzaste el l\u00edmite de ${plan.maxLeadsPerMonth} leads este mes en tu plan ${plan.name}. Mejor\u00e1 tu plan para seguir recibiendo consultas.`,
+      error: `Alcanzaste el límite de ${plan.maxLeadsPerMonth} leads este mes en tu plan ${plan.name}. Mejorá tu plan para seguir recibiendo consultas.`,
     };
   }
   return { allowed: true };
