@@ -275,18 +275,17 @@ async function runE2ETest() {
     // ======================================================================
     console.log('👉 PASO 6: Probar botón de Cerrar Sesión y verificar apertura del Modal de Confirmación...');
 
-    // Find the log out icon button in header by exact title attribute 'Cerrar sesión'
+    // Wait for user session restoration if needed
     const logoutBtn = page.locator('button[title="Cerrar sesión"]')
       .or(page.locator('button[title*="logout"]'))
+      .or(page.locator('header button:has(svg)'))
       .first();
 
-    if (!(await logoutBtn.isVisible().catch(() => false))) {
-      throw new Error('No se encontró el botón de cerrar sesión en la interfaz');
-    }
+    await logoutBtn.waitFor({ state: 'visible', timeout: 10000 });
 
     console.log(' 🚪 Pulsando botón de Cerrar Sesión en Header...');
     await logoutBtn.click();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
     const step6ModalPath = path.join(OUTPUT_DIR, 'step6-logout-modal.png');
     await page.screenshot({ path: step6ModalPath });
