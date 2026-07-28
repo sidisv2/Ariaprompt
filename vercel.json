@@ -5,6 +5,9 @@
       "schedule": "0 3 * * *"
     }
   ],
+  "build": {
+    "includeFiles": ["src/lib/**"]
+  },
   "functions": {
     "api/**/*.ts": {
       "includeFiles": "src/lib/**"
