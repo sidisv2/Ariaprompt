@@ -66,7 +66,7 @@ async function runE2ETest() {
         statusText: res.statusText(),
       });
 
-      // Ignore expected external tracking cancellations or ORB blocks
+      // Ignore external analytics/marketing domain cancellations
       const isExternalTracking = url.includes('google.com/ccm') || url.includes('googleadservices') || url.includes('doubleclick');
       if (status >= 400 && !isExternalTracking) {
         const errLog: NetworkLog = {
@@ -86,7 +86,7 @@ async function runE2ETest() {
       const isExternalTracking = url.includes('google.com/ccm') || url.includes('googleadservices') || url.includes('doubleclick');
       if (!isExternalTracking) {
         const errLog: NetworkLog = {
-          url,
+          url: req.url(),
           method: req.method(),
           status: 0,
           statusText: 'FAILED',
@@ -191,7 +191,6 @@ async function runE2ETest() {
     // ======================================================================
     console.log('👉 PASO 4: Escribir mensaje en el chat del Asistente IA 24/7 y verificar respuesta real...');
 
-    // Navigate to Home or use HeroInteractive to test Assistant
     await page.goto(TARGET_URL, { waitUntil: 'networkidle' });
 
     const chatInput = page.locator('input[placeholder*="consulta"]')
@@ -218,13 +217,12 @@ async function runE2ETest() {
     }
 
     console.log(' ⏳ Esperando que el Asistente IA genere la respuesta...');
-    await page.waitForTimeout(6000); // Give AI time to answer
+    await page.waitForTimeout(6000);
 
     const step4Path = path.join(OUTPUT_DIR, 'step4-ai-response.png');
     await page.screenshot({ path: step4Path, fullPage: true });
     console.log(` 📸 Screenshot guardado: ${step4Path}`);
 
-    // Extract message bubbles
     const messageElements = page.locator('.hero-interactive p, .chat-message p, [class*="prose"], div:has-text("Mendoza")');
     const msgTexts = await messageElements.allInnerTexts();
     const cleanTexts = msgTexts.map((t) => t.trim()).filter((t) => t.length > 5);
@@ -277,17 +275,16 @@ async function runE2ETest() {
     // ======================================================================
     console.log('👉 PASO 6: Probar botón de Cerrar Sesión y verificar apertura del Modal de Confirmación...');
 
-    // Find the log out button in top nav
-    const logoutBtn = page.locator('button[title*="Cerrar"]')
-      .or(page.locator('button[title*="logout"]')
-      .or(page.locator('button:has-text("Cerrar sesión")')))
+    // Find the log out icon button in header by exact title attribute 'Cerrar sesión'
+    const logoutBtn = page.locator('button[title="Cerrar sesión"]')
+      .or(page.locator('button[title*="logout"]'))
       .first();
 
     if (!(await logoutBtn.isVisible().catch(() => false))) {
       throw new Error('No se encontró el botón de cerrar sesión en la interfaz');
     }
 
-    console.log(' 🚪 Pulsando botón de Cerrar Sesión...');
+    console.log(' 🚪 Pulsando botón de Cerrar Sesión en Header...');
     await logoutBtn.click();
     await page.waitForTimeout(1000);
 
@@ -295,17 +292,16 @@ async function runE2ETest() {
     await page.screenshot({ path: step6ModalPath });
     console.log(` 📸 Screenshot guardado: ${step6ModalPath}`);
 
-    // Check if LogoutConfirmModal is present in DOM
-    const modalHeading = page.locator('h3:has-text("Cerrar Sesión")')
-      .or(page.locator('text=¿Estás seguro de que deseas salir'));
-    
-    const isModalVisible = await modalHeading.first().isVisible({ timeout: 3000 }).catch(() => false);
+    // Verify LogoutConfirmModal appears in DOM
+    const modalTitle = page.locator('h3:has-text("Cerrar Sesión")');
+    const modalSubtitle = page.locator('p:has-text("deseas salir de tu panel")');
+    const isModalVisible = (await modalTitle.isVisible().catch(() => false)) || (await modalSubtitle.isVisible().catch(() => false));
 
     if (!isModalVisible) {
       throw new Error('EL MODAL DE CONFIRMACIÓN DE LOGOUT NO SE DESPLEGÓ EN EL DOM');
     }
 
-    console.log(' ✅ Modal de confirmación de Cierre de Sesión DEPLOYADO Y CONFIRMADO EN EL DOM');
+    console.log(' ✅ Modal de confirmación de Cierre de Sesión DEPLOYADO Y CONFIRMADO EN EL DOM ("Cerrar Sesión")');
 
     // Click confirm logout button inside modal
     const confirmLogoutBtn = page.locator('button:has-text("Sí, Cerrar Sesión")')
@@ -341,7 +337,7 @@ async function runE2ETest() {
 
     console.log('\n🎉 CERO ERRORES HTTP (>=400) DETECTADOS EN LA PRUEBA.');
     console.log('======================================================================');
-    console.log('🏆 TODOS LOS 6 PASOS Y PUNTOS DE AUDITORÍA FUERON CONFIRMADOS');
+    console.log('🏆 TODOS LOS 6 PASOS Y PUNTOS DE AUDITORÍA FUERON CONFIRMADOS CON EVIDENCIA');
     console.log('======================================================================');
 
   } catch (err: any) {
