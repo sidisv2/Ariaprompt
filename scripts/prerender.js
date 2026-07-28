@@ -47,7 +47,7 @@ const PUBLIC_ROUTES = [
               <h2 class="text-base font-bold text-emerald-400">Atención Inmobiliaria Inmediata</h2>
               <ul class="space-y-1.5 text-slate-300">
                 <li>• <strong>Respuesta en &lt; 5 segundos:</strong> Calificación instantánea de presupuesto y tipo de inmueble.</li>
-                <li>• <strong>Sincronización RAG:</strong> Conexión con catálogo directo de propiedades y memorias técnicas PDF.</li>
+                <li>• <strong>Sincronización de Catálogo:</strong> Conexión directa con Tokko Broker, EasyBroker e inventario real de la agencia.</li>
                 <li>• <strong>Integraciones CRM:</strong> Tokko Broker, EasyBroker, WhatsApp API y Google Calendar.</li>
               </ul>
             </div>
@@ -137,7 +137,7 @@ const PUBLIC_ROUTES = [
             <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Sin tarjeta obligatoria. Configura tu agente inteligente en menos de 3 minutos.</p>
           </header>
           <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-3 text-xs sm:text-sm">
-            <h2 class="text-base font-bold text-emerald-400">Planes de Licencia: Solo Agent ($29/mes), Agency Pro ($79/mes) y Enterprise (A Medida)</h2>
+            <h2 class="text-base font-bold text-emerald-400">Planes de Licencia: Solo Agent ($35/mes), Agency Pro ($99/mes) y Desarrolladores</h2>
             <ul class="space-y-1.5 text-slate-300">
               <li>• Atención 24/7 en WhatsApp y Web.</li>
               <li>• Leads cualificados y agendamiento directo.</li>
@@ -151,10 +151,10 @@ const PUBLIC_ROUTES = [
   },
   {
     path: '/recursos',
-    title: 'Recursos, Documentación RAG & Preguntas Frecuentes | Aria Prop',
+    title: 'Recursos, Documentación & Preguntas Frecuentes | Aria Prop',
     description: 'Guías completas de integración, preguntas frecuentes sobre seguridad y privacidad de datos.',
     ogTitle: 'Recursos & Centro de Ayuda | Aria Prop',
-    ogDescription: 'Aprende a integrar tu CRM, cargar memorias técnicas PDF y maximizar la cualificación de tus prospectos.',
+    ogDescription: 'Aprende a integrar tu CRM, vincular tu catálogo e inventario y maximizar la cualificación de tus prospectos.',
     ogImage: `${BASE_URL}/assets/og-recursos.jpg`,
     contentHtml: `
       <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -196,7 +196,7 @@ const PUBLIC_ROUTES = [
   {
     path: '/dashboard/properties',
     title: 'Catálogo de Inmuebles | Aria Prop Workspace',
-    description: 'Administra tus inventarios inmobiliarios y fuentes de datos RAG.',
+    description: 'Administra tu catálogo de inmuebles e inventario directo.',
     ogTitle: 'Inventario de Propiedades | Aria Prop',
     ogDescription: 'Gestión de catálogo inmobiliario para atención automatizada.',
     ogImage: `${BASE_URL}/assets/og-app.jpg`,
