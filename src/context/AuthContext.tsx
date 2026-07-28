@@ -371,28 +371,41 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
           return { success: true };
         }
 
-        // Fallback to primary demo account if signUp limits are reached
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-          email: 'demo@ariaprop.com',
-          password: 'demo',
-        });
+        // If Supabase Auth fails or rate limits (429), fallback to local demo user session
+        const mockDemoUser: AppUser = {
+          id: `usr_demo_${demoTimestamp}_${demoRandom}`,
+          email: ephemeralDemoEmail,
+          nombre: 'Inmobiliaria Demo LATAM',
+          avatarUrl: `https://ui-avatars.com/api/?name=Demo+LATAM&background=10b981&color=fff`,
+          createdAt: new Date().toISOString(),
+          role: 'user',
+          plan: 'normal',
+        };
 
-        if (signInErr) {
-          setLoading(false);
-          return { success: false, error: signInErr.message };
-        }
-
-        if (signInData.user) {
-          await mapSupabaseUserToAppUser(signInData.user);
-        }
-
+        setUser(mockDemoUser);
+        localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(mockDemoUser));
         setAuthModalOpen(false);
         handlePostAuthAction();
         setLoading(false);
         return { success: true };
       } catch (err: any) {
+        console.warn('Supabase Auth demo error, fallback to local demo:', err);
+        const mockDemoUser: AppUser = {
+          id: `usr_demo_${demoTimestamp}_${demoRandom}`,
+          email: ephemeralDemoEmail,
+          nombre: 'Inmobiliaria Demo LATAM',
+          avatarUrl: `https://ui-avatars.com/api/?name=Demo+LATAM&background=10b981&color=fff`,
+          createdAt: new Date().toISOString(),
+          role: 'user',
+          plan: 'normal',
+        };
+
+        setUser(mockDemoUser);
+        localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, JSON.stringify(mockDemoUser));
+        setAuthModalOpen(false);
+        handlePostAuthAction();
         setLoading(false);
-        return { success: false, error: err.message || 'Error iniciando sesión de demostración' };
+        return { success: true };
       }
     } else {
       await new Promise((resolve) => setTimeout(resolve, 500));
