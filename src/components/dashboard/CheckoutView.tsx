@@ -64,18 +64,29 @@ const normalizePlanId = (planId: string) => {
   return planId;
 };
 
+const PADDLE_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
+  starter: {
+    monthly: 'pri_01kyh5xs672hj75v57tyf8mqg1',
+    annual:  'pri_01kyh5zsndbhkhswrbfmwj4xvb',
+  },
+  pro: {
+    monthly: 'pri_01kyh63dg2h0jkwvd1bh6jde47',
+    annual:  'pri_01kyh64fj85g1j12vgar9ct9yz',
+  },
+};
+
 const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }> = {
   starter: {
     monthly: 'https://mpago.la/17xmopC',
-    annual: 'https://mpago.la/29pqoZr',
+    annual:  'https://mpago.la/29pqoZr',
   },
   pro: {
     monthly: 'https://mpago.la/1UhRK7X',
-    annual: 'https://mpago.la/1z8gxgW',
+    annual:  'https://mpago.la/1z8gxgW',
   },
   agency: {
     monthly: 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.',
-    annual: 'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.',
+    annual:  'https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaPrompt.',
   },
 };
 
@@ -138,51 +149,85 @@ export function CheckoutView({ }: CheckoutViewProps) {
   const PLANS = getDynamicPlans();
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('mercadopago');
-  
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const activeCurrencyObj = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
   const activePlan = PLANS.find((p) => p.id === selectedPlanId) || PLANS[1];
-  const getOfficialPaymentLink = (planId: string) => {
+
+  /** Returns the official payment link for a given plan + billing cycle. */
+  const getOfficialPaymentLink = (planId: string, cycle: 'monthly' | 'annual' = billingCycle) => {
     const linkConfig = OFFICIAL_PAYMENT_LINKS[normalizePlanId(planId)] || OFFICIAL_PAYMENT_LINKS.pro;
-    return linkConfig[billingCycle];
+    return linkConfig[cycle];
   };
+
   const officialPaymentLink = getOfficialPaymentLink(activePlan.id);
+
+  /**
+   * Opens a Paddle checkout overlay for card/PayPal/Google Pay/Apple Pay.
+   * Falls back to opening the MP link in a new tab if Paddle is not available.
+   */
+  const openPaddleCheckout = (priceId: string, fallbackUrl: string) => {
+    try {
+      const Paddle = (window as any).Paddle;
+      if (Paddle) {
+        Paddle.Checkout.open({
+          items: [{ priceId, quantity: 1 }],
+        });
+      } else {
+        window.open(fallbackUrl, '_blank');
+      }
+    } catch {
+      window.open(fallbackUrl, '_blank');
+    }
+  };
 
   const formattedPrice = (activePlan.priceUsd * activeCurrencyObj.rate).toLocaleString('es-ES', {
     maximumFractionDigits: 0
   });
 
+  /** CTA on plan cards — goes directly to the right gateway, no intermediate modal. */
   const handleOpenCheckoutWithAuth = (planId: string) => {
-    setSelectedPlanId(normalizePlanId(planId));
+    const normId = normalizePlanId(planId);
+    setSelectedPlanId(normId);
+
     requireAuthForPayment({
       planId,
       onAuthenticated: () => {
-        window.location.href = getOfficialPaymentLink(planId);
+        if (normId === 'agency') {
+          // Enterprise/Developers: open WhatsApp
+          window.open(getOfficialPaymentLink(planId), '_blank');
+        } else if (paymentMethod === 'card' || paymentMethod === 'paypal' || paymentMethod === 'transfer') {
+          const priceId = PADDLE_PRICE_IDS[normId]?.[billingCycle] || PADDLE_PRICE_IDS.pro[billingCycle];
+          openPaddleCheckout(priceId, getOfficialPaymentLink(planId));
+        } else {
+          // Mercado Pago (default)
+          window.open(getOfficialPaymentLink(planId), '_blank');
+        }
       },
     });
   };
 
-  const handleOpenPaymentMethodWithAuth = (method: PaymentMethod) => {
-    setPaymentMethod(method);
+  /** Mercado Pago card click — opens MP link directly in new tab. */
+  const handleMercadoPago = () => {
+    setPaymentMethod('mercadopago');
     requireAuthForPayment({
       planId: selectedPlanId,
-      onAuthenticated: () => setShowCheckoutModal(true),
+      onAuthenticated: () => {
+        window.open(getOfficialPaymentLink(selectedPlanId, billingCycle), '_blank');
+      },
     });
   };
 
-  const handleSimulatePayment = () => {
-    const arsCurrency = CURRENCIES.find((c) => c.code === 'ARS');
-    const orderId = `aria-${activePlan.id}-${Date.now()}`;
-    const amount = activePlan.priceUsd * (arsCurrency?.rate || 1);
-
-    trackPurchaseConversion(orderId, amount);
-    setPaymentCompleted(true);
-    setTimeout(() => {
-      setShowCheckoutModal(false);
-      setPaymentCompleted(false);
-    }, 2500);
+  /** Card/PayPal/Transfer click — opens Paddle checkout overlay directly. */
+  const handlePaddleMethod = (method: PaymentMethod) => {
+    setPaymentMethod(method);
+    requireAuthForPayment({
+      planId: selectedPlanId,
+      onAuthenticated: () => {
+        const normId = normalizePlanId(selectedPlanId);
+        const priceId = PADDLE_PRICE_IDS[normId]?.[billingCycle] || PADDLE_PRICE_IDS.pro[billingCycle];
+        openPaddleCheckout(priceId, getOfficialPaymentLink(selectedPlanId, billingCycle));
+      },
+    });
   };
 
 
@@ -355,9 +400,9 @@ export function CheckoutView({ }: CheckoutViewProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Mercado Pago */}
+          {/* Mercado Pago — opens MP link directly in new tab */}
           <button
-            onClick={() => handleOpenPaymentMethodWithAuth('mercadopago')}
+            onClick={handleMercadoPago}
             className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
               paymentMethod === 'mercadopago'
                 ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
@@ -371,9 +416,9 @@ export function CheckoutView({ }: CheckoutViewProps) {
             </div>
           </button>
 
-          {/* Credit/Debit Card */}
+          {/* Credit/Debit Card — opens Paddle overlay */}
           <button
-            onClick={() => handleOpenPaymentMethodWithAuth('card')}
+            onClick={() => handlePaddleMethod('card')}
             className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
               paymentMethod === 'card'
                 ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
@@ -390,9 +435,9 @@ export function CheckoutView({ }: CheckoutViewProps) {
             </div>
           </button>
 
-          {/* PayPal */}
+          {/* PayPal — opens Paddle overlay */}
           <button
-            onClick={() => handleOpenPaymentMethodWithAuth('paypal')}
+            onClick={() => handlePaddleMethod('paypal')}
             className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
               paymentMethod === 'paypal'
                 ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
@@ -406,9 +451,9 @@ export function CheckoutView({ }: CheckoutViewProps) {
             </div>
           </button>
 
-          {/* Transfer Bank SPEI / PSE */}
+          {/* Transfer SPEI / PSE — opens Paddle overlay */}
           <button
-            onClick={() => handleOpenPaymentMethodWithAuth('transfer')}
+            onClick={() => handlePaddleMethod('transfer')}
             className={`p-5 rounded-2xl border text-left transition-all space-y-3 cursor-pointer ${
               paymentMethod === 'transfer'
                 ? 'bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500'
@@ -427,141 +472,6 @@ export function CheckoutView({ }: CheckoutViewProps) {
 
         </div>
       </div>
-
-      {/* Trust & Security Stamps */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
-          <ShieldCheck className="w-8 h-8 text-emerald-400 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-white">Garantía de Reembolso 14 Días</h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">Devolución completa si no estás satisfecho.</p>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
-          <RefreshCw className="w-8 h-8 text-emerald-400 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-white">Sin Contratos Ni Permanencia</h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">Cancela o cambia de plan en 1 clic.</p>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center gap-3">
-          <Headphones className="w-8 h-8 text-emerald-400 shrink-0" />
-          <div>
-            <h4 className="text-xs font-bold text-white">Soporte Prioritario VIP 24/7</h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">Atención directa por WhatsApp y teléfono.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Checkout Modal */}
-      {showCheckoutModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-zinc-900 border border-white/10 rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 relative overflow-hidden shadow-2xl">
-            
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
-              <div>
-                <span className="text-[10px] uppercase font-extrabold text-emerald-400 tracking-wider">
-                  Checkout Seguro - {activePlan.name}
-                </span>
-                <h3 className="text-lg font-bold text-white">Resumen de Suscripción</h3>
-              </div>
-              <button
-                onClick={() => setShowCheckoutModal(false)}
-                className="text-slate-400 hover:text-white text-sm font-bold p-1 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {paymentCompleted ? (
-              <div className="py-8 text-center space-y-3">
-                <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-bounce">
-                  <CheckCircle2 className="w-10 h-10" />
-                </div>
-                <h4 className="text-xl font-bold text-white">¡Suscripción Activada con Éxito!</h4>
-                <p className="text-xs text-slate-300 max-w-xs mx-auto">
-                  Tu plan <strong className="text-emerald-400">{activePlan.name}</strong> y tu agente <strong>Aria Prop</strong> están listos para atender a tus clientes.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Order Summary */}
-                <div className="bg-black/40 p-4 rounded-2xl space-y-2 border border-white/5 text-xs">
-                  <div className="flex justify-between text-slate-300">
-                    <span>Plan Seleccionado:</span>
-                    <span className="font-bold text-white">{activePlan.name}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-300">
-                    <span>Moneda Elegida:</span>
-                    <span className="font-bold text-emerald-400">{activeCurrencyObj.flag} {activeCurrencyObj.code}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-300 pt-2 border-t border-white/5 text-sm">
-                    <span className="font-bold text-white">Total a Pagar:</span>
-                    <span className="font-extrabold text-emerald-400 font-mono">
-                      {activeCurrencyObj.symbol}{formattedPrice} {activeCurrencyObj.code} / mes
-                    </span>
-                  </div>
-                </div>
-
-                {/* Selected Payment Method Details */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-3 text-xs">
-                  <div className="flex items-center gap-2 text-white font-bold">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Método: {paymentMethod === 'mercadopago' ? 'Mercado Pago Checkout' : paymentMethod === 'card' ? 'Tarjeta de Crédito / Débito' : paymentMethod === 'paypal' ? 'PayPal Express' : 'Transferencia Bancaria SPEI / PSE'}</span>
-                  </div>
-
-                  {paymentMethod === 'transfer' && (
-                    <div className="p-3 bg-black/50 rounded-xl space-y-1 font-mono text-[11px] text-slate-300 border border-white/5">
-                      <p><strong className="text-emerald-400">Banco:</strong> Banco Santander LATAM</p>
-                      <p><strong className="text-emerald-400">CLABE / SPEI (México):</strong> 012180015432987654</p>
-                      <p><strong className="text-emerald-400">CBU (Argentina):</strong> 0000003100098765432100</p>
-                      <p><strong className="text-emerald-400">Concepto:</strong> Suscripción Aria Prop - {activePlan.name}</p>
-                    </div>
-                  )}
-
-                  {/* Payment link preview */}
-                  <div className="pt-2">
-                    <label className="block text-[11px] text-slate-400 mb-1">Enlace de Pago Generado:</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        readOnly
-                        value={officialPaymentLink}
-                        className="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 font-mono text-[10px] text-emerald-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Modal Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <a
-                    href={officialPaymentLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 py-3 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <span>Abrir Pasarela Directa</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-
-                  <button
-                    onClick={handleSimulatePayment}
-                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                  >
-                    <span>Simular Pago Completado</span>
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </>
-            )}
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
