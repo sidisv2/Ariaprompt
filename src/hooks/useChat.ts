@@ -68,7 +68,7 @@ function generateClientFallbackText(message: string, context: string): string {
   }
 
   return (
-    `¡Hola! Soy Aria Promp, tu comparador inmobiliario neutral.\n\n` +
+    `¡Hola! Soy Aria Prop, tu comparador inmobiliario neutral.\n\n` +
     `¿Podrías decirme qué tipo de propiedad buscas (depto, casa), la ciudad y tu presupuesto aproximado?`
   );
 }

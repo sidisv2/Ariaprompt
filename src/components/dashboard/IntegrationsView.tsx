@@ -158,7 +158,7 @@ export const IntegrationsView: React.FC = () => {
             Conexión de CRM Partners <span className="text-slate-400 text-lg font-normal">(Tokko Broker & EasyBroker)</span>
           </h1>
           <p className="text-slate-400 text-sm mt-1 max-w-3xl">
-            Sincroniza en tiempo real el inventario de las inmobiliarias partners mediante su API Key oficial. Los inmuebles se almacenan de forma aislada y son consultados por Aria Promp en el chat comparador.
+            Sincroniza en tiempo real el inventario de las inmobiliarias partners mediante su API Key oficial. Los inmuebles se almacenan de forma aislada y son consultados por Aria Prop en el chat comparador.
           </p>
         </div>
 

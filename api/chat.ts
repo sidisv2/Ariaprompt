@@ -111,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ).join('\n');
 
     const systemPrompt = `
-Eres Aria Promp, el asistente virtual de una plataforma inmobiliaria que opera en toda América.
+Eres Aria Prop, el asistente virtual de una plataforma inmobiliaria que opera en toda América.
 
 IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
 Debes responder SIEMPRE en este idioma (${targetLangName}) desde el primer saludo y en todas tus explicaciones.
@@ -188,7 +188,7 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
       lowerMsg === 'hi'
     ) {
       responseText =
-        `¡Hola! Soy Aria Promp, el asistente virtual de la agencia.\n\n` +
+        `¡Hola! Soy Aria Prop, el asistente virtual de la agencia.\n\n` +
         `Consulto en tiempo real nuestro catálogo directo de propiedades verificadas con direcciones físicas.\n\n` +
         `Para empezar, ¿buscas comprar o alquilar, y en qué ciudad o zona estás interesado?`;
     } else if (searchResult.unmatchedLocationName) {
@@ -219,7 +219,7 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
         `¿Te gustaría ajustar el presupuesto o buscar en otra zona cercana dentro del catálogo directo?`;
     } else {
       responseText =
-        `¡Hola! Soy Aria Promp, el asistente virtual de la agencia.\n\n` +
+        `¡Hola! Soy Aria Prop, el asistente virtual de la agencia.\n\n` +
         `¿Podrías decirme qué tipo de propiedad buscas (depto, casa), si es para compra o alquiler, y en qué ciudad?`;
     }
 
