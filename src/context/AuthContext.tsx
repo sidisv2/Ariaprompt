@@ -121,6 +121,13 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
           if (data.session && mounted) {
             setSession(data.session);
             await mapSupabaseUserToAppUser(data.session.user);
+          } else if (mounted) {
+            // Fallback to local session storage (e.g. demo mode or offline session)
+            const stored = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              setUser({ ...parsed, role: 'user', plan: parsed.plan || 'normal' });
+            }
           }
         } catch (err) {
           console.warn('Supabase session load error:', err);
@@ -130,7 +137,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
           const stored = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
           if (stored && mounted) {
             const parsed = JSON.parse(stored);
-            setUser({ ...parsed, role: 'user' });
+            setUser({ ...parsed, role: 'user', plan: parsed.plan || 'normal' });
           }
         } catch (err) {
           console.warn('Error reading local mock auth session:', err);
