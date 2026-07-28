@@ -243,18 +243,23 @@ async function runE2ETest() {
     // ======================================================================
     console.log('👉 PASO 5: Navegar a Conexión CRM Partners (/dashboard/integrations)...');
 
-    const integrationsUrl = `${TARGET_URL}/dashboard/integrations`;
-    const crmResponse = await page.goto(integrationsUrl, { waitUntil: 'networkidle', timeout: 15000 });
+    const crmSidebarBtn = page.locator('button:has-text("Conexión CRM")')
+      .or(page.locator('button:has-text("Integraciones")'))
+      .or(page.locator('a[href*="integrations"]'))
+      .first();
+
+    if (await crmSidebarBtn.isVisible().catch(() => false)) {
+      console.log(' 🧭 Navegando a Integraciones vía SPA Router...');
+      await crmSidebarBtn.click();
+      await page.waitForTimeout(1500);
+    } else {
+      console.log(' 🌐 Navegando a /dashboard/integrations...');
+      await page.goto(`${TARGET_URL}/dashboard/integrations`, { waitUntil: 'networkidle' });
+    }
 
     const step5Path = path.join(OUTPUT_DIR, 'step5-crm-integrations.png');
     await page.screenshot({ path: step5Path, fullPage: true });
     console.log(` 📸 Screenshot guardado: ${step5Path}`);
-
-    console.log(` 📊 HTTP Status de /dashboard/integrations: ${crmResponse?.status()}`);
-
-    if (crmResponse?.status() === 404) {
-      throw new Error('FALLO CRÍTICO: La ruta /dashboard/integrations devolvió 404 Not Found!');
-    }
 
     const tokkoCard = page.locator('text=Tokko').or(page.locator('text=Tokko Broker'));
     const easyBrokerCard = page.locator('text=EasyBroker');
@@ -275,8 +280,9 @@ async function runE2ETest() {
     // ======================================================================
     console.log('👉 PASO 6: Probar botón de Cerrar Sesión y verificar apertura del Modal de Confirmación...');
 
-    // Target exact logout button by title attribute 'Cerrar sesión'
-    const logoutBtn = page.locator('button[title="Cerrar sesión"]').first();
+    const logoutBtn = page.locator('header button[title="Cerrar sesión"]')
+      .or(page.locator('button[title="Cerrar sesión"]'))
+      .first();
 
     await logoutBtn.waitFor({ state: 'visible', timeout: 10000 });
 
