@@ -275,11 +275,8 @@ async function runE2ETest() {
     // ======================================================================
     console.log('👉 PASO 6: Probar botón de Cerrar Sesión y verificar apertura del Modal de Confirmación...');
 
-    // Wait for user session restoration if needed
-    const logoutBtn = page.locator('button[title="Cerrar sesión"]')
-      .or(page.locator('button[title*="logout"]'))
-      .or(page.locator('header button:has(svg)'))
-      .first();
+    // Target exact logout button by title attribute 'Cerrar sesión'
+    const logoutBtn = page.locator('button[title="Cerrar sesión"]').first();
 
     await logoutBtn.waitFor({ state: 'visible', timeout: 10000 });
 
