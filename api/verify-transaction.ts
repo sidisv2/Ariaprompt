@@ -1,4 +1,3 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 function getBackendSupabaseClient() {
@@ -29,7 +28,7 @@ function getBackendSupabaseClient() {
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -42,33 +41,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { txn_id } = req.query;
-
-  if (!txn_id || typeof txn_id !== 'string' || !txn_id.trim()) {
-    return res.status(200).json({
-      verified: false,
-      reason: 'Missing transaction_id parameter',
-    });
-  }
-
-  const cleanTxnId = txn_id.trim();
-
-  if (cleanTxnId.startsWith('pdl_') || cleanTxnId.startsWith('mock_')) {
-    return res.status(200).json({
-      verified: false,
-      reason: 'Synthetic or unverified client transaction ID',
-    });
-  }
-
-  const supabase = getBackendSupabaseClient();
-  if (!supabase) {
-    return res.status(200).json({
-      verified: false,
-      reason: 'Database client unavailable',
-    });
-  }
-
   try {
+    const txn_id = req.query?.txn_id;
+
+    if (!txn_id || typeof txn_id !== 'string' || !txn_id.trim()) {
+      return res.status(200).json({
+        verified: false,
+        reason: 'Missing transaction_id parameter',
+      });
+    }
+
+    const cleanTxnId = txn_id.trim();
+
+    if (cleanTxnId.startsWith('pdl_') || cleanTxnId.startsWith('mock_')) {
+      return res.status(200).json({
+        verified: false,
+        reason: 'Synthetic or unverified client transaction ID',
+      });
+    }
+
+    const supabase = getBackendSupabaseClient();
+    if (!supabase) {
+      return res.status(200).json({
+        verified: false,
+        reason: 'Database client unavailable',
+      });
+    }
+
     const { data: transaction, error } = await supabase
       .from('payment_transactions')
       .select('*')
@@ -101,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('Error verifying transaction:', err);
     return res.status(200).json({
       verified: false,
-      reason: 'Server error during transaction verification',
+      reason: err?.message || 'Server error during transaction verification',
     });
   }
 }
