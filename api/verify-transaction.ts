@@ -1,8 +1,35 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBackendSupabaseClient } from '../src/lib/backendSupabase';
+import { createClient } from '@supabase/supabase-js';
+
+function getBackendSupabaseClient() {
+  const supabaseUrl = (
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    ''
+  ).trim();
+
+  const supabaseKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    console.warn('Backend Supabase initialization warning:', err);
+    return null;
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -26,7 +53,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const cleanTxnId = txn_id.trim();
 
-  // Reject mock or generated fallback IDs (e.g. pdl_1234567) from triggering server-side verification
   if (cleanTxnId.startsWith('pdl_') || cleanTxnId.startsWith('mock_')) {
     return res.status(200).json({
       verified: false,

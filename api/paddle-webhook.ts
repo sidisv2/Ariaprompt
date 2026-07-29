@@ -1,5 +1,33 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBackendSupabaseClient } from '../src/lib/backendSupabase';
+import { createClient } from '@supabase/supabase-js';
+
+function getBackendSupabaseClient() {
+  const supabaseUrl = (
+    process.env.VITE_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    ''
+  ).trim();
+
+  const supabaseKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+    return null;
+  }
+
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    console.warn('Backend Supabase initialization warning:', err);
+    return null;
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -21,18 +49,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const eventType = payload?.event_type || payload?.event_name || payload?.type || 'unknown';
     const data = payload?.data || payload;
 
-    // Handle transaction completion or subscription creation
     if (eventType === 'transaction.completed' || eventType === 'subscription.created' || eventType === 'subscription.updated') {
       const txnId = data?.id || data?.checkout_id || data?.transaction_id;
       const customerEmail = data?.customer?.email || data?.user_email || data?.custom_data?.email;
       const userId = data?.custom_data?.user_id || data?.custom_data?.userId;
 
-      // Extract amount & currency
       const rawAmount = data?.details?.totals?.grand_total || data?.amount || data?.total;
       const amount = typeof rawAmount === 'number' ? (rawAmount > 500 ? rawAmount / 100 : rawAmount) : 35;
       const currency = (data?.currency_code || data?.currency || 'USD').toUpperCase();
 
-      // Map price or plan ID
       const items = data?.items || [];
       const priceId = items[0]?.price?.id || '';
       let planId = 'pro';
@@ -49,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const supabase = getBackendSupabaseClient();
       if (supabase) {
-        // 1. Insert/upsert into payment_transactions
+        // 1. Insert into payment_transactions
         const { error: txErr } = await supabase.from('payment_transactions').upsert(
           {
             txn_id: txnId,
@@ -71,7 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           console.log(`✅ payment_transaction recorded: ${txnId} (${planId} - $${amount} ${currency})`);
         }
 
-        // 2. Update user profile in public.profiles if user match is found
+        // 2. Update user profile plan status
         if (userId || customerEmail) {
           let profileQuery = supabase.from('profiles').update({
             estado_cuenta: 'activo',
