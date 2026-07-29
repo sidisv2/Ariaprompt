@@ -157,3 +157,36 @@ BEGIN
 END;
 $$;
 
+-- 14. TABLA 'payment_transactions' (Registro de Pagos y Suscripciones Paddle)
+CREATE TABLE IF NOT EXISTS public.payment_transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  txn_id TEXT UNIQUE NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  customer_email TEXT,
+  plan_id TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'completed',
+  raw_event JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_txn_id ON public.payment_transactions(txn_id);
+CREATE INDEX IF NOT EXISTS idx_payment_transactions_user_id ON public.payment_transactions(user_id);
+
+ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Política RLS: Los usuarios autenticados pueden consultar exclusivamente sus propias transacciones
+CREATE POLICY "PaymentTransactions_Select_Policy" ON public.payment_transactions 
+  FOR SELECT 
+  TO authenticated 
+  USING (auth.uid() = user_id);
+
+-- Política RLS: Service Role (webhooks/backend) acceso completo para inserciones y actualizaciones
+CREATE POLICY "PaymentTransactions_ServiceRole_Policy" ON public.payment_transactions
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+
