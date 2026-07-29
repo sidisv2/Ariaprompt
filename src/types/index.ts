@@ -128,6 +128,7 @@ export type AppRoute =
   | 'terminos'
   | 'privacidad'
   | 'reembolsos'
+  | 'checkout-success'
   | 'dashboard-metrics'
   | 'dashboard-properties'
   | 'dashboard-leads'

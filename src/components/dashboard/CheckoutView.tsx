@@ -165,12 +165,24 @@ export function CheckoutView({ }: CheckoutViewProps) {
    * Opens a Paddle checkout overlay for card/PayPal/Google Pay/Apple Pay.
    * Falls back to opening the MP link in a new tab if Paddle is not available.
    */
-  const openPaddleCheckout = (priceId: string, fallbackUrl: string) => {
+  const openPaddleCheckout = (priceId: string, planId: string, fallbackUrl: string) => {
     try {
       const Paddle = (window as any).Paddle;
+      const targetPlan = PLANS.find((p) => p.id === planId) || activePlan;
+      const successUrl = `${window.location.origin}/checkout/success?txn_id={checkout_id}&plan=${planId}&amount=${targetPlan.priceUsd}&currency=USD`;
+
       if (Paddle) {
         Paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
+          settings: {
+            successUrl: successUrl,
+          },
+          eventCallback: (data: any) => {
+            if (data?.name === 'checkout.completed' || data?.event === 'Checkout.Complete') {
+              const txnId = data?.data?.id || data?.checkout?.id || `pdl_${Date.now()}`;
+              window.location.href = `${window.location.origin}/checkout/success?txn_id=${txnId}&plan=${planId}&amount=${targetPlan.priceUsd}&currency=USD`;
+            }
+          }
         });
       } else {
         window.open(fallbackUrl, '_blank');
@@ -197,7 +209,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
           window.open(getOfficialPaymentLink(planId), '_blank');
         } else if (paymentMethod === 'card' || paymentMethod === 'paypal' || paymentMethod === 'transfer') {
           const priceId = PADDLE_PRICE_IDS[normId]?.[billingCycle] || PADDLE_PRICE_IDS.pro[billingCycle];
-          openPaddleCheckout(priceId, getOfficialPaymentLink(planId));
+          openPaddleCheckout(priceId, normId, getOfficialPaymentLink(planId));
         } else {
           // Mercado Pago (default)
           window.open(getOfficialPaymentLink(planId), '_blank');
@@ -225,7 +237,7 @@ export function CheckoutView({ }: CheckoutViewProps) {
       onAuthenticated: () => {
         const normId = normalizePlanId(selectedPlanId);
         const priceId = PADDLE_PRICE_IDS[normId]?.[billingCycle] || PADDLE_PRICE_IDS.pro[billingCycle];
-        openPaddleCheckout(priceId, getOfficialPaymentLink(selectedPlanId, billingCycle));
+        openPaddleCheckout(priceId, normId, getOfficialPaymentLink(selectedPlanId, billingCycle));
       },
     });
   };

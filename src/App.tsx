@@ -23,6 +23,7 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('terminos') || path.includes('terms')) return 'terminos';
   if (path.includes('privacidad') || path.includes('privacy')) return 'privacidad';
   if (path.includes('reembolsos') || path.includes('refund')) return 'reembolsos';
+  if (path.includes('checkout/success') || path.includes('gracias')) return 'checkout-success';
   if (path.includes('comparar/manual')) return 'comparar-manual';
   if (path.includes('comparar/crm')) return 'comparar-crm';
   if (path.includes('comparar/chatbots')) return 'comparar-chatbots';
@@ -50,6 +51,7 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'terminos': return '/terminos';
     case 'privacidad': return '/privacidad';
     case 'reembolsos': return '/reembolsos';
+    case 'checkout-success': return '/checkout/success';
     case 'comparar-manual': return '/comparar/manual';
     case 'comparar-crm': return '/comparar/crm';
     case 'comparar-chatbots': return '/comparar/chatbots';

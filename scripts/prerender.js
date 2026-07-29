@@ -236,6 +236,22 @@ const PUBLIC_ROUTES = [
     `,
   },
   {
+    path: '/checkout/success',
+    title: '¡Suscripción Activada Con Éxito! | Aria Prop AI',
+    description: 'Confirmación de pago de suscripción en Aria Prop. Tu Asistente IA Comercial está listo.',
+    ogTitle: '¡Pago Confirmado! | Aria Prop',
+    ogDescription: 'Confirmación de suscripción activa y acceso al Workspace Inmobiliario.',
+    ogImage: `${BASE_URL}/assets/og-home.jpg`,
+    contentHtml: `
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-4xl mx-auto px-4 py-8 space-y-6 text-center">
+          <h1 class="text-3xl font-black text-white">¡Suscripción Activada Con Éxito!</h1>
+          <p class="text-slate-300">Gracias por contratar Aria Prop. Tu plan está activo y listo para usar en tu Workspace.</p>
+        </main>
+      </div>
+    `,
+  },
+  {
     path: '/dashboard/integrations',
     title: 'Conexión de CRM (Tokko Broker & EasyBroker) | Aria Prop Workspace',
     description: 'Conecta tu catálogo de propiedades directamente desde Tokko Broker o EasyBroker con la IA 24/7 de Aria Prop.',

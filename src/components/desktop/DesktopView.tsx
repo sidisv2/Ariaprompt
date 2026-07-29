@@ -26,6 +26,7 @@ import { RecursosPage } from '../pages/RecursosPage';
 import { TerminosPage } from '../pages/TerminosPage';
 import { PrivacidadPage } from '../pages/PrivacidadPage';
 import { ReembolsosPage } from '../pages/ReembolsosPage';
+import { CheckoutSuccessPage } from '../pages/CheckoutSuccessPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
@@ -165,6 +166,10 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
       ) : currentRoute === 'reembolsos' ? (
         <main className="flex-1 animate-page-fade">
           <ReembolsosPage onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'checkout-success' ? (
+        <main className="flex-1 animate-page-fade">
+          <CheckoutSuccessPage onRouteChange={onRouteChange} />
         </main>
       ) : currentRoute === 'comparar-manual' ? (
         <main className="flex-1 animate-page-fade">
