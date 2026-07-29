@@ -27,6 +27,9 @@ import { EmbedChatWidget } from '../embed/EmbedChatWidget';
 import { ProductoPage } from '../pages/ProductoPage';
 import { SolucionesPage } from '../pages/SolucionesPage';
 import { RecursosPage } from '../pages/RecursosPage';
+import { TerminosPage } from '../pages/TerminosPage';
+import { PrivacidadPage } from '../pages/PrivacidadPage';
+import { ReembolsosPage } from '../pages/ReembolsosPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
@@ -106,7 +109,19 @@ export const MobileView: React.FC<MobileViewProps> = ({
         ) : currentRoute === 'recursos' ? (
           <div>
             <RecursosPage onRouteChange={onRouteChange} />
-            <Footer />
+            <Footer onRouteChange={onRouteChange} />
+          </div>
+        ) : currentRoute === 'terminos' ? (
+          <div>
+            <TerminosPage onRouteChange={onRouteChange} />
+          </div>
+        ) : currentRoute === 'privacidad' ? (
+          <div>
+            <PrivacidadPage onRouteChange={onRouteChange} />
+          </div>
+        ) : currentRoute === 'reembolsos' ? (
+          <div>
+            <ReembolsosPage onRouteChange={onRouteChange} />
           </div>
         ) : currentRoute === 'embed-preview' ? (
           <div className="p-4 space-y-4 text-center">

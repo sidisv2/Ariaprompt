@@ -176,6 +176,66 @@ const PUBLIC_ROUTES = [
     `,
   },
   {
+    path: '/terminos',
+    title: 'Términos de Servicio | Aria Prop AI',
+    description: 'Términos y condiciones de uso de la plataforma de IA inmobiliaria Aria Prop. Procesamiento de facturación vía Paddle.',
+    ogTitle: 'Términos de Servicio | Aria Prop',
+    ogDescription: 'Condiciones de servicio y modelo de facturación B2B procesado por Paddle.com.',
+    ogImage: `${BASE_URL}/assets/og-home.jpg`,
+    contentHtml: `
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+          <h1 class="text-3xl font-black text-white">Términos de Servicio</h1>
+          <p class="text-slate-300">Términos de uso de la plataforma Aria Prop. Las suscripciones son facturadas y procesadas de forma segura a través de Paddle.com (nuestro Merchant of Record).</p>
+          <div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
+            <h2 class="text-lg font-bold text-emerald-400">Facturación & Paddle</h2>
+            <p class="text-slate-300">Nuestros procesos de pedido y pago son gestionados por Paddle.com Market Ltd, que actúa como el comerciante registrado autorizado.</p>
+          </div>
+        </main>
+      </div>
+    `,
+  },
+  {
+    path: '/privacidad',
+    title: 'Política de Privacidad | Aria Prop AI',
+    description: 'Política de privacidad, resguardo de datos de inventario inmobiliario y cifrado SSL/TLS 256-bit.',
+    ogTitle: 'Política de Privacidad | Aria Prop',
+    ogDescription: 'Aislamiento de RLS por agencia en Supabase y procesamiento seguro vía Paddle.',
+    ogImage: `${BASE_URL}/assets/og-home.jpg`,
+    contentHtml: `
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+          <h1 class="text-3xl font-black text-white">Política de Privacidad</h1>
+          <p class="text-slate-300">Resguardo privado de datos, cifrado SSL/TLS 256-bit y políticas de Row Level Security (RLS) por agencia.</p>
+          <div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
+            <h2 class="text-lg font-bold text-emerald-400">Protección de Datos & Pagos</h2>
+            <p class="text-slate-300">Los datos de facturación son procesados directamente por Paddle.com. Aria Prop no almacena números de tarjeta completos.</p>
+          </div>
+        </main>
+      </div>
+    `,
+  },
+  {
+    path: '/reembolsos',
+    title: 'Política de Reembolso & Cancelación | Aria Prop AI',
+    description: 'Garantía de reembolso de 14 días y cancelación de suscripción en 1 clic procesada por Paddle.',
+    ogTitle: 'Política de Reembolso | Aria Prop',
+    ogDescription: 'Garantía de devolución de 14 días y cancelación sin comisiones ni cargos adicionales.',
+    ogImage: `${BASE_URL}/assets/og-home.jpg`,
+    contentHtml: `
+      <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+        <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
+          <h1 class="text-3xl font-black text-white">Política de Reembolso y Cancelación</h1>
+          <p class="text-slate-300">Garantía de reembolso de 14 días. Reembolsos procesados automáticamente por Paddle.com hacia su medio de pago original.</p>
+          <div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
+            <h2 class="text-lg font-bold text-emerald-400">Cancelación Transparente</h2>
+            <p class="text-slate-300">Cancele en cualquier momento desde su panel sin penalizaciones. Para solicitar un reembolso, escriba a pagos@ariaprop.online.</p>
+          </div>
+        </main>
+      </div>
+    `,
+  },
+  {
     path: '/dashboard/integrations',
     title: 'Conexión de CRM (Tokko Broker & EasyBroker) | Aria Prop Workspace',
     description: 'Conecta tu catálogo de propiedades directamente desde Tokko Broker o EasyBroker con la IA 24/7 de Aria Prop.',

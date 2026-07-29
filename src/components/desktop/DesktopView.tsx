@@ -23,6 +23,9 @@ import { FAQ } from '../FAQ/FAQ';
 import { ProductoPage } from '../pages/ProductoPage';
 import { SolucionesPage } from '../pages/SolucionesPage';
 import { RecursosPage } from '../pages/RecursosPage';
+import { TerminosPage } from '../pages/TerminosPage';
+import { PrivacidadPage } from '../pages/PrivacidadPage';
+import { ReembolsosPage } from '../pages/ReembolsosPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
@@ -150,6 +153,18 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         <main className="flex-1 animate-page-fade">
           <RecursosPage onRouteChange={onRouteChange} />
           <Footer onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'terminos' ? (
+        <main className="flex-1 animate-page-fade">
+          <TerminosPage onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'privacidad' ? (
+        <main className="flex-1 animate-page-fade">
+          <PrivacidadPage onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'reembolsos' ? (
+        <main className="flex-1 animate-page-fade">
+          <ReembolsosPage onRouteChange={onRouteChange} />
         </main>
       ) : currentRoute === 'comparar-manual' ? (
         <main className="flex-1 animate-page-fade">
