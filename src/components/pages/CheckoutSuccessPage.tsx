@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { AppRoute } from '../../types';
-import { CheckCircle2, ShieldCheck, ArrowRight, Zap, Building, Sparkles } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, ArrowRight, Building, Sparkles, AlertTriangle } from 'lucide-react';
 import { trackPurchaseConversion } from '../../lib/analytics';
 import { PLAN_LIMITS } from '../../lib/planLimits';
 import { Footer } from '../marketing/Footer';
@@ -19,7 +19,7 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ onRout
   const [planId, setPlanId] = useState<string>('pro');
   const [amount, setAmount] = useState<number>(99);
   const [currency, setCurrency] = useState<string>('USD');
-  const [conversionStatus, setConversionStatus] = useState<'fired' | 'already_fired' | 'no_txn'>('no_txn');
+  const [verificationState, setVerificationState] = useState<'verifying' | 'verified' | 'unverified'>('verifying');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -37,39 +37,47 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ onRout
     const normPlan = rawPlan === 'solo_agent' ? 'solo' : rawPlan === 'agency_pro' ? 'pro' : rawPlan;
     const planConfig = PLAN_LIMITS[normPlan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.pro;
 
-    const rawAmount = parseFloat(urlParams.get('amount') || '0');
-    const finalAmount = rawAmount > 0 ? rawAmount : planConfig.monthlyPriceUsd;
-    const rawCurrency = (urlParams.get('currency') || 'USD').toUpperCase();
-
     setPlanId(normPlan);
-    setAmount(finalAmount);
-    setCurrency(rawCurrency);
+    setAmount(planConfig.monthlyPriceUsd);
 
-    if (!txnId) {
-      console.log('ℹ️ CheckoutSuccessPage: No transaction ID found in URL params. Conversion event suppressed.');
-      setConversionStatus('no_txn');
+    if (!txnId || txnId.startsWith('pdl_') || txnId.startsWith('mock_')) {
+      console.log('🔒 CheckoutSuccessPage: Missing or synthetic transaction ID. Conversion tracking disabled to prevent fake Ads data.');
+      setVerificationState('unverified');
       return;
     }
 
     setTransactionId(txnId);
 
-    // CONDITION 1: Check localStorage deduplication
-    const dedupeKey = `ads_conversion_fired_${txnId}`;
-    const alreadyFired = localStorage.getItem(dedupeKey);
+    // Call server-side verification endpoint (/api/verify-transaction)
+    fetch(`/api/verify-transaction?txn_id=${encodeURIComponent(txnId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.verified === true) {
+          setVerificationState('verified');
+          setAmount(data.amount || planConfig.monthlyPriceUsd);
+          setCurrency(data.currency || 'USD');
 
-    if (alreadyFired) {
-      console.log(`ℹ️ CheckoutSuccessPage: Conversion event for transaction "${txnId}" was already fired previously. Suppressing duplicate.`);
-      setConversionStatus('already_fired');
-      return;
-    }
+          // CONDITION 1: Deduplication via localStorage check
+          const dedupeKey = `ads_conversion_fired_${txnId}`;
+          const alreadyFired = localStorage.getItem(dedupeKey);
 
-    // Set deduplication flag before calling gtag to prevent race conditions
-    localStorage.setItem(dedupeKey, 'true');
+          if (alreadyFired) {
+            console.log(`ℹ️ CheckoutSuccessPage: Conversion event for verified transaction "${txnId}" was already fired. Suppressing duplicate.`);
+            return;
+          }
 
-    // Fire Google Ads conversion tracking event
-    trackPurchaseConversion(txnId, finalAmount);
-    setConversionStatus('fired');
-    console.log(`🎯 CheckoutSuccessPage: Google Ads conversion event fired successfully for transaction "${txnId}" with value ${finalAmount} ${rawCurrency}.`);
+          localStorage.setItem(dedupeKey, 'true');
+          trackPurchaseConversion(txnId, data.amount || planConfig.monthlyPriceUsd);
+          console.log(`🎯 CheckoutSuccessPage: SERVER-VERIFIED conversion event fired for "${txnId}": ${data.amount} ${data.currency}`);
+        } else {
+          console.log(`🔒 CheckoutSuccessPage: Transaction "${txnId}" not server-verified (${data?.reason || 'unconfirmed'}). Google Ads conversion event suppressed.`);
+          setVerificationState('unverified');
+        }
+      })
+      .catch((err) => {
+        console.warn('⚠️ CheckoutSuccessPage: Verification request failed:', err);
+        setVerificationState('unverified');
+      });
   }, []);
 
   const planName = PLAN_LIMITS[planId as keyof typeof PLAN_LIMITS]?.name || 'Agency Pro';
@@ -129,8 +137,8 @@ export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ onRout
                 <span className="text-slate-200 font-mono text-xs block break-all">{transactionId}</span>
               </div>
             ) : (
-              <div className="bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20 text-amber-300 text-[11px] sm:col-span-2">
-                <span>{isEn ? 'Note: Access active in workspace.' : 'Nota: Tu acceso está habilitado en tu espacio de trabajo.'}</span>
+              <div className="bg-slate-950/60 p-4 rounded-2xl border border-white/5 space-y-1 sm:col-span-2 text-slate-400 text-xs">
+                <span>{isEn ? 'Acceso activo en tu workspace.' : 'Tu acceso está habilitado en tu espacio de trabajo.'}</span>
               </div>
             )}
           </div>
