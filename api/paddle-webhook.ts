@@ -60,7 +60,6 @@ function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boole
 
   const webhookSecret = process.env.PADDLE_WEBHOOK_SECRET_KEY || '';
 
-  // If secret is configured in env vars, perform crypto HMAC SHA256 verification
   if (webhookSecret) {
     try {
       const signedPayload = `${ts}:${rawBody}`;
@@ -69,13 +68,16 @@ function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boole
         .update(signedPayload)
         .digest('hex');
 
-      return crypto.timingSafeEqual(Buffer.from(h), Buffer.from(expectedHash));
+      const bufH = Buffer.from(h, 'utf8');
+      const bufExp = Buffer.from(expectedHash, 'utf8');
+      if (bufH.length !== bufExp.length) return false;
+
+      return crypto.timingSafeEqual(bufH, bufExp);
     } catch {
       return false;
     }
   }
 
-  // If secret is not set yet in env vars, reject any synthetic/invalid hashes
   if (h === 'invalid_signature' || h.length < 10) {
     return false;
   }
