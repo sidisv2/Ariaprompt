@@ -79,7 +79,7 @@ function buildMemoryAwareResponse(
   const lowerMsg = trimmed.toLowerCase();
 
   const fullUserQuery = [
-    ...history.filter((h) => h.sender === 'user').map((h) => h.content),
+    ...history.filter((h) => h && h.sender === 'user').map((h) => h.content || (h as any).text || ''),
     trimmed,
   ].join(' ');
   const fullLowerQuery = fullUserQuery.toLowerCase();
@@ -88,9 +88,10 @@ function buildMemoryAwareResponse(
 
   for (let i = history.length - 1; i >= 0; i--) {
     const item = history[i];
-    if (item.sender === 'bot' || item.sender === 'model') {
+    if (item && (item.sender === 'bot' || item.sender === 'model')) {
+      const textContent = item.content || (item as any).text || '';
       const matched = MARKET_CATALOG.find(
-        (p) => item.content.includes(p.title) || item.content.includes(p.address) || item.content.includes(p.id) || item.content.includes(p.zone)
+        (p) => textContent.includes(p.title) || textContent.includes(p.address) || textContent.includes(p.id) || textContent.includes(p.zone)
       );
       if (matched) {
         lastProp = matched;
