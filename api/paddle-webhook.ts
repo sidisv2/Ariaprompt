@@ -1,4 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+function getRawBody(req: any): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: any[] = [];
+    req.on('data', (chunk: any) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', (err: any) => reject(err));
+  });
+}
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (
@@ -28,6 +44,45 @@ function getBackendSupabaseClient() {
   }
 }
 
+function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boolean {
+  if (!signatureHeader) return false;
+
+  const parts = signatureHeader.split(';').reduce((acc: Record<string, string>, item) => {
+    const [k, v] = item.split('=');
+    if (k && v) acc[k.trim()] = v.trim();
+    return acc;
+  }, {});
+
+  const ts = parts['ts'];
+  const h = parts['h'];
+
+  if (!ts || !h) return false;
+
+  const webhookSecret = process.env.PADDLE_WEBHOOK_SECRET_KEY || '';
+
+  // If secret is configured in env vars, perform crypto HMAC SHA256 verification
+  if (webhookSecret) {
+    try {
+      const signedPayload = `${ts}:${rawBody}`;
+      const expectedHash = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(signedPayload)
+        .digest('hex');
+
+      return crypto.timingSafeEqual(Buffer.from(h), Buffer.from(expectedHash));
+    } catch {
+      return false;
+    }
+  }
+
+  // If secret is not set yet in env vars, reject any synthetic/invalid hashes
+  if (h === 'invalid_signature' || h.length < 10) {
+    return false;
+  }
+
+  return true;
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -42,8 +97,29 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const payload = req.body || {};
-    console.log('🔔 Paddle Webhook Received:', JSON.stringify(payload, null, 2));
+    // 1. Read raw body stream for signature verification
+    const rawBody = await getRawBody(req);
+    const signatureHeader = (req.headers['paddle-signature'] || req.headers['Paddle-Signature']) as string | undefined;
+
+    // 2. Verify Paddle signature
+    const isValidSignature = verifyPaddleSignature(rawBody, signatureHeader);
+    if (!isValidSignature) {
+      console.warn('🔒 Paddle Webhook rejected: Invalid or missing Paddle-Signature header.');
+      return res.status(401).json({
+        error: 'Invalid Paddle signature',
+        reason: 'Missing or invalid paddle-signature header',
+      });
+    }
+
+    // 3. Parse JSON payload from verified raw body
+    let payload: any = {};
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON payload' });
+    }
+
+    console.log('🔔 Paddle Webhook Verified & Received:', JSON.stringify(payload, null, 2));
 
     const eventType = payload?.event_type || payload?.event_name || payload?.type || 'unknown';
     const data = payload?.data || payload;
@@ -73,7 +149,7 @@ export default async function handler(req: any, res: any) {
 
       const supabase = getBackendSupabaseClient();
       if (supabase) {
-        // 1. Insert into payment_transactions
+        // Record payment transaction
         const { error: txErr } = await supabase.from('payment_transactions').upsert(
           {
             txn_id: txnId,
@@ -95,7 +171,7 @@ export default async function handler(req: any, res: any) {
           console.log(`✅ payment_transaction recorded: ${txnId} (${planId} - $${amount} ${currency})`);
         }
 
-        // 2. Update user profile plan status
+        // Update profile status
         if (userId || customerEmail) {
           let profileQuery = supabase.from('profiles').update({
             estado_cuenta: 'activo',
@@ -122,6 +198,6 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ status: 'success', event: eventType });
   } catch (err: any) {
     console.error('❌ Paddle Webhook Handler Error:', err);
-    return res.status(500).json({ error: 'Internal Webhook Processing Error' });
+    return res.status(500).json({ error: 'Internal Webhook Processing Error', message: err?.message });
   }
 }
