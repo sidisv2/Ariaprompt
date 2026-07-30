@@ -38,10 +38,7 @@ import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
 import { DiscountOfferModal } from '../common/DiscountOfferModal';
-import { RoiSavingsCalculatorSection } from '../marketing/RoiSavingsCalculatorSection';
-import { ComparisonPage } from '../pages/ComparisonPage';
-import { useAuth } from '../../context/AuthContext';
-import { Tag, Sparkles } from 'lucide-react';
+import { RestructuredLandingPage } from '../marketing/RestructuredLandingPage';
 
 interface DesktopViewProps {
   currentRoute: AppRoute;
@@ -201,55 +198,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         </main>
       ) : (
         <main className="flex-1 animate-page-fade">
-          {/* Section 1: Hero con Asistente Interactivo Cloudairy & Sequencia Animada */}
-          <HeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
-
-          {/* Section 2: Barra de Confianza / Ecosistema Inmobiliario */}
-          <TechStackBanner />
-
-          {/* Section 3: Caso de Uso Narrativo de Principio a Fin */}
-          <RealUseCaseNarrative />
-
-          {/* Section 4: Comparativa Sin Aria vs Con Aria */}
-          <ComparisonSection />
-
-          {/* Section 5: ¿Por qué Aria y no ChatGPT o CRM tradicional? */}
-          <WhyAriaSection />
-
-          {/* Section 6: Sección de Problema (Agitación de Dolor) */}
-          <ProblemSection />
-
-          {/* Section 7: Calculadora Interactiva de Ahorro / Pérdidas de Leads */}
-          <RoiSavingsCalculatorSection onRouteChange={onRouteChange} />
-
-          {/* Section 8: Cómo Funciona (Flujo en 4 Pasos) */}
-          <HowItWorksSection />
-
-          {/* Section 9: Funcionalidades Clave (Bento Grid) */}
-          <BentoGridFeatures />
-
-          {/* Section 10: Demo Interactiva */}
-          <InteractiveDemoSection />
-
-          {/* Section 11: Sellos de Confianza y Seguridad Enterprise */}
-          <TrustSecuritySection />
-
-          {/* Section 12: Integraciones (WhatsApp, Calendar, CRMs, Portales) */}
-          <IntegrationsSection />
-
-          {/* Section 13: Precios / Cotización */}
-          <PricingSection onRouteChange={onRouteChange} />
-
-          {/* Section 14: Arquitectura y Stack Técnico */}
-          <TechStackSection />
-
-          {/* Section 15: Preguntas Frecuentes (FAQ) */}
-          <FAQ />
-
-          {/* Section 16: CTA Final de Cierre */}
-          <FinalCtaSection />
-
-          {/* Section 17: Footer Completo */}
+          <RestructuredLandingPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
           <Footer onRouteChange={onRouteChange} />
         </main>
       )}

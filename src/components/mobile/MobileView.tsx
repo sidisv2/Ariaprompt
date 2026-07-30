@@ -36,8 +36,7 @@ import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
 import { TechStackSection } from '../marketing/TechStackSection';
 import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
-import { IntegrationsSection } from '../marketing/IntegrationsSection';
-import { FinalCtaSection } from '../marketing/FinalCtaSection';
+import { RestructuredLandingPage } from '../marketing/RestructuredLandingPage';
 
 interface MobileViewProps {
   currentRoute: AppRoute;
@@ -142,54 +141,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <Footer />
           </div>
         ) : (
-          <div className="space-y-8 animate-page-fade">
-            {/* Section 2: Mobile Hero */}
-            <MobileHeroSection sampleProperties={properties} onRouteChange={onRouteChange} />
-
-            {/* Section 2: Banner de Stack e Integraciones */}
-            <TechStackBanner />
-
-            {/* Section 3: Caso de Uso Narrativo */}
-            <RealUseCaseNarrative />
-
-            {/* Section 4: Comparativa Sin Aria vs Con Aria */}
-            <ComparisonSection />
-
-            {/* Section 5: ¿Por qué Aria y no ChatGPT o CRM tradicional? */}
-            <WhyAriaSection />
-
-            {/* Section 6: Sección de Problema */}
-            <ProblemSection />
-
-            {/* Section 7: Cómo Funciona (4 Pasos) */}
-            <HowItWorksSection />
-
-            {/* Section 8: Funcionalidades Clave */}
-            <BentoGridFeatures />
-
-            {/* Section 9: Demo Interactiva */}
-            <InteractiveDemoSection />
-
-            {/* Section 10: Sellos de Confianza y Seguridad */}
-            <TrustSecuritySection />
-
-            {/* Section 10: Integraciones */}
-            <IntegrationsSection />
-
-            {/* Section 11: Precios / Cotización */}
-            <MobilePricingSection onRouteChange={onRouteChange} />
-
-            {/* Section 12: Arquitectura y Stack Técnico */}
-            <TechStackSection />
-
-            {/* Section 13: Preguntas Frecuentes (FAQ) */}
-            <FAQ />
-
-            {/* Section 13: CTA Final de Cierre */}
-            <FinalCtaSection />
-
-            {/* Section 14: Footer Completo */}
-            <Footer />
+          <div className="space-y-4 animate-page-fade">
+            <RestructuredLandingPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
+            <Footer onRouteChange={onRouteChange} />
           </div>
         )}
       </main>
