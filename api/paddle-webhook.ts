@@ -64,7 +64,7 @@ function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boole
     return false;
   }
 
-  // Parse ts and h parameters from header
+  // Parse ts and hash (h1 or h) parameters from header
   const parts = signatureHeader.split(';').reduce((acc: Record<string, string>, item) => {
     const [k, v] = item.split('=');
     if (k && v) acc[k.trim()] = v.trim();
@@ -72,10 +72,10 @@ function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boole
   }, {});
 
   const ts = parts['ts'];
-  const h = parts['h'];
+  const h = parts['h1'] || parts['h'];
 
   if (!ts || !h) {
-    console.warn('🔒 Paddle Webhook Rejected: Malformed Paddle-Signature header.');
+    console.warn('🔒 Paddle Webhook Rejected: Malformed Paddle-Signature header (missing ts or h1).');
     return false;
   }
 
