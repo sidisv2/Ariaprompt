@@ -181,8 +181,10 @@ const INITIAL_PARTNER_PROPERTIES: PartnerProperty[] = [
 // Helper Functions to Load & Save Connections
 export function getSavedCrmConnections(): CrmConnection[] {
   try {
-    const raw = localStorage.getItem(CONNECTIONS_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(CONNECTIONS_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    }
   } catch (e) {
     console.error('Error reading saved CRM connections:', e);
   }
@@ -191,7 +193,9 @@ export function getSavedCrmConnections(): CrmConnection[] {
 
 export function saveCrmConnections(connections: CrmConnection[]): void {
   try {
-    localStorage.setItem(CONNECTIONS_STORAGE_KEY, JSON.stringify(connections));
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(CONNECTIONS_STORAGE_KEY, JSON.stringify(connections));
+    }
   } catch (e) {
     console.error('Error saving CRM connections:', e);
   }

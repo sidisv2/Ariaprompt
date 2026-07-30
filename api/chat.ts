@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { INITIAL_BOT_CONFIG } from '../src/data/mockData';
 import {
@@ -82,6 +83,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...finalData,
       });
     }
+  };
+
   try {
     let body = req.body || {};
     if (typeof body === 'string') {
@@ -112,16 +115,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       '';
     const cleanApiKey = rawKey.replace(/^["']|["']$/g, '').trim();
 
-    let ai: any = null;
+    let ai: GoogleGenAI | null = null;
     if (cleanApiKey) {
       try {
-        const genAiModule = await import('@google/genai');
-        const GoogleGenAI = genAiModule.GoogleGenAI;
-        if (GoogleGenAI) {
-          ai = new GoogleGenAI({ apiKey: cleanApiKey });
-        }
+        ai = new GoogleGenAI({ apiKey: cleanApiKey });
       } catch (err) {
-        console.error('GoogleGenAI Dynamic Import Error:', err);
+        console.error('GoogleGenAI Initialization Error:', err);
         ai = null;
       }
     }
