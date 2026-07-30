@@ -1,6 +1,22 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { PLAN_LIMITS, PlanTier, PlanLimits } from '../src/lib/planLimits';
+type PlanTier = 'normal' | 'solo' | 'pro' | 'desarrolladores';
+
+interface PlanLimits {
+  id: PlanTier;
+  name: string;
+  maxAgents: number;
+  maxLeadsPerMonth: number;
+  maxProperties: number;
+  crmSyncEnabled: boolean;
+}
+
+const PLAN_LIMITS: Record<string, PlanLimits> = {
+  normal: { id: 'normal', name: 'Gratuito', maxAgents: 1, maxLeadsPerMonth: 5, maxProperties: 3, crmSyncEnabled: false },
+  solo: { id: 'solo', name: 'Solo Agent', maxAgents: 1, maxLeadsPerMonth: 100, maxProperties: 20, crmSyncEnabled: false },
+  pro: { id: 'pro', name: 'Agency Pro', maxAgents: 5, maxLeadsPerMonth: 500, maxProperties: 100, crmSyncEnabled: true },
+  desarrolladores: { id: 'desarrolladores', name: 'Desarrolladores', maxAgents: 999999, maxLeadsPerMonth: 999999, maxProperties: 999999, crmSyncEnabled: true },
+};
 
 function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefined): PlanTier {
   if (!estadoCuenta) return 'normal';
@@ -14,7 +30,7 @@ function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefined): Pla
 }
 
 function getPlanLimits(tier: PlanTier | null | undefined): PlanLimits {
-  return PLAN_LIMITS[tier ?? 'normal'];
+  return PLAN_LIMITS[tier ?? 'normal'] || PLAN_LIMITS.normal;
 }
 
 /**

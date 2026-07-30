@@ -1,6 +1,38 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getBackendSupabaseClient } from '../src/lib/backendSupabase';
-import { getPlanLimits, getCurrentPeriod } from '../src/lib/planLimits';
+import { createClient } from '@supabase/supabase-js';
+
+function getBackendSupabaseClient() {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
+    return null;
+  }
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    return null;
+  }
+}
+
+const PLAN_LIMITS: Record<string, { name: string; maxLeadsPerMonth: number; maxProperties: number }> = {
+  normal: { name: 'Gratuito', maxLeadsPerMonth: 5, maxProperties: 3 },
+  solo: { name: 'Solo Agent', maxLeadsPerMonth: 100, maxProperties: 20 },
+  pro: { name: 'Agency Pro', maxLeadsPerMonth: 500, maxProperties: 100 },
+  desarrolladores: { name: 'Desarrolladores', maxLeadsPerMonth: 999999, maxProperties: 999999 },
+};
+
+function getPlanLimits(tier?: string | null) {
+  const key = (tier || 'normal').toLowerCase();
+  return PLAN_LIMITS[key] || PLAN_LIMITS.normal;
+}
+
+function getCurrentPeriod(date: Date = new Date()): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,7 +46,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const agencyId = (req.query.agency_id as string) || (req.headers['x-agency-id'] as string);
 
   if (!supabase || !agencyId) {
-    // Return default plan limits info for unauthenticated or memory mode
     const defaultLimits = getPlanLimits('normal');
     return res.status(200).json({
       success: true,
@@ -35,7 +66,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const period = getCurrentPeriod();
 
-    // 1. Fetch profile to get plan_id
     const { data: profile } = await supabase
       .from('profiles')
       .select('plan_id')
@@ -44,7 +74,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const planLimits = getPlanLimits(profile?.plan_id);
 
-    // 2. Fetch usage_records for this month's leads_count
     const { data: usageRec } = await supabase
       .from('usage_records')
       .select('leads_count')
@@ -54,7 +83,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const leadsCount = usageRec?.leads_count || 0;
 
-    // 3. Fetch active properties_count
     const { count: propertiesCount } = await supabase
       .from('propiedades')
       .select('id', { count: 'exact', head: true })

@@ -5,7 +5,22 @@ import {
   searchMultiSourceRealEstate,
   MARKET_REAL_ESTATE_DATABASE,
 } from '../src/lib/multiSourceRealEstateEngine';
-import { getBackendSupabaseClient } from '../src/lib/backendSupabase';
+import { createClient } from '@supabase/supabase-js';
+
+function getBackendSupabaseClient() {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
+    return null;
+  }
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    return null;
+  }
+}
 
 // Function Calling Tool Definition for Real Estate Search
 export const buscarPropiedadesToolDeclaration = {
