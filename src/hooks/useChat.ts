@@ -6,9 +6,18 @@ import {
   SearchEngineResult,
 } from '../lib/multiSourceRealEstateEngine';
 
-function generateClientFallbackText(message: string, context: string): string {
+function generateClientFallbackText(
+  message: string,
+  context: string,
+  history: { sender: string; content: string }[] = []
+): string {
   const trimmed = message.trim();
   const lowerMsg = trimmed.toLowerCase();
+
+  const fullUserQuery = [
+    ...history.filter((h) => h.sender === 'user').map((h) => h.content),
+    trimmed,
+  ].join(' ');
 
   if (
     lowerMsg === 'hola' ||
@@ -25,45 +34,44 @@ function generateClientFallbackText(message: string, context: string): string {
     );
   }
 
-  const searchResult: SearchEngineResult = searchMultiSourceRealEstate(trimmed);
+  const searchResult: SearchEngineResult = searchMultiSourceRealEstate(fullUserQuery);
 
-  if (searchResult.unmatchedLocationName) {
-    return (
-      `Revisé en mis fuentes integradas y actualmente no tengo publicaciones verificadas activas en **${searchResult.unmatchedLocationName}**.\n\n` +
-      `Cuento con opciones disponibles en **Mendoza**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
-      `¿Te gustaría explorar alguna de estas ciudades o prefieres que un asesor busque algo puntual en ${searchResult.unmatchedLocationName}?`
-    );
-  }
+  const isAskingArea = lowerMsg.includes('metro') || lowerMsg.includes('m2') || lowerMsg.includes('superficie') || lowerMsg.includes('calle') || lowerMsg.includes('queda') || lowerMsg.includes('direccion') || lowerMsg.includes('dirección');
+  const isAskingPrice = lowerMsg.includes('precio') || lowerMsg.includes('cuanto cuesta') || lowerMsg.includes('cuánto cuesta') || lowerMsg.includes('valor');
+  const isAskingBedrooms = lowerMsg.includes('dormitorio') || lowerMsg.includes('habitacion') || lowerMsg.includes('habitación') || lowerMsg.includes('cuarto') || lowerMsg.includes('ambiente');
 
   if (searchResult.exactMatches.length > 0) {
+    const topProp = searchResult.exactMatches[0];
+    if (isAskingArea) {
+      return `La propiedad **${topProp.title}** tiene **${topProp.features.areaM2} m²** de superficie y está ubicada en **${topProp.location.address || topProp.location.zone}** (${topProp.location.zone}, ${topProp.location.city}).\n\n¿Te gustaría agendar una visita presencial?`;
+    }
+    if (isAskingPrice) {
+      return `El precio de **${topProp.title}** es de **$${topProp.price.toLocaleString('en-US')} USD**.\n\n¿Deseas coordinar un contacto directo o agendar una llamada?`;
+    }
+    if (isAskingBedrooms) {
+      return `Como comentamos, **${topProp.title}** cuenta con **${topProp.features.bedrooms} dormitorio(s)** y ${topProp.features.rooms || topProp.features.bedrooms + 1} ambientes.\n\n¿Te gustaría ver más fotos o agendar una visita?`;
+    }
+
     const items = searchResult.exactMatches.slice(0, 2);
     return (
-      `Analizando mis fuentes, te recomiendo estas opciones principales:\n\n` +
+      `Analizando mis fuentes integradas, te recomiendo estas opciones principales:\n\n` +
       items
         .map((p, idx) => (
           `**Opción ${idx + 1}**: ${p.title}\n` +
           `• **Precio**: $${p.price.toLocaleString('en-US')} USD | ${p.features.bedrooms} hab (${p.features.areaM2} m²)\n` +
           `• **Ubicación**: ${p.location.zone}, ${p.location.city}\n` +
-          `• **Punto fuerte**: Excelente relación m²/precio\n` +
-          `• **Fuente**: ${p.source?.name} - [Ver publicación original](${p.source?.url})\n`
+          `• **Punto fuerte**: Excelente relación m²/precio\n`
         ))
         .join('\n') +
       `\n¿Te interesa agendar una visita o coordinar contacto directo con la inmobiliaria de alguna de ellas?`
     );
   }
 
-  if (searchResult.closestMatches.length > 0) {
-    const items = searchResult.closestMatches.slice(0, 2);
+  if (searchResult.unmatchedLocationName) {
     return (
-      `Analizando las opciones más cercanas en mi catálogo:\n\n` +
-      items
-        .map((p, idx) => (
-          `**Opción ${idx + 1}**: ${p.title}\n` +
-          `• **Precio**: $${p.price.toLocaleString('en-US')} USD\n` +
-          `• **Ubicación**: ${p.location.zone}, ${p.location.city}\n` +
-          `• **Fuente**: ${p.source?.name} - [Ver publicación original](${p.source?.url})\n`
-        ))
-        .join('\n')
+      `Revisé en mis fuentes integradas y actualmente no tengo publicaciones verificadas activas en **${searchResult.unmatchedLocationName}**.\n\n` +
+      `Cuento con opciones disponibles en **Mendoza**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
+      `¿Te gustaría explorar alguna de estas ciudades o prefieres que un asesor busque algo puntual en ${searchResult.unmatchedLocationName}?`
     );
   }
 
@@ -193,7 +201,7 @@ export function useChat(options?: { initialContext?: string }) {
 
       // If text stream ended up empty, apply fallback message so bubble is NEVER empty
       if (!accumulatedText.trim()) {
-        const fallbackText = generateClientFallbackText(text, ctx);
+        const fallbackText = generateClientFallbackText(text, ctx, history);
         const searchResult = searchMultiSourceRealEstate(text);
         setMessages((prev) =>
           prev.map((m) =>
@@ -215,7 +223,7 @@ export function useChat(options?: { initialContext?: string }) {
     } catch (err) {
       console.warn('Streaming fetch failed, applying client-side fallback:', err);
 
-      const fallbackText = generateClientFallbackText(text, ctx);
+      const fallbackText = generateClientFallbackText(text, ctx, history);
       const searchResult = searchMultiSourceRealEstate(text);
 
       setMessages((prev) =>
