@@ -1,11 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, Type } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
 import { INITIAL_BOT_CONFIG } from '../src/data/mockData';
 import {
   searchMultiSourceRealEstate,
   MARKET_REAL_ESTATE_DATABASE,
 } from '../src/lib/multiSourceRealEstateEngine';
-import { createClient } from '@supabase/supabase-js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -21,24 +20,6 @@ function getBackendSupabaseClient() {
     return null;
   }
 }
-
-// Function Calling Tool Definition for Real Estate Search
-export const buscarPropiedadesToolDeclaration = {
-  name: 'buscar_propiedades',
-  description: 'Busca y compara publicaciones de propiedades en tiempo real en la base de datos de la agencia según ubicación, presupuesto, tipo de propiedad, ambientes y si es Venta o Alquiler.',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      pais: { type: Type.STRING, description: 'País de interés (ej: Argentina, México, Colombia, Perú)' },
-      ciudad: { type: Type.STRING, description: 'Ciudad o zona de interés (ej: San Rafael, Mendoza, Buenos Aires, Polanco, El Poblado, San Isidro)' },
-      tipo: { type: Type.STRING, description: 'Tipo de inmueble: departamento, casa, penthouse, terreno, local' },
-      precio_min: { type: Type.NUMBER, description: 'Presupuesto mínimo en USD' },
-      precio_max: { type: Type.NUMBER, description: 'Presupuesto máximo en USD' },
-      habitaciones: { type: Type.NUMBER, description: 'Cantidad de ambientes o dormitorios' },
-      operacion: { type: Type.STRING, description: 'Venta o Alquiler' },
-    },
-  },
-};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS for Vercel deployment
@@ -62,10 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable Nginx/Proxy buffering
+  res.setHeader('X-Accel-Buffering', 'no');
 
   if (typeof (res as any).flushHeaders === 'function') {
-    (res as any).flushHeaders();
+    try { (res as any).flushHeaders(); } catch {}
   }
 
   const sendChunk = (data: any) => {
@@ -93,7 +74,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const trimmedMsg = message.trim();
     const lowerMsg = trimmedMsg.toLowerCase();
 
-    // Determine target language name
     const langNames: Record<string, string> = {
       es: 'Español',
       en: 'English',
@@ -101,7 +81,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
     const targetLangName = langNames[lang] || 'Español';
 
-    // Multi-variable API Key Resolution with quotes stripping
     const rawKey =
       apiKey ||
       process.env.GEMINI_API_KEY ||
@@ -110,22 +89,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       '';
     const cleanApiKey = rawKey.replace(/^["']|["']$/g, '').trim();
 
-    let ai: GoogleGenAI | null = null;
+    let ai: any = null;
     if (cleanApiKey) {
       try {
-        ai = new GoogleGenAI({
-          apiKey: cleanApiKey,
-        });
+        const genAiModule = await import('@google/genai');
+        const GoogleGenAI = genAiModule.GoogleGenAI;
+        if (GoogleGenAI) {
+          ai = new GoogleGenAI({ apiKey: cleanApiKey });
+        }
       } catch (err) {
-        console.error('GoogleGenAI Initialization Error:', err);
+        console.error('GoogleGenAI Dynamic Import Error:', err);
         ai = null;
       }
     }
 
-    // Execute multi-source real estate search engine
     const searchResult = searchMultiSourceRealEstate(trimmedMsg);
 
-    // Build RAG context with explicit origin URLs and sources
     const multiSourceCatalogContext = MARKET_REAL_ESTATE_DATABASE.map(
       (p) =>
         `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en DIRECCIÓN REAL VERIFICADA: ${p.location.address}, ${p.location.zone}, ${p.location.city}, ${p.location.country || ''}. MAPA: ${p.location.googleMapsUrl || '#'}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.features.bedrooms} hab / ${p.features.rooms || p.features.bedrooms + 1} ambientes, ${p.features.areaM2} m². FUENTE: Catálogo Directo de la Agencia. Descripción: ${p.description}`
@@ -172,7 +151,6 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
           contents: formattedContents,
           config: {
             systemInstruction: systemPrompt,
-            tools: [{ functionDeclarations: [buscarPropiedadesToolDeclaration] }],
           },
         });
 
@@ -208,79 +186,16 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
       lowerMsg === 'hello' ||
       lowerMsg === 'hi'
     ) {
-      responseText =
-        `¡Hola! Soy Aria Prop, el asistente virtual de la agencia.\n\n` +
-        `Consulto en tiempo real nuestro catálogo directo de propiedades verificadas con direcciones físicas.\n\n` +
-        `Para empezar, ¿buscas comprar o alquilar, y en qué ciudad o zona estás interesado?`;
-    } else if (searchResult.unmatchedLocationName) {
-      const opText = searchResult.operationRequested === 'rent' ? 'de alquiler' : 'de compra';
-      responseText =
-        `Revisé nuestro catálogo directo y actualmente **no contamos con publicaciones ${opText} activas** en **${searchResult.unmatchedLocationName.toUpperCase()}**.\n\n` +
-        `Contamos con opciones verificadas disponibles en **Mendoza Capital**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
-        `¿Te gustaría explorar alguna de estas ciudades o prefieres que conecte tu consulta con un asesor humano por WhatsApp para buscar algo específico en ${searchResult.unmatchedLocationName}?`;
-    } else if (searchResult.exactMatches.length > 0) {
-      const items = searchResult.exactMatches.slice(0, 2);
-      primaryPropId = items[0].id;
-      const isRent = searchResult.operationRequested === 'rent';
-
-      responseText =
-        `Consultando nuestro catálogo directo, te recomiendo estas opciones principales ${isRent ? 'en ALQUILER' : 'en VENTA'}:\n\n` +
-        items
-          .map((p, idx) => (
-            `**Opción ${idx + 1}**: ${p.title}\n` +
-            `• 📍 **Dirección Real**: ${p.location.address}, ${p.location.zone}, ${p.location.city}, ${p.location.country || ''} ([Ver en Google Maps](${p.location.googleMapsUrl}))\n` +
-            `• 💰 **Precio**: **$${p.price.toLocaleString('en-US')} USD${p.price < 5000 ? '/mes' : ''}** | ${p.features.bedrooms} hab (${p.features.areaM2} m²)\n` +
-            `• 🌐 **Fuente**: Catálogo Directo de la Agencia\n`
-          ))
-          .join('\n') +
-        `\n¿Te interesa agendar una visita o coordinar contacto directo con un asesor de la agencia?`;
-    } else if (searchResult.explanationNote) {
-      responseText =
-        `ℹ️ **Resultado de búsqueda**: ${searchResult.explanationNote}\n\n` +
-        `¿Te gustaría ajustar el presupuesto o buscar en otra zona cercana dentro del catálogo directo?`;
+      responseText = `¡Hola! Soy Aria, tu asistente inmobiliario 24/7. ¿Buscas comprar o alquilar alguna propiedad en particular hoy?`;
     } else {
-      responseText =
-        `¡Hola! Soy Aria Prop, el asistente virtual de la agencia.\n\n` +
-        `¿Podrías decirme qué tipo de propiedad buscas (depto, casa), si es para compra o alquiler, y en qué ciudad?`;
-    }
+      const isAlquiler = lowerMsg.includes('alquiler') || lowerMsg.includes('rent') || lowerMsg.includes('renta');
 
-    // Persist lead directly into Supabase DB if backend Supabase client is connected
-    const supabase = getBackendSupabaseClient();
-    if (supabase && (lowerMsg.includes('@') || lowerMsg.includes('comprar') || lowerMsg.includes('alquilar') || lowerMsg.includes('agendar') || lowerMsg.includes('visita'))) {
-      try {
-        const agencyId = req.body?.agency_id || req.headers['x-agency-id'];
-        if (agencyId) {
-          const { checkLeadLimit, getCurrentPeriod } = await import('../src/lib/planLimits');
-          const period = getCurrentPeriod();
-
-          const { data: profile } = await supabase.from('profiles').select('plan_id').eq('id', agencyId).single();
-          const { data: usageRec } = await supabase.from('usage_records').select('leads_count').eq('agency_id', agencyId).eq('period', period).single();
-
-          const currentCount = usageRec?.leads_count || 0;
-          const checkResult = checkLeadLimit(profile?.plan_id, currentCount);
-
-          if (checkResult.allowed) {
-            await supabase.from('leads').insert([{
-              agency_id: agencyId,
-              name: `Prospecto Web (${new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })})`,
-              notes: trimmedMsg,
-              chat_summary: responseText.slice(0, 300),
-              status: lowerMsg.includes('agendar') ? 'agendado' : 'nuevo',
-              temperature: lowerMsg.includes('comprar') || lowerMsg.includes('agendar') ? 'hot' : 'warm',
-              score: lowerMsg.includes('agendar') ? 90 : 70,
-              channel: 'web_widget',
-            }]);
-
-            await supabase.rpc('increment_lead_usage', {
-              p_agency_id: agencyId,
-              p_period: period,
-            });
-          } else {
-            console.warn('Lead limit exceeded for agency in chat.ts:', agencyId);
-          }
-        }
-      } catch (dbErr) {
-        console.warn('Supabase DB Lead Persistence warning:', dbErr);
+      if (searchResult.exactMatchCount > 0 && searchResult.matchedProperties.length > 0) {
+        const topProp = searchResult.matchedProperties[0];
+        primaryPropId = topProp.id;
+        responseText = `¡Hola! Encontré esta excelente opción en nuestro catálogo verificado:\n\n🏡 **${topProp.title}** en ${topProp.location.zone}, ${topProp.location.city}\n• **Precio:** $${topProp.price.toLocaleString('en-US')} USD ${isAlquiler ? '/mes' : ''}\n• **Ambientes:** ${topProp.features.bedrooms} dormitorios (${topProp.features.areaM2} m²)\n• **Dirección:** ${topProp.location.address}\n\n¿Te gustaría agendar una visita presencial o recibir más detalles por WhatsApp?`;
+      } else {
+        responseText = `Hola. Actualmente estamos actualizando las propiedades verificadas para esa búsqueda específica en nuestro catálogo directo. ¿Te gustaría que te conecte con un asesor humano por WhatsApp para enviarte las opciones disponibles en la zona?`;
       }
     }
 
@@ -293,10 +208,14 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
     return res.end();
   } catch (globalErr: any) {
     console.error('API Chat Global Error:', globalErr);
-    sendChunk({
-      text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
-    });
-    sendChunk({ done: true });
-    return res.end();
+    try {
+      sendChunk({
+        text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
+      });
+      sendChunk({ done: true });
+    } catch {}
+    if (typeof res.end === 'function') {
+      res.end();
+    }
   }
 }
