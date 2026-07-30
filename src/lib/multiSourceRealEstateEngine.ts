@@ -403,11 +403,12 @@ export function searchMultiSourceRealEstate(query: string): SearchEngineResult {
   const catalog = [...MARKET_REAL_ESTATE_DATABASE, ...syncedPartnerProperties];
 
   const matches = catalog.filter((p) => {
-    const city = p.location.city.toLowerCase();
-    const zone = p.location.zone.toLowerCase();
+    if (!p || !p.location) return false;
+    const city = (p.location.city || '').toLowerCase();
+    const zone = (p.location.zone || '').toLowerCase();
     const province = (p.location.province || '').toLowerCase();
     const country = (p.location.country || '').toLowerCase();
-    const title = p.title.toLowerCase();
+    const title = (p.title || '').toLowerCase();
 
     let locationMatch = true;
     if (criteria.location) {
