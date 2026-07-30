@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../context/LanguageContext';
 import { AppRoute } from '../../types';
-import { RefreshCw, CheckCircle2, ArrowLeft, CreditCard, ShieldCheck, HelpCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle2, ArrowLeft, CreditCard, ShieldCheck, HelpCircle, ExternalLink } from 'lucide-react';
 import { Footer } from '../marketing/Footer';
 
 interface ReembolsosPageProps {
