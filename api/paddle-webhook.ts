@@ -151,8 +151,22 @@ export default async function handler(req: any, res: any) {
       const customerEmail = data?.customer?.email || data?.user_email || data?.custom_data?.email;
       const userId = data?.custom_data?.user_id || data?.custom_data?.userId;
 
-      const rawAmount = data?.details?.totals?.grand_total || data?.amount || data?.total;
-      const amount = typeof rawAmount === 'number' ? (rawAmount > 500 ? rawAmount / 100 : rawAmount) : 35;
+      // Extract raw amount (Paddle passes string or number e.g. "9900" or 9900 in cents)
+      const rawAmount = data?.details?.totals?.grand_total ?? data?.amount ?? data?.total;
+      let amount = 0;
+      if (rawAmount !== undefined && rawAmount !== null) {
+        const numVal = parseFloat(String(rawAmount));
+        if (!isNaN(numVal) && numVal > 0) {
+          // If total is in cents (e.g. 9900 cents = $99.00 USD), convert to major units
+          amount = numVal > 500 ? numVal / 100 : numVal;
+        }
+      }
+
+      if (amount <= 0) {
+        console.error('❌ Webhook Error: Invalid transaction amount received:', rawAmount);
+        return res.status(400).json({ error: 'Invalid or missing transaction amount' });
+      }
+
       const currency = (data?.currency_code || data?.currency || 'USD').toUpperCase();
 
       const items = data?.items || [];
