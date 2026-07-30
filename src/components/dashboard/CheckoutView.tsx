@@ -97,6 +97,25 @@ export function CheckoutView({ }: CheckoutViewProps) {
     return (localStorage.getItem('aria_selected_billing_cycle') as 'annual' | 'monthly') || 'annual';
   });
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && !(window as any).Paddle) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+      script.async = true;
+      script.onload = () => {
+        if ((window as any).Paddle) {
+          try {
+            (window as any).Paddle.Environment?.set('sandbox');
+            console.log('✅ Paddle.js v2 SDK initialized in Sandbox mode.');
+          } catch (err) {
+            console.warn('⚠️ Paddle.js initialization warning:', err);
+          }
+        }
+      };
+      document.head.appendChild(script);
+    }
+  }, []);
+
   const getDynamicPlans = (): PlanItem[] => {
     const isAnnual = billingCycle === 'annual';
     return [
