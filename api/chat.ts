@@ -110,7 +110,7 @@ function buildMemoryAwareResponse(
   const isAskingArea = lowerMsg.includes('metro') || lowerMsg.includes('m2') || lowerMsg.includes('superficie') || lowerMsg.includes('calle') || lowerMsg.includes('queda') || lowerMsg.includes('direccion') || lowerMsg.includes('dirección');
   const isAskingPrice = lowerMsg.includes('precio') || lowerMsg.includes('cuanto cuesta') || lowerMsg.includes('cuánto cuesta') || lowerMsg.includes('valor');
   const isAskingBedrooms = lowerMsg.includes('dormitorio') || lowerMsg.includes('habitacion') || lowerMsg.includes('habitación') || lowerMsg.includes('cuarto') || lowerMsg.includes('ambiente');
-  const isAskingZoneOptions = lowerMsg.includes('esa zona') || lowerMsg.includes('otra opción') || lowerMsg.includes('otra opcion') || lowerMsg.includes('misma zona') || lowerMsg.includes('disponible');
+  const isAskingZoneOptions = lowerMsg.includes('zona') || lowerMsg.includes('opción') || lowerMsg.includes('opcion') || lowerMsg.includes('disponible');
 
   if (lastProp) {
     if (isAskingArea) {
@@ -157,13 +157,18 @@ function buildMemoryAwareResponse(
     };
   }
 
-  const matches = MARKET_CATALOG.filter(
-    (p) =>
-      fullLowerQuery.includes(p.city.toLowerCase()) ||
-      fullLowerQuery.includes(p.zone.toLowerCase()) ||
-      fullLowerQuery.includes(p.type.toLowerCase()) ||
-      (fullLowerQuery.includes('alquiler') && p.price < 5000)
-  );
+  const matches = MARKET_CATALOG.filter((p) => {
+    const city = p.city.toLowerCase();
+    const zone = p.zone.toLowerCase();
+    const type = p.type.toLowerCase();
+    const isAlquiler = fullLowerQuery.includes('alquiler') || fullLowerQuery.includes('rent');
+
+    const matchesCityOrZone = fullLowerQuery.includes(city) || fullLowerQuery.includes(zone);
+    const matchesType = fullLowerQuery.includes(type);
+
+    if (isAlquiler && p.price >= 5000) return false;
+    return matchesCityOrZone || matchesType;
+  });
 
   if (matches.length > 0) {
     const topProp = matches[0];
@@ -174,7 +179,7 @@ function buildMemoryAwareResponse(
   }
 
   return {
-    text: `Hola. Recordando tu consulta, actualmente estamos actualizando las propiedades verificadas para esa búsqueda específica en nuestro catálogo directo. ¿Te gustaría que te conecte con un asesor humano por WhatsApp para enviarte las opciones disponibles en la zona?`,
+    text: `Hola. Recordando tu consulta sobre propiedades, actualmente estamos actualizando las opciones verificadas para esa zona en nuestro catálogo directo. ¿Te gustaría que te conecte con un asesor humano por WhatsApp para enviarte las opciones disponibles?`,
     recommendedPropId: undefined,
   };
 }
@@ -330,7 +335,7 @@ Responde siempre en ${targetLangName} con mensajes cortos, amables y conversacio
 
     // Deterministic Memory-Aware Fallback Response
     const memoryResult = buildMemoryAwareResponse(trimmedMsg, history);
-    responseText = memoryResult.text;
+    let responseText = memoryResult.text;
     const primaryPropId = memoryResult.recommendedPropId;
 
     if (isSSE) {
