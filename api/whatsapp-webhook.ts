@@ -69,24 +69,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 1. GET Handler: Meta Webhook Initial Verification Challenge
   if (req.method === 'GET') {
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
+    const mode = Array.isArray(req.query['hub.mode']) ? req.query['hub.mode'][0] : req.query['hub.mode'];
+    const token = Array.isArray(req.query['hub.verify_token']) ? req.query['hub.verify_token'][0] : req.query['hub.verify_token'];
+    const challenge = Array.isArray(req.query['hub.challenge']) ? req.query['hub.challenge'][0] : req.query['hub.challenge'];
 
-    const expectedVerifyToken = (
-      process.env.WEBHOOK_VERIFY_TOKEN ||
-      process.env.WHATSAPP_VERIFY_TOKEN ||
-      'aria_meta_verify_token_98374102938472918237'
-    ).trim();
+    const rawEnvToken = process.env.WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || '';
+    const cleanEnvToken = rawEnvToken.replace(/^["']|["']$/g, '').trim();
+    const fallbackToken = 'aria_meta_verify_token_98374102938472918237';
 
-    if (mode === 'subscribe' && token && token === expectedVerifyToken) {
+    const isValidToken = Boolean(token && (token === fallbackToken || (cleanEnvToken && token === cleanEnvToken)));
+
+    if (mode === 'subscribe' && isValidToken) {
       console.log('✅ Meta Webhook Verification Successful! Returning hub.challenge.');
-      return res.status(200).send(challenge);
+      res.setHeader('Content-Type', 'text/plain');
+      return res.status(200).send(challenge || '');
     } else {
-      console.warn('❌ Meta Webhook Verification Failed. Token mismatch or missing mode.');
+      console.warn(`❌ Meta Webhook Verification Failed. Received token: "${token}", expected fallback: "${fallbackToken}" or env: "${cleanEnvToken}"`);
       return res.status(403).json({
         error: 'Webhook verification failed',
-        message: 'hub.verify_token does not match WEBHOOK_VERIFY_TOKEN environment variable.',
+        message: 'hub.verify_token does not match expected verify token.',
       });
     }
   }
