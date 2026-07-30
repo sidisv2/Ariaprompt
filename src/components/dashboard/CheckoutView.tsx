@@ -66,7 +66,19 @@ const normalizePlanId = (planId: string) => {
 
 const IS_PADDLE_PRODUCTION = import.meta.env.VITE_PADDLE_ENV === 'production';
 
-// Sandbox Price IDs (Verified and Tested)
+// Production Price IDs (Verified against Paddle Production Live API api.paddle.com)
+const PADDLE_PRODUCTION_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
+  starter: {
+    monthly: import.meta.env.VITE_PADDLE_PRICE_SOLO_MONTHLY || 'pri_01kyh5xs672hj75v57tyf8mqg1',
+    annual:  import.meta.env.VITE_PADDLE_PRICE_SOLO_ANNUAL  || 'pri_01kyh5zsndbhkhswrbfmwj4xvb',
+  },
+  pro: {
+    monthly: import.meta.env.VITE_PADDLE_PRICE_PRO_MONTHLY  || 'pri_01kyh63dg2h0jkwvd1bh6jde47',
+    annual:  import.meta.env.VITE_PADDLE_PRICE_PRO_ANNUAL   || 'pri_01kyh64fj85g1j12vgar9ct9yz',
+  },
+};
+
+// Sandbox Fallback Price IDs
 const PADDLE_SANDBOX_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
   starter: {
     monthly: 'pri_01kyh5xs672hj75v57tyf8mqg1',
@@ -75,18 +87,6 @@ const PADDLE_SANDBOX_PRICE_IDS: Record<string, { monthly: string; annual: string
   pro: {
     monthly: 'pri_01kyh63dg2h0jkwvd1bh6jde47',
     annual:  'pri_01kyh64fj85g1j12vgar9ct9yz',
-  },
-};
-
-// Production Price IDs (Paddle Dashboard -> Catalog -> Prices -> Copy pri_live_...)
-const PADDLE_PRODUCTION_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
-  starter: {
-    monthly: import.meta.env.VITE_PADDLE_PRICE_SOLO_MONTHLY || 'pri_live_solo_monthly_placeholder',
-    annual:  import.meta.env.VITE_PADDLE_PRICE_SOLO_ANNUAL  || 'pri_live_solo_annual_placeholder',
-  },
-  pro: {
-    monthly: import.meta.env.VITE_PADDLE_PRICE_PRO_MONTHLY  || 'pri_live_pro_monthly_placeholder',
-    annual:  import.meta.env.VITE_PADDLE_PRICE_PRO_ANNUAL   || 'pri_live_pro_annual_placeholder',
   },
 };
 
