@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateAriaAiResponse } from './_ariaEngine';
 
-const DEFAULT_PHONE_NUMBER_ID = '1215379554999227';
-const DEFAULT_ACCESS_TOKEN =
-  'EAAMqcn1MsZA0BSJh1xSZBEc4RINVbzOAV4AwfV2o4Ki3w8ho4R3MEOrtdpZCtIxkGI7C3D0j3kiLMZCna3RBVZANskmITH1CbboXqR37lhZB3bZAaDZAcoxJkYSD0BaAsZBzSiJQ7MGwFHcf8r17jFbroPxM3hO3qlbBS264G3HdosTtV92klIXYkAtRwzlpIYc07uTg6oZBy3h3lzMqK85wo0YrEZCD07yq2CaJCOT1MiaOQa6ZABrExcVAtld9V35tzBArqg0lteaGiv7rkdEwhTqnZCTrL';
-const DEFAULT_VERIFY_TOKEN = 'aria_meta_verify_token_98374102938472918237';
-
 export async function sendWhatsAppTextMessage({
   to,
   text,
@@ -15,11 +10,11 @@ export async function sendWhatsAppTextMessage({
   text: string;
   phoneNumberId?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
-  const token = (process.env.WHATSAPP_ACCESS_TOKEN || DEFAULT_ACCESS_TOKEN).trim();
-  const phoneId = (phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || DEFAULT_PHONE_NUMBER_ID).trim();
+  const token = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
+  const phoneId = (phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
 
   if (!token || !phoneId) {
-    console.warn('⚠️ Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID env vars.');
+    console.warn('⚠️ Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID environment variables.');
     return {
       success: false,
       error: 'WhatsApp Cloud API credentials not configured in environment variables.',
@@ -81,10 +76,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const expectedVerifyToken = (
       process.env.WEBHOOK_VERIFY_TOKEN ||
       process.env.WHATSAPP_VERIFY_TOKEN ||
-      DEFAULT_VERIFY_TOKEN
+      ''
     ).trim();
 
-    if (mode === 'subscribe' && token && expectedVerifyToken && token === expectedVerifyToken) {
+    if (!expectedVerifyToken) {
+      console.warn('⚠️ WEBHOOK_VERIFY_TOKEN environment variable is not configured.');
+      return res.status(500).json({
+        error: 'Configuration Error',
+        message: 'WEBHOOK_VERIFY_TOKEN environment variable is missing on server.',
+      });
+    }
+
+    if (mode === 'subscribe' && token && token === expectedVerifyToken) {
       console.log('✅ Meta Webhook Verification Successful! Returning hub.challenge.');
       return res.status(200).send(challenge);
     } else {
@@ -122,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const incomingMsg = messages[0];
       const fromNumber = incomingMsg.from; // Sender's WhatsApp ID e.g. "5491122334455"
       const msgType = incomingMsg.type;
-      const phoneNumberId = metadata?.phone_number_id || DEFAULT_PHONE_NUMBER_ID;
+      const phoneNumberId = metadata?.phone_number_id;
 
       // Extract message text content
       let textBody = '';
