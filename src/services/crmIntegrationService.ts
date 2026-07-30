@@ -200,8 +200,10 @@ export function saveCrmConnections(connections: CrmConnection[]): void {
 // Helper Functions to Load & Save Synced Partner Properties
 export function getSyncedPartnerProperties(): PartnerProperty[] {
   try {
-    const raw = localStorage.getItem(PARTNER_PROPERTIES_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(PARTNER_PROPERTIES_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    }
   } catch (e) {
     console.error('Error reading synced partner properties:', e);
   }
@@ -210,7 +212,9 @@ export function getSyncedPartnerProperties(): PartnerProperty[] {
 
 export function saveSyncedPartnerProperties(properties: PartnerProperty[]): void {
   try {
-    localStorage.setItem(PARTNER_PROPERTIES_STORAGE_KEY, JSON.stringify(properties));
+    if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(PARTNER_PROPERTIES_STORAGE_KEY, JSON.stringify(properties));
+    }
   } catch (e) {
     console.error('Error saving partner properties:', e);
   }
