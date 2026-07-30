@@ -113,7 +113,7 @@ function buildMemoryAwareResponse(
   const isAskingBedrooms = lowerMsg.includes('dormitorio') || lowerMsg.includes('habitacion') || lowerMsg.includes('habitación') || lowerMsg.includes('cuarto') || lowerMsg.includes('ambiente');
   const isAskingZoneOptions = lowerMsg.includes('zona') || lowerMsg.includes('opción') || lowerMsg.includes('opcion') || lowerMsg.includes('disponible');
 
-  if (lastProp) {
+  if (lastProp && history.length > 0) {
     if (isAskingArea) {
       return {
         text: `La propiedad **${lastProp.title}** tiene **${lastProp.areaM2} m²** de superficie y está ubicada sobre la calle **${lastProp.address}** (${lastProp.zone}, ${lastProp.city}).\n\n¿Te gustaría coordinar una visita presencial?`,
