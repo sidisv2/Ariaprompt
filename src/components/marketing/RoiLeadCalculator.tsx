@@ -85,7 +85,7 @@ export function RoiLeadCalculator({ onPlanSelect }: RoiLeadCalculatorProps) {
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
             />
             <p className="text-[11px] text-slate-400 italic">
-              * Promedio del mercado: 30% a 40% del tráfico inmobiliario navega entre las 20:00 hs y las 09:00 hs.
+              * Ajustá este valor según tu experiencia real con tus propios leads.
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export function RoiLeadCalculator({ onPlanSelect }: RoiLeadCalculatorProps) {
               />
             </div>
             <p className="text-[11px] text-slate-400">
-              Ej: Alquiler promedio (~$500 USD) o Venta (comisión 3% de inmueble en USD).
+              Ej: Comisión típica por venta de propiedad mediana (~$60.000 USD al 3%) o alquileres de mayor valor.
             </p>
           </div>
 
