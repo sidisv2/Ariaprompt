@@ -24,7 +24,7 @@ export const ComparisonPage: React.FC<ComparisonPageProps> = ({ type, onRouteCha
           : 'See how 24/7 generative AI increases booked tours compared to traditional manual replies.',
       comparisonName: lang === 'es' ? 'Atención Manual Humana' : 'Manual Human Reply',
       rows: [
-        { feature: 'Tiempo de respuesta a prospectos', competitor: '2 a 12 Horas (o días)', aria: '< 5 Segundos (24/7)' },
+        { feature: 'Tiempo de respuesta a prospectos', competitor: '2 a 12 Horas (o días)', aria: 'Respuesta en Segundos (24/7)' },
         { feature: 'Disponibilidad de atención', competitor: 'Solo horario de oficina', aria: '24/7/365 sin pausas' },
         { feature: 'Calificación de presupuesto', competitor: 'Manual por llamadas', aria: 'Automatizada en < 1 min' },
         { feature: 'Agendamiento en Google Calendar', competitor: 'Llamadas de coordinación', aria: 'Agendamiento directo 1-clic' },

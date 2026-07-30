@@ -6,7 +6,7 @@ const serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const supabase = createClient(supabaseUrl, serviceKey);
 
 async function runE2EPaddleTest() {
-  console.log('🔍 Testing Supabase table public.payment_transactions status...');
+  console.log('🔍 STEP 0: Testing Supabase table public.payment_transactions status...');
   
   const { data: testSelect, error: selectError } = await supabase
     .from('payment_transactions')
@@ -19,15 +19,15 @@ async function runE2EPaddleTest() {
     return;
   }
 
-  console.log('✅ Table public.payment_transactions is ACTIVE in Supabase!');
+  console.log('✅ Table public.payment_transactions is ACTIVE and accessible in Supabase!\n');
 
-  // Create a real test transaction ID
-  const testTxnId = `txn_live_paddle_test_${Date.now()}`;
+  // Create a test transaction ID
+  const testTxnId = `txn_real_paddle_e2e_${Date.now()}`;
   const testEmail = 'demo.agencia@ariaprop.online';
   const testPlan = 'pro';
   const testAmount = 99;
 
-  console.log(`\n🚀 Inserting test transaction "${testTxnId}" into payment_transactions...`);
+  console.log(`🚀 STEP 1: Executing INSERT into public.payment_transactions for txn_id "${testTxnId}"...`);
 
   const { data: insertedRow, error: insertErr } = await supabase
     .from('payment_transactions')
@@ -49,11 +49,25 @@ async function runE2EPaddleTest() {
     return;
   }
 
-  console.log('✅ INSERT SUCCESSFUL! Recorded row in payment_transactions:');
-  console.log(JSON.stringify(insertedRow, null, 2));
+  console.log('✅ STEP 1 COMPLETE: Insert executed successfully.');
+
+  console.log(`\n📋 STEP 2: Executing SELECT query on public.payment_transactions for txn_id "${testTxnId}"...`);
+  const { data: selectedRow, error: selectRowErr } = await supabase
+    .from('payment_transactions')
+    .select('*')
+    .eq('txn_id', testTxnId)
+    .single();
+
+  if (selectRowErr || !selectedRow) {
+    console.error('❌ SELECT failed to retrieve inserted row:', selectRowErr?.message);
+    return;
+  }
+
+  console.log('✅ STEP 2 COMPLETE: SELECT confirmed row exists in Supabase:');
+  console.log(JSON.stringify(selectedRow, null, 2));
 
   // Verify API endpoint /api/verify-transaction
-  console.log(`\n🌐 Testing GET https://ariaprop.online/api/verify-transaction?txn_id=${testTxnId}...`);
+  console.log(`\n🌐 STEP 3: Executing GET https://ariaprop.online/api/verify-transaction?txn_id=${testTxnId}...`);
   try {
     const res = await fetch(`https://ariaprop.online/api/verify-transaction?txn_id=${testTxnId}`);
     const json = await res.json();
@@ -62,12 +76,25 @@ async function runE2EPaddleTest() {
     console.log(JSON.stringify(json, null, 2));
 
     if (json.verified === true && json.txn_id === testTxnId && json.amount === testAmount) {
-      console.log('\n🎉 E2E TEST PASSED POSITIVELY! Server confirmed transaction with verified: true!');
+      console.log('\n🎉 STEP 3 COMPLETE: Positive verification test PASSED! Server confirmed verified: true!');
     } else {
-      console.error('\n❌ Verification check failed:', json);
+      console.error('\n❌ STEP 3 FAILED: Verification check did not return expected true response:', json);
     }
   } catch (err: any) {
-    console.error('❌ Failed to call verify-transaction endpoint:', err.message);
+    console.error('❌ STEP 3 FAILED: Request error:', err.message);
+  }
+
+  // STEP 4: Cleanup
+  console.log(`\n🧹 STEP 4: Cleaning up test record "${testTxnId}" from public.payment_transactions...`);
+  const { error: delErr } = await supabase
+    .from('payment_transactions')
+    .delete()
+    .eq('txn_id', testTxnId);
+
+  if (delErr) {
+    console.warn('⚠️ Cleanup warning:', delErr.message);
+  } else {
+    console.log('✅ STEP 4 COMPLETE: Test record deleted. Table is clean.');
   }
 }
 

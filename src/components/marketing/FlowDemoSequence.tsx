@@ -26,7 +26,7 @@ export const FlowDemoSequence: React.FC = () => {
     },
     {
       id: 1,
-      badge: t('flowDemo.step2Badge') || 'Paso 2 • Respuesta Instantánea < 5s',
+      badge: t('flowDemo.step2Badge') || 'Paso 2 • Respuesta Instantánea en Segundos',
       title: t('flowDemo.step2Title') || 'Aria responde al instante con datos reales del CRM',
       desc: t('flowDemo.step2Desc') || 'Sin demoras ni esperar a mañana. Aria entrega la ficha técnica exacta desde Tokko/EasyBroker.',
       chatBot: t('flowDemo.step2BotMsg') || '¡Hola! Sí, está disponible (Código EB-4092). Cuenta con 85m², balcón terraza y cochera. ¿Querés agendar una visita presencial esta semana?',

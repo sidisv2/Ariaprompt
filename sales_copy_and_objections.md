@@ -13,9 +13,9 @@ A continuación se presentan las respuestas estructuradas a las objeciones más 
 ### Objeción 1: *"Ya tengo a alguien que atiende WhatsApp en mi equipo"*
 
 - **Respuesta Breve (2-3 líneas)**:  
-  Tu equipo no puede estar despierto a las 2:00 AM ni responder en menos de 5 segundos un domingo a la tarde. Aria Prop no reemplaza a tus colaboradores: absorbe las preguntas repetitivas y nocturnas para entregarle a tu equipo prospectos cualificados y con la visita presencial ya coordinada.
+  Tu equipo no puede estar despierto a las 2:00 AM ni responder al instante un domingo a la tarde. Aria Prop no reemplaza a tus colaboradores: absorbe las preguntas repetitivas y nocturnas para entregarle a tu equipo prospectos cualificados y con la visita presencial ya coordinada.
 - **Feature / Dato de respaldo**:  
-  Atención ininterrumpida 24/7 con respuesta en menos de 5 segundos, integración con WhatsApp Business API y agenda directa en Google Calendar.
+  Atención ininterrumpida 24/7 con respuesta en segundos, integración con WhatsApp Business API y agenda directa en Google Calendar.
 
 ---
 

@@ -55,7 +55,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
     <div className="w-full bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950">
       
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SECCIÓN 1 — Hero: Respuesta Instantánea < 5s                        */}
+      {/* SECCIÓN 1 — Hero: Respuesta Instantánea                            */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <section className="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
         {/* Background glow effects */}

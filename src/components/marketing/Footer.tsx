@@ -163,7 +163,7 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
           <div className="flex items-center gap-4">
             <span>Powered by Gemini 2.5 Flash & Next.js Engine</span>
             <span>•</span>
-            <span className="text-emerald-400 font-bold">Latency &lt; 5s</span>
+            <span className="text-emerald-400 font-bold">Respuesta en Segundos</span>
           </div>
         </div>
 

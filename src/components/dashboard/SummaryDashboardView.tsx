@@ -221,7 +221,7 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
             <span className="p-2 rounded-xl bg-teal-500/10 text-teal-400">
               <MessageSquare className="w-4 h-4" />
             </span>
-            <span className="text-[10px] font-bold text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">&lt; 5s res</span>
+            <span className="text-[10px] font-bold text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">Respuesta en Segundos</span>
           </div>
           <div>
             <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{activeLeadsCount}</span>

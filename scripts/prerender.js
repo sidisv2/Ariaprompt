@@ -29,7 +29,7 @@ const PUBLIC_ROUTES = [
     title: `Aria Prop - ${es.hero?.badge || 'Agente de IA Inmobiliario 24/7 en América'}`,
     description: es.hero?.subtitle || 'Automatiza la atención de tus inmuebles, cualifica leads de alta intención y agenda visitas 24/7 en WhatsApp y Web con la IA de Aria Prop.',
     ogTitle: `${es.hero?.title1} ${es.hero?.title2} | Aria Prop`,
-    ogDescription: es.hero?.subtitle || 'Responde a tus prospectos en menos de 5 segundos, califica presupuesto y coordina citas directo en Google Calendar.',
+    ogDescription: es.hero?.subtitle || 'Responde a tus prospectos al instante, califica presupuesto y coordina citas directo en Google Calendar.',
     ogImage: `${BASE_URL}/assets/og-home.jpg`,
     contentHtml: `
       <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -46,14 +46,14 @@ const PUBLIC_ROUTES = [
             <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
               <h2 class="text-base font-bold text-emerald-400">Atención Inmobiliaria Inmediata</h2>
               <ul class="space-y-1.5 text-slate-300">
-                <li>• <strong>Respuesta en &lt; 5 segundos:</strong> Calificación instantánea de presupuesto y tipo de inmueble.</li>
+                <li>• <strong>Respuesta en Segundos:</strong> Calificación instantánea de presupuesto y tipo de inmueble.</li>
                 <li>• <strong>Sincronización de Catálogo:</strong> Conexión directa con Tokko Broker, EasyBroker e inventario real de la agencia.</li>
                 <li>• <strong>Integraciones CRM:</strong> Tokko Broker, EasyBroker, WhatsApp API y Google Calendar.</li>
               </ul>
             </div>
             <div class="p-5 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
               <h2 class="text-base font-bold text-emerald-400">Infraestructura Verificada & Seguridad</h2>
-              <p class="text-slate-300">${es.hero?.socialProof || 'Respuesta inmediata en < 5s • Coordinación en Google Calendar • Integración CRM'}</p>
+              <p class="text-slate-300">${es.hero?.socialProof || 'Respuesta inmediata en segundos • Coordinación en Google Calendar • Integración CRM'}</p>
               <div class="pt-2 text-xs text-emerald-400 font-semibold">• ${es.footer?.rgpd || 'Conexión Segura HTTPS / TLS & Privacidad'}</div>
             </div>
           </section>
@@ -79,7 +79,7 @@ const PUBLIC_ROUTES = [
           <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
             <h2 class="text-lg font-bold text-emerald-400">Atención Comercial & Cualificación Inmediata</h2>
             <ul class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300">
-              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Respuesta en &lt; 5 segundos:</strong> Atención al instante en WhatsApp y Web sin hacer esperar a los prospectos.</li>
+              <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Respuesta en Segundos:</strong> Atención al instante en WhatsApp y Web sin hacer esperar a los prospectos.</li>
               <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Agendamiento Automático:</strong> Coordinación de visitas guiadas directo en Google Calendar.</li>
               <li class="p-3 rounded-xl bg-slate-950 border border-white/5">• <strong>Cualificación de Leads:</strong> Filtro inteligente de presupuesto, urgencia y tipo de inmueble.</li>
             </ul>

@@ -48,7 +48,7 @@ export const RoiSavingsCalculatorSection: React.FC<RoiSavingsCalculatorSectionPr
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400">
               {lang === 'es' ? 'perdiendo hoy' : 'losing today'}
             </span>{' '}
-            {lang === 'es' ? 'por no responder en < 5s?' : 'by not replying in < 5s?'}
+            {lang === 'es' ? 'por no responder al instante?' : 'by not replying instantly?'}
           </h2>
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             {lang === 'es'

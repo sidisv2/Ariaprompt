@@ -6,7 +6,7 @@ export const TechStackBanner: React.FC = () => {
   const { t } = useLanguage();
 
   const metrics = [
-    { icon: <Zap className="w-4 h-4 text-emerald-400" />, label: 'Respuesta < 5s', sub: 'Atención Inmediata 24/7' },
+    { icon: <Zap className="w-4 h-4 text-emerald-400" />, label: 'Respuesta en Segundos', sub: 'Atención Inmediata 24/7' },
     { icon: <Clock className="w-4 h-4 text-teal-400" />, label: '100% Automatizado', sub: 'Sin Guardias Manuales' },
     { icon: <Calendar className="w-4 h-4 text-cyan-400" />, label: 'Google Calendar', sub: 'Citas Directas' },
     { icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, label: 'Cifrado SSL / TLS', sub: 'Privacidad de Datos' },
