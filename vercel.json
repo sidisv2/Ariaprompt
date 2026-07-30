@@ -5,6 +5,11 @@
       "schedule": "0 3 * * *"
     }
   ],
+  "functions": {
+    "api/**/*.ts": {
+      "includeFiles": "src/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
