@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const isSSE = typeof (res as any).write === 'function';
+  const isSSE = Boolean(req.headers.accept && req.headers.accept.includes('text/event-stream'));
   let accumulatedText = '';
 
   if (isSSE) {
@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       accumulatedText += data.text;
     }
 
-    if (isSSE) {
+    if (isSSE && typeof (res as any).write === 'function') {
       try {
         (res as any).write(`data: ${JSON.stringify(data)}\n\n`);
         if (typeof (res as any).flush === 'function') {
