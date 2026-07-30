@@ -39,26 +39,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Stream SSE headers early to ensure connection remains open and unbuffered on Vercel
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
+  const isSSE = typeof (res as any).write === 'function';
+  let accumulatedText = '';
 
-  if (typeof (res as any).flushHeaders === 'function') {
-    try { (res as any).flushHeaders(); } catch {}
+  if (isSSE) {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    if (typeof (res as any).flushHeaders === 'function') {
+      try { (res as any).flushHeaders(); } catch {}
+    }
   }
 
   const sendChunk = (data: any) => {
-    try {
-      if (typeof res.write === 'function') {
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
+    if (data?.text) {
+      accumulatedText += data.text;
+    }
+
+    if (isSSE) {
+      try {
+        (res as any).write(`data: ${JSON.stringify(data)}\n\n`);
         if (typeof (res as any).flush === 'function') {
           (res as any).flush();
         }
+      } catch (err) {
+        console.warn('SSE sendChunk write warning:', err);
       }
-    } catch (err) {
-      console.warn('SSE sendChunk write warning:', err);
+    }
+  };
+
+  const endResponse = (finalData?: any) => {
+    if (isSSE) {
+      if (finalData) sendChunk(finalData);
+      return res.end();
+    } else {
+      return res.status(200).json({
+        success: true,
+        text: accumulatedText,
+        done: true,
+        ...finalData,
+      });
     }
   };
 
@@ -67,8 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       sendChunk({ text: '⚠️ Por favor ingresa una consulta válida.' });
-      sendChunk({ done: true });
-      return res.end();
+      return endResponse({ done: true });
     }
 
     const trimmedMsg = message.trim();
@@ -163,8 +184,7 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
         }
 
         if (receivedAnyText) {
-          sendChunk({ done: true });
-          return res.end();
+          return endResponse({ done: true });
         }
       } catch (geminiErr: any) {
         console.error('Gemini Stream Call Error:', geminiErr?.message || geminiErr);
@@ -199,23 +219,32 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
       }
     }
 
-    const words = responseText.split(' ');
-    for (const word of words) {
-      sendChunk({ text: word + ' ' });
-      await new Promise((r) => setTimeout(r, 12));
+    if (isSSE) {
+      const words = responseText.split(' ');
+      for (const word of words) {
+        sendChunk({ text: word + ' ' });
+        await new Promise((r) => setTimeout(r, 12));
+      }
+      return endResponse({ done: true, recommendedPropertyId: primaryPropId });
+    } else {
+      accumulatedText = responseText;
+      return endResponse({ recommendedPropertyId: primaryPropId });
     }
-    sendChunk({ done: true, recommendedPropertyId: primaryPropId });
-    return res.end();
   } catch (globalErr: any) {
     console.error('API Chat Global Error:', globalErr);
-    try {
-      sendChunk({
+    if (isSSE) {
+      try {
+        sendChunk({
+          text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
+        });
+      } catch {}
+      return res.end();
+    } else {
+      return res.status(200).json({
+        success: true,
         text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
+        done: true,
       });
-      sendChunk({ done: true });
-    } catch {}
-    if (typeof res.end === 'function') {
-      res.end();
     }
   }
 }
