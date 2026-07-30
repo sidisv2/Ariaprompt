@@ -44,9 +44,27 @@ function getBackendSupabaseClient() {
   }
 }
 
+/**
+ * Strict Fail-Closed Paddle Signature Verification
+ * Uses HMAC-SHA256 based on PADDLE_WEBHOOK_SECRET_KEY.
+ * Never defaults to true. Always rejects if key is missing or signature is invalid.
+ */
 function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boolean {
-  if (!signatureHeader) return false;
+  const webhookSecret = (process.env.PADDLE_WEBHOOK_SECRET_KEY || '').trim();
 
+  // FAIL-CLOSED RULE 1: If PADDLE_WEBHOOK_SECRET_KEY is missing, REJECT ALL.
+  if (!webhookSecret) {
+    console.error('🔒 CRITICAL SECURITY ALERT: PADDLE_WEBHOOK_SECRET_KEY is missing in environment variables. All incoming webhooks rejected.');
+    return false;
+  }
+
+  // FAIL-CLOSED RULE 2: If signature header is missing or empty, REJECT ALL.
+  if (!signatureHeader) {
+    console.warn('🔒 Paddle Webhook Rejected: Missing Paddle-Signature header.');
+    return false;
+  }
+
+  // Parse ts and h parameters from header
   const parts = signatureHeader.split(';').reduce((acc: Record<string, string>, item) => {
     const [k, v] = item.split('=');
     if (k && v) acc[k.trim()] = v.trim();
@@ -56,33 +74,35 @@ function verifyPaddleSignature(rawBody: string, signatureHeader?: string): boole
   const ts = parts['ts'];
   const h = parts['h'];
 
-  if (!ts || !h) return false;
-
-  const webhookSecret = process.env.PADDLE_WEBHOOK_SECRET_KEY || '';
-
-  if (webhookSecret) {
-    try {
-      const signedPayload = `${ts}:${rawBody}`;
-      const expectedHash = crypto
-        .createHmac('sha256', webhookSecret)
-        .update(signedPayload)
-        .digest('hex');
-
-      const bufH = Buffer.from(h, 'utf8');
-      const bufExp = Buffer.from(expectedHash, 'utf8');
-      if (bufH.length !== bufExp.length) return false;
-
-      return crypto.timingSafeEqual(bufH, bufExp);
-    } catch {
-      return false;
-    }
-  }
-
-  if (h === 'invalid_signature' || h.length < 10) {
+  if (!ts || !h) {
+    console.warn('🔒 Paddle Webhook Rejected: Malformed Paddle-Signature header.');
     return false;
   }
 
-  return true;
+  try {
+    const signedPayload = `${ts}:${rawBody}`;
+    const expectedHash = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(signedPayload)
+      .digest('hex');
+
+    const bufH = Buffer.from(h, 'utf8');
+    const bufExp = Buffer.from(expectedHash, 'utf8');
+
+    if (bufH.length !== bufExp.length) {
+      console.warn('🔒 Paddle Webhook Rejected: Signature hash length mismatch.');
+      return false;
+    }
+
+    const matches = crypto.timingSafeEqual(bufH, bufExp);
+    if (!matches) {
+      console.warn('🔒 Paddle Webhook Rejected: HMAC SHA256 signature does not match secret.');
+    }
+    return matches;
+  } catch (err) {
+    console.error('🔒 Exception during Paddle signature verification:', err);
+    return false;
+  }
 }
 
 export default async function handler(req: any, res: any) {
@@ -103,13 +123,13 @@ export default async function handler(req: any, res: any) {
     const rawBody = await getRawBody(req);
     const signatureHeader = (req.headers['paddle-signature'] || req.headers['Paddle-Signature']) as string | undefined;
 
-    // 2. Verify Paddle signature
+    // 2. Verify Paddle signature (Strict Fail-Closed)
     const isValidSignature = verifyPaddleSignature(rawBody, signatureHeader);
     if (!isValidSignature) {
-      console.warn('🔒 Paddle Webhook rejected: Invalid or missing Paddle-Signature header.');
+      console.warn('🔒 Paddle Webhook rejected: Invalid or unverified Paddle signature.');
       return res.status(401).json({
         error: 'Invalid Paddle signature',
-        reason: 'Missing or invalid paddle-signature header',
+        reason: 'Missing, malformed, or unverified paddle-signature header',
       });
     }
 
