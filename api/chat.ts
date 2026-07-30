@@ -82,10 +82,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ...finalData,
       });
     }
-  };
-
   try {
-    const { message, history = [], context = 'general', apiKey, lang = 'es' } = req.body || {};
+    let body = req.body || {};
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch { body = {}; }
+    }
+    const { message, history = [], context = 'general', apiKey, lang = 'es' } = body;
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       sendChunk({ text: '⚠️ Por favor ingresa una consulta válida.' });
