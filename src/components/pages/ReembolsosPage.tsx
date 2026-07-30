@@ -145,6 +145,9 @@ export const ReembolsosPage: React.FC<ReembolsosPageProps> = ({ onRouteChange })
             {isEn ? '5. Payment & Refund Contacts' : isPt ? '5. Contatos de Pagamento' : '5. Contacto para Pagos y Reembolsos'}
           </h2>
           <ul className="space-y-1 text-slate-300 text-xs font-mono">
+            <li>• <strong>{isEn ? 'Company / Legal Holder:' : 'Razón Social / Titular:'}</strong> Valentin Lautaro Morales</li>
+            <li>• <strong>{isEn ? 'Tax ID / CUIT:' : isPt ? 'ID Fiscal:' : 'Identificación Fiscal / CUIT:'}</strong> CUIT 20-46398072-2 (20463980722)</li>
+            <li>• <strong>{isEn ? 'Address:' : isPt ? 'Endereço:' : 'Dirección Fiscal:'}</strong> San Rafael, Argentina</li>
             <li>• <strong>{isEn ? 'Refunds Department:' : 'Departamento de Reembolsos:'}</strong> <a href="mailto:pagos@ariaprop.online" className="text-emerald-400 underline">pagos@ariaprop.online</a></li>
             <li>• <strong>{isEn ? 'Customer Support:' : 'Soporte Comercial:'}</strong> <a href="mailto:soporte@ariaprop.online" className="text-emerald-400 underline">soporte@ariaprop.online</a></li>
             <li>• <strong>Merchant of Record Support:</strong> <a href="https://paddle.net" target="_blank" rel="noreferrer" className="text-emerald-400 underline inline-flex items-center gap-1">Paddle Buyer Support <ExternalLink className="w-3 h-3" /></a></li>

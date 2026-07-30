@@ -85,10 +85,10 @@ export const PrivacidadPage: React.FC<PrivacidadPageProps> = ({ onRouteChange })
           </h2>
           <p>
             {isEn
-              ? 'Aria Prop ("Company", "we") is committed to protecting the privacy of real estate agencies, independent brokers, and their leads. The entity responsible for processing your account data is [NOMBRE_DE_LA_EMPRESA_O_TITULAR].'
+              ? 'Aria Prop ("Company", "we") is committed to protecting the privacy of real estate agencies, independent brokers, and their leads. The entity responsible for processing your account data is Valentin Lautaro Morales.'
               : isPt
-              ? 'A Aria Prop está comprometida em proteger a privacidade das agências e corretores.'
-              : 'Aria Prop ("La Empresa") se compromete a proteger la privacidad de las agencias inmobiliarias, corredores independientes y prospectos. El responsable del tratamiento de los datos de su cuenta es [NOMBRE_DE_LA_EMPRESA_O_TITULAR].'}
+              ? 'A Aria Prop está comprometida em proteger a privacidade das agências e corretores. O responsável pelo tratamento dos dados é Valentin Lautaro Morales.'
+              : 'Aria Prop ("La Empresa") se compromete a proteger la privacidad de las agencias inmobiliarias, corredores independientes y prospectos. El responsable del tratamiento de los datos de su cuenta es Valentin Lautaro Morales.'}
           </p>
         </section>
 
@@ -158,7 +158,9 @@ export const PrivacidadPage: React.FC<PrivacidadPageProps> = ({ onRouteChange })
             {isEn ? '6. Contact Privacy Team' : isPt ? '6. Contato de Privacidade' : '6. Contacto de Privacidad'}
           </h2>
           <ul className="space-y-1 text-slate-300 text-xs font-mono">
-            <li>• <strong>{isEn ? 'Company / Legal Holder:' : 'Razón Social / Titular:'}</strong> [NOMBRE_DE_LA_EMPRESA_O_TITULAR]</li>
+            <li>• <strong>{isEn ? 'Company / Legal Holder:' : 'Razón Social / Titular:'}</strong> Valentin Lautaro Morales</li>
+            <li>• <strong>{isEn ? 'Tax ID / CUIT:' : isPt ? 'ID Fiscal:' : 'Identificación Fiscal / CUIT:'}</strong> CUIT 20-46398072-2 (20463980722)</li>
+            <li>• <strong>{isEn ? 'Address:' : isPt ? 'Endereço:' : 'Dirección Fiscal:'}</strong> San Rafael, Argentina</li>
             <li>• <strong>{isEn ? 'Privacy Email:' : 'Email de Privacidad:'}</strong> <a href="mailto:privacidad@ariaprop.online" className="text-emerald-400 underline">privacidad@ariaprop.online</a></li>
             <li>• <strong>{isEn ? 'General Support Email:' : 'Email de Soporte:'}</strong> <a href="mailto:soporte@ariaprop.online" className="text-emerald-400 underline">soporte@ariaprop.online</a></li>
           </ul>
