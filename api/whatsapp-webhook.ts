@@ -257,14 +257,26 @@ export async function sendWhatsAppTextMessage({
   text: string;
   phoneNumberId?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
-  const token = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
-  const phoneId = (phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
+  const rawToken =
+    process.env.WHATSAPP_ACCESS_TOKEN ||
+    process.env.META_WHATSAPP_ACCESS_TOKEN ||
+    process.env.WHATSAPP_TOKEN ||
+    process.env.META_ACCESS_TOKEN ||
+    '';
+  const token = rawToken.replace(/^["']|["']$/g, '').trim();
 
-  if (!token || !phoneId) {
-    console.warn('⚠️ Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID environment variables.');
+  const rawPhoneId =
+    phoneNumberId ||
+    process.env.WHATSAPP_PHONE_NUMBER_ID ||
+    process.env.META_PHONE_NUMBER_ID ||
+    '1215379554999227';
+  const phoneId = rawPhoneId.replace(/^["']|["']$/g, '').trim();
+
+  if (!token) {
+    console.warn('⚠️ Missing WHATSAPP_ACCESS_TOKEN environment variable in Vercel.');
     return {
       success: false,
-      error: 'WhatsApp Cloud API credentials not configured in environment variables.',
+      error: 'WHATSAPP_ACCESS_TOKEN environment variable is empty or missing in Vercel deployment.',
     };
   }
 
