@@ -64,7 +64,10 @@ const normalizePlanId = (planId: string) => {
   return planId;
 };
 
-const PADDLE_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
+const IS_PADDLE_PRODUCTION = import.meta.env.VITE_PADDLE_ENV === 'production';
+
+// Sandbox Price IDs (Verified and Tested)
+const PADDLE_SANDBOX_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
   starter: {
     monthly: 'pri_01kyh5xs672hj75v57tyf8mqg1',
     annual:  'pri_01kyh5zsndbhkhswrbfmwj4xvb',
@@ -74,6 +77,20 @@ const PADDLE_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
     annual:  'pri_01kyh64fj85g1j12vgar9ct9yz',
   },
 };
+
+// Production Price IDs (Paddle Dashboard -> Catalog -> Prices -> Copy pri_live_...)
+const PADDLE_PRODUCTION_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
+  starter: {
+    monthly: import.meta.env.VITE_PADDLE_PRICE_SOLO_MONTHLY || 'pri_live_solo_monthly_placeholder',
+    annual:  import.meta.env.VITE_PADDLE_PRICE_SOLO_ANNUAL  || 'pri_live_solo_annual_placeholder',
+  },
+  pro: {
+    monthly: import.meta.env.VITE_PADDLE_PRICE_PRO_MONTHLY  || 'pri_live_pro_monthly_placeholder',
+    annual:  import.meta.env.VITE_PADDLE_PRICE_PRO_ANNUAL   || 'pri_live_pro_annual_placeholder',
+  },
+};
+
+const PADDLE_PRICE_IDS = IS_PADDLE_PRODUCTION ? PADDLE_PRODUCTION_PRICE_IDS : PADDLE_SANDBOX_PRICE_IDS;
 
 const OFFICIAL_PAYMENT_LINKS: Record<string, { monthly: string; annual: string }> = {
   starter: {
@@ -105,8 +122,13 @@ export function CheckoutView({ }: CheckoutViewProps) {
       script.onload = () => {
         if ((window as any).Paddle) {
           try {
-            (window as any).Paddle.Environment?.set('sandbox');
-            console.log('✅ Paddle.js v2 SDK initialized in Sandbox mode.');
+            if (IS_PADDLE_PRODUCTION) {
+              (window as any).Paddle.Environment?.set('production');
+              console.log('✅ Paddle.js v2 SDK initialized in PRODUCTION mode.');
+            } else {
+              (window as any).Paddle.Environment?.set('sandbox');
+              console.log('✅ Paddle.js v2 SDK initialized in SANDBOX mode.');
+            }
           } catch (err) {
             console.warn('⚠️ Paddle.js initialization warning:', err);
           }
