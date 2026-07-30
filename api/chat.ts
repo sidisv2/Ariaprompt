@@ -1,10 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { INITIAL_BOT_CONFIG } from '../src/data/mockData';
-import {
-  searchMultiSourceRealEstate,
-  MARKET_REAL_ESTATE_DATABASE,
-} from '../src/lib/multiSourceRealEstateEngine';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -20,6 +15,61 @@ function getBackendSupabaseClient() {
     return null;
   }
 }
+
+const MARKET_CATALOG = [
+  {
+    id: 'mendoza-rent-01',
+    title: 'Departamento 2 Ambientes Amoblado en Alquiler - Barrio Bombal',
+    type: 'apartment',
+    price: 450,
+    address: 'Av. España 1450',
+    zone: 'Barrio Bombal',
+    city: 'Mendoza',
+    country: 'Argentina',
+    bedrooms: 1,
+    areaM2: 52,
+    description: 'Excelente departamento totalmente amoblado y equipado listo para ingresar. Edificio moderno con seguridad 24hs.',
+  },
+  {
+    id: 'prop-101',
+    title: 'Penthouse de Ultra Lujo con Terraza Privada y Vista a Campo de Golf',
+    type: 'penthouse',
+    price: 1250000,
+    address: 'Campos Elíseos 400',
+    zone: 'Polanco',
+    city: 'Ciudad de México',
+    country: 'México',
+    bedrooms: 4,
+    areaM2: 380,
+    description: 'Residencia de lujo con acabados de mármol importado, domótica integral y piscina privada.',
+  },
+  {
+    id: 'prop-102',
+    title: 'Casa Residencial en Barrio Cerrado El Poblado',
+    type: 'house',
+    price: 680000,
+    address: 'Calle 10 Sur 28',
+    zone: 'El Poblado',
+    city: 'Medellín',
+    country: 'Colombia',
+    bedrooms: 5,
+    areaM2: 420,
+    description: 'Moderna casa independiente rodeada de naturaleza con seguridad privada.',
+  },
+  {
+    id: 'prop-103',
+    title: 'Departamento Moderno 3 Ambientes en Puerto Madero',
+    type: 'apartment',
+    price: 390000,
+    address: 'Juana Manso 1100',
+    zone: 'Puerto Madero',
+    city: 'Buenos Aires',
+    country: 'Argentina',
+    bedrooms: 2,
+    areaM2: 95,
+    description: 'Piso alto con vista panorámica al río y la reserva ecológica.',
+  },
+];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -113,35 +163,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       '';
     const cleanApiKey = rawKey.replace(/^["']|["']$/g, '').trim();
 
-    const searchResult = searchMultiSourceRealEstate(trimmedMsg);
-
-    const multiSourceCatalogContext = MARKET_REAL_ESTATE_DATABASE.map(
+    const catalogContext = MARKET_CATALOG.map(
       (p) =>
-        `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en DIRECCIÓN REAL VERIFICADA: ${p.location.address}, ${p.location.zone}, ${p.location.city}, ${p.location.country || ''}. MAPA: ${p.location.googleMapsUrl || '#'}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.features.bedrooms} hab / ${p.features.rooms || p.features.bedrooms + 1} ambientes, ${p.features.areaM2} m². FUENTE: Catálogo Directo de la Agencia. Descripción: ${p.description}`
+        `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en ${p.address}, ${p.zone}, ${p.city}, ${p.country}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.bedrooms} hab, ${p.areaM2} m². FUENTE: Catálogo Directo de la Agencia. ${p.description}`
     ).join('\n');
 
     const systemPrompt = `
 Eres Aria Prop, el asistente virtual de una plataforma inmobiliaria que opera en toda América.
 
 IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
-Debes responder SIEMPRE en este idioma (${targetLangName}) desde el primer saludo y en todas tus explicaciones.
-Excepción: Si el usuario escribe su mensaje en un idioma distinto (ej: si escribe en inglés o portugués), prioriza responder en el idioma utilizado por el usuario en su mensaje.
+Debes responder SIEMPRE en este idioma (${targetLangName}).
 
-Tus objetivos, en este orden:
-1. Entender qué busca el usuario (comprar o alquilar, tipo de propiedad, zona, presupuesto, ambientes).
-2. Consultar únicamente los datos reales disponibles en FUENTE_DE_DATOS y recomendar las opciones que mejor se ajusten.
+Tus objetivos:
+1. Entender qué busca el usuario (comprar o alquilar, tipo de propiedad, zona, presupuesto).
+2. Consultar los datos disponibles en FUENTE_DE_DATOS y recomendar opciones.
 3. Facilitar el contacto directo o agendar una visita.
 
-## FUENTE_DE_DATOS (Base/índice de la agencia):
-${multiSourceCatalogContext}
+## FUENTE_DE_DATOS:
+${catalogContext}
 
-## REGLAS DE ATRIBUCIÓN Y TRANSPARENCIA (ESTRICTAS):
-- NUNCA menciones ni atribuyas publicaciones a fuentes externas como "MercadoLibre", "Zonaprop", "Idealista" o "Properati", ya que las propiedades actuales pertenecen al "Catálogo Directo de la Agencia".
-- Presenta las propiedades siempre indicando como fuente: "Catálogo Directo de la Agencia" o "Inventario Verificado Aria Prop".
-- SI EL USUARIO PIDE ALQUILER: Muestra exclusivamente propiedades marcadas como ALQUILER (ej. $450 USD/mes). Nunca muestres opciones de venta cuando el usuario pida alquiler.
-- SI LA CIUDAD NO ESTÁ EN FUENTE_DE_DATOS (ej. San Rafael): Decí de forma transparente que actualmente no contás con propiedades verificadas en esa ciudad específica dentro del catálogo directo de la agencia, y ofrecé conectar por WhatsApp con un asesor humano para buscar opciones en esa zona.
-
-Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes cortos, amables y conversacionales (2-4 líneas).
+Responde siempre en ${targetLangName} con mensajes cortos, amables y conversacionales (2-4 líneas).
 `;
 
     if (cleanApiKey) {
@@ -161,7 +202,7 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: contents,
+            contents,
             systemInstruction: { parts: [{ text: systemPrompt }] },
           }),
         });
@@ -179,9 +220,17 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
       }
     }
 
-    // Deterministic Dynamic Comparator Fallback
+    // Deterministic Fallback Response
     let responseText = '';
     let primaryPropId: string | undefined;
+
+    const matches = MARKET_CATALOG.filter(
+      (p) =>
+        lowerMsg.includes(p.city.toLowerCase()) ||
+        lowerMsg.includes(p.zone.toLowerCase()) ||
+        lowerMsg.includes(p.type.toLowerCase()) ||
+        (lowerMsg.includes('alquiler') && p.price < 5000)
+    );
 
     if (
       lowerMsg === 'hola' ||
@@ -192,16 +241,12 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
       lowerMsg === 'hi'
     ) {
       responseText = `¡Hola! Soy Aria, tu asistente inmobiliario 24/7. ¿Buscas comprar o alquilar alguna propiedad en particular hoy?`;
+    } else if (matches.length > 0) {
+      const topProp = matches[0];
+      primaryPropId = topProp.id;
+      responseText = `¡Hola! Encontré esta excelente opción en nuestro catálogo verificado:\n\n🏡 **${topProp.title}** en ${topProp.zone}, ${topProp.city}\n• **Precio:** $${topProp.price.toLocaleString('en-US')} USD ${topProp.price < 5000 ? '/mes' : ''}\n• **Ambientes:** ${topProp.bedrooms} dormitorios (${topProp.areaM2} m²)\n• **Dirección:** ${topProp.address}\n\n¿Te gustaría agendar una visita presencial o recibir más detalles por WhatsApp?`;
     } else {
-      const isAlquiler = lowerMsg.includes('alquiler') || lowerMsg.includes('rent') || lowerMsg.includes('renta');
-
-      if (searchResult.exactMatchCount > 0 && searchResult.matchedProperties.length > 0) {
-        const topProp = searchResult.matchedProperties[0];
-        primaryPropId = topProp.id;
-        responseText = `¡Hola! Encontré esta excelente opción en nuestro catálogo verificado:\n\n🏡 **${topProp.title}** en ${topProp.location.zone}, ${topProp.location.city}\n• **Precio:** $${topProp.price.toLocaleString('en-US')} USD ${isAlquiler ? '/mes' : ''}\n• **Ambientes:** ${topProp.features.bedrooms} dormitorios (${topProp.features.areaM2} m²)\n• **Dirección:** ${topProp.location.address}\n\n¿Te gustaría agendar una visita presencial o recibir más detalles por WhatsApp?`;
-      } else {
-        responseText = `Hola. Actualmente estamos actualizando las propiedades verificadas para esa búsqueda específica en nuestro catálogo directo. ¿Te gustaría que te conecte con un asesor humano por WhatsApp para enviarte las opciones disponibles en la zona?`;
-      }
+      responseText = `Hola. Actualmente estamos actualizando las propiedades verificadas para esa búsqueda específica en nuestro catálogo directo. ¿Te gustaría que te conecte con un asesor humano por WhatsApp para enviarte las opciones disponibles en la zona?`;
     }
 
     if (isSSE) {
