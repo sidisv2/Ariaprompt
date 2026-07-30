@@ -108,10 +108,11 @@ function buildMemoryAwareResponse(
     );
   }
 
-  const isAskingArea = lowerMsg.includes('metro') || lowerMsg.includes('m2') || lowerMsg.includes('superficie') || lowerMsg.includes('calle') || lowerMsg.includes('queda') || lowerMsg.includes('direccion') || lowerMsg.includes('dirección');
-  const isAskingPrice = lowerMsg.includes('precio') || lowerMsg.includes('cuanto cuesta') || lowerMsg.includes('cuánto cuesta') || lowerMsg.includes('valor');
-  const isAskingBedrooms = lowerMsg.includes('dormitorio') || lowerMsg.includes('habitacion') || lowerMsg.includes('habitación') || lowerMsg.includes('cuarto') || lowerMsg.includes('ambiente');
-  const isAskingZoneOptions = lowerMsg.includes('zona') || lowerMsg.includes('opción') || lowerMsg.includes('opcion') || lowerMsg.includes('disponible');
+  const hasHistory = history && history.length > 0;
+  const isAskingArea = hasHistory && (lowerMsg.includes('metro') || lowerMsg.includes('m2') || lowerMsg.includes('superficie') || lowerMsg.includes('calle') || lowerMsg.includes('queda') || lowerMsg.includes('direccion') || lowerMsg.includes('dirección'));
+  const isAskingPrice = hasHistory && (lowerMsg.includes('precio') || lowerMsg.includes('cuanto cuesta') || lowerMsg.includes('cuánto cuesta') || lowerMsg.includes('valor'));
+  const isAskingBedrooms = hasHistory && (lowerMsg.includes('cuántos dormitorios') || lowerMsg.includes('cuantos dormitorios') || lowerMsg.includes('cuántos cuartos') || lowerMsg.includes('cuantos cuartos') || lowerMsg.includes('dijiste'));
+  const isAskingZoneOptions = hasHistory && (lowerMsg.includes('zona') || lowerMsg.includes('opción') || lowerMsg.includes('opcion') || lowerMsg.includes('disponible'));
 
   if (lastProp && history.length > 0) {
     if (isAskingArea) {
