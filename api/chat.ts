@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import { INITIAL_BOT_CONFIG } from '../src/data/mockData';
 import {
@@ -23,7 +22,6 @@ function getBackendSupabaseClient() {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Enable CORS for Vercel deployment
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -115,16 +113,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       '';
     const cleanApiKey = rawKey.replace(/^["']|["']$/g, '').trim();
 
-    let ai: GoogleGenAI | null = null;
-    if (cleanApiKey) {
-      try {
-        ai = new GoogleGenAI({ apiKey: cleanApiKey });
-      } catch (err) {
-        console.error('GoogleGenAI Initialization Error:', err);
-        ai = null;
-      }
-    }
-
     const searchResult = searchMultiSourceRealEstate(trimmedMsg);
 
     const multiSourceCatalogContext = MARKET_REAL_ESTATE_DATABASE.map(
@@ -156,9 +144,12 @@ ${multiSourceCatalogContext}
 Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes cortos, amables y conversacionales (2-4 líneas).
 `;
 
-    if (ai) {
+    if (cleanApiKey) {
       try {
-        const formattedContents = [
+        const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${cleanApiKey}`;
+
+        const contents = [
           ...history.map((h: { sender: string; content: string }) => ({
             role: h.sender === 'user' ? 'user' : 'model',
             parts: [{ text: h.content }],
@@ -166,32 +157,25 @@ Responde siempre en ${targetLangName} (o en el idioma del usuario) con mensajes 
           { role: 'user', parts: [{ text: trimmedMsg }] },
         ];
 
-        const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-
-        const responseStream = await ai.models.generateContentStream({
-          model: modelName,
-          contents: formattedContents,
-          config: {
-            systemInstruction: systemPrompt,
-          },
+        const geminiRes = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: contents,
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+          }),
         });
 
-        let receivedAnyText = false;
-        for await (const chunk of responseStream) {
-          if (chunk.text) {
-            receivedAnyText = true;
-            sendChunk({ text: chunk.text });
+        if (geminiRes.ok) {
+          const json = await geminiRes.json();
+          const generatedText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (generatedText) {
+            sendChunk({ text: generatedText });
+            return endResponse({ done: true });
           }
         }
-
-        if (receivedAnyText) {
-          return endResponse({ done: true });
-        }
       } catch (geminiErr: any) {
-        console.error('Gemini Stream Call Error:', geminiErr?.message || geminiErr);
-        sendChunk({
-          text: `⚠️ **Aviso de API**: Error en llamada a modelo Gemini (${geminiErr?.message || 'Error de conexión'}). Mostrando respuesta comparativa de contingencia del catálogo directo:\n\n`,
-        });
+        console.warn('Gemini REST Call Error:', geminiErr?.message || geminiErr);
       }
     }
 
