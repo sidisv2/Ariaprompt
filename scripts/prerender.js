@@ -186,10 +186,10 @@ const PUBLIC_ROUTES = [
       <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
         <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
           <h1 class="text-3xl font-black text-white">Términos de Servicio</h1>
-          <p class="text-slate-300">Términos de uso de la plataforma Aria Prop. Las suscripciones son facturadas y procesadas de forma segura a través de Paddle.com (nuestro Merchant of Record).</p>
+          <p class="text-slate-300">Términos de uso de la plataforma Aria Prop provista por Valentin Lautaro Morales (CUIT 20-46398072-2, San Rafael, Argentina). Las suscripciones son facturadas y procesadas de forma segura a través de Paddle.com (nuestro Merchant of Record).</p>
           <div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
-            <h2 class="text-lg font-bold text-emerald-400">Facturación & Paddle</h2>
-            <p class="text-slate-300">Nuestros procesos de pedido y pago son gestionados por Paddle.com Market Ltd, que actúa como el comerciante registrado autorizado.</p>
+            <h2 class="text-lg font-bold text-emerald-400">Facturación & Entidad Legal</h2>
+            <p class="text-slate-300">Titular Legal: Valentin Lautaro Morales • CUIT 20-46398072-2 • Dirección Fiscal: San Rafael, Argentina. Procesamiento de cobros realizado por Paddle.com Market Ltd.</p>
           </div>
         </main>
       </div>
@@ -206,10 +206,10 @@ const PUBLIC_ROUTES = [
       <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
         <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
           <h1 class="text-3xl font-black text-white">Política de Privacidad</h1>
-          <p class="text-slate-300">Resguardo privado de datos, cifrado SSL/TLS 256-bit y políticas de Row Level Security (RLS) por agencia.</p>
+          <p class="text-slate-300">Resguardo privado de datos, cifrado SSL/TLS 256-bit y políticas de Row Level Security (RLS) por agencia. Responsable del tratamiento de datos: Valentin Lautaro Morales (CUIT 20-46398072-2, San Rafael, Argentina).</p>
           <div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
-            <h2 class="text-lg font-bold text-emerald-400">Protección de Datos & Pagos</h2>
-            <p class="text-slate-300">Los datos de facturación son procesados directamente por Paddle.com. Aria Prop no almacena números de tarjeta completos.</p>
+            <h2 class="text-lg font-bold text-emerald-400">Protección de Datos & Responsable Legal</h2>
+            <p class="text-slate-300">Titular Responsable: Valentin Lautaro Morales • CUIT 20-46398072-2 • San Rafael, Argentina. Los datos de pago son procesados directamente por Paddle.com.</p>
           </div>
         </main>
       </div>
@@ -226,10 +226,10 @@ const PUBLIC_ROUTES = [
       <div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans">
         <main class="max-w-4xl mx-auto px-4 py-8 space-y-6">
           <h1 class="text-3xl font-black text-white">Política de Reembolso y Cancelación</h1>
-          <p class="text-slate-300">Garantía de reembolso de 14 días. Reembolsos procesados automáticamente por Paddle.com hacia su medio de pago original.</p>
+          <p class="text-slate-300">Garantía de reembolso de 14 días para servicios provistos por Valentin Lautaro Morales (CUIT 20-46398072-2, San Rafael, Argentina). Reembolsos procesados automáticamente por Paddle.com hacia su medio de pago original.</p>
           <div class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-4">
-            <h2 class="text-lg font-bold text-emerald-400">Cancelación Transparente</h2>
-            <p class="text-slate-300">Cancele en cualquier momento desde su panel sin penalizaciones. Para solicitar un reembolso, escriba a pagos@ariaprop.online.</p>
+            <h2 class="text-lg font-bold text-emerald-400">Cancelación Transparente & Titular Legal</h2>
+            <p class="text-slate-300">Titular Legal: Valentin Lautaro Morales • CUIT 20-46398072-2 • San Rafael, Argentina. Cancele en cualquier momento desde su panel. Para reembolsos: pagos@ariaprop.online.</p>
           </div>
         </main>
       </div>
