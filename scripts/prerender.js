@@ -134,7 +134,7 @@ const PUBLIC_ROUTES = [
           <header class="space-y-4">
             <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">Tarifas Transparentes</span>
             <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">Planes y Precios Transparentes</h1>
-            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Sin tarjeta obligatoria. Configura tu agente inteligente en menos de 3 minutos.</p>
+            <p class="text-slate-300 text-sm sm:text-base max-w-2xl">Sin tarjeta obligatoria. Configura tu agente inteligente rápidamente sin necesidad de código.</p>
           </header>
           <section class="p-6 rounded-2xl bg-slate-900 border border-white/10 space-y-3 text-xs sm:text-sm">
             <h2 class="text-base font-bold text-emerald-400">Planes de Licencia: Solo Agent ($35/mes), Agency Pro ($99/mes) y Desarrolladores</h2>
