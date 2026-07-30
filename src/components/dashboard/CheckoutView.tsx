@@ -65,6 +65,7 @@ const normalizePlanId = (planId: string) => {
 };
 
 const IS_PADDLE_PRODUCTION = import.meta.env.VITE_PADDLE_ENV === 'production';
+const PADDLE_CLIENT_TOKEN = import.meta.env.VITE_PADDLE_CLIENT_TOKEN || 'live_3335c4da3b502375ca2b1d960e2';
 
 // Production Price IDs (Verified against Paddle Production Live API api.paddle.com)
 const PADDLE_PRODUCTION_PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
@@ -115,26 +116,36 @@ export function CheckoutView({ }: CheckoutViewProps) {
   });
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && !(window as any).Paddle) {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
-      script.async = true;
-      script.onload = () => {
-        if ((window as any).Paddle) {
-          try {
-            if (IS_PADDLE_PRODUCTION) {
-              (window as any).Paddle.Environment?.set('production');
-              console.log('✅ Paddle.js v2 SDK initialized in PRODUCTION mode.');
-            } else {
-              (window as any).Paddle.Environment?.set('sandbox');
-              console.log('✅ Paddle.js v2 SDK initialized in SANDBOX mode.');
-            }
-          } catch (err) {
-            console.warn('⚠️ Paddle.js initialization warning:', err);
+    const initPaddle = () => {
+      const Paddle = (window as any).Paddle;
+      if (Paddle) {
+        try {
+          if (IS_PADDLE_PRODUCTION) {
+            Paddle.Environment?.set('production');
+          } else {
+            Paddle.Environment?.set('sandbox');
           }
+
+          if (PADDLE_CLIENT_TOKEN && typeof Paddle.Initialize === 'function') {
+            Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+            console.log('✅ Paddle.js v2 SDK initialized with Client Token:', PADDLE_CLIENT_TOKEN);
+          }
+        } catch (err) {
+          console.warn('⚠️ Paddle.js initialization warning:', err);
         }
-      };
-      document.head.appendChild(script);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      if (!(window as any).Paddle) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.paddle.com/paddle/v2/paddle.js';
+        script.async = true;
+        script.onload = initPaddle;
+        document.head.appendChild(script);
+      } else {
+        initPaddle();
+      }
     }
   }, []);
 
@@ -213,6 +224,20 @@ export function CheckoutView({ }: CheckoutViewProps) {
       const successUrl = `${window.location.origin}/checkout/success?txn_id={checkout_id}&plan=${planId}&amount=${targetPlan.priceUsd}&currency=USD`;
 
       if (Paddle) {
+        if (IS_PADDLE_PRODUCTION) {
+          try { Paddle.Environment?.set('production'); } catch {}
+        } else {
+          try { Paddle.Environment?.set('sandbox'); } catch {}
+        }
+
+        if (PADDLE_CLIENT_TOKEN && typeof Paddle.Initialize === 'function') {
+          try {
+            Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+          } catch (initErr) {
+            console.warn('Paddle.Initialize warning:', initErr);
+          }
+        }
+
         Paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],
           settings: {
