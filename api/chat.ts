@@ -69,9 +69,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const sendChunk = (data: any) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-    if (typeof (res as any).flush === 'function') {
-      (res as any).flush();
+    try {
+      if (typeof res.write === 'function') {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+        if (typeof (res as any).flush === 'function') {
+          (res as any).flush();
+        }
+      }
+    } catch (err) {
+      console.warn('SSE sendChunk write warning:', err);
     }
   };
 
