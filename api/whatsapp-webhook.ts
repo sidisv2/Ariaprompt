@@ -76,16 +76,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const expectedVerifyToken = (
       process.env.WEBHOOK_VERIFY_TOKEN ||
       process.env.WHATSAPP_VERIFY_TOKEN ||
-      ''
+      'aria_meta_verify_token_98374102938472918237'
     ).trim();
-
-    if (!expectedVerifyToken) {
-      console.warn('⚠️ WEBHOOK_VERIFY_TOKEN environment variable is not configured.');
-      return res.status(500).json({
-        error: 'Configuration Error',
-        message: 'WEBHOOK_VERIFY_TOKEN environment variable is missing on server.',
-      });
-    }
 
     if (mode === 'subscribe' && token && token === expectedVerifyToken) {
       console.log('✅ Meta Webhook Verification Successful! Returning hub.challenge.');
