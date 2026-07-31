@@ -9,10 +9,10 @@ interface PrivacidadPageProps {
 }
 
 export const PrivacidadPage: React.FC<PrivacidadPageProps> = ({ onRouteChange }) => {
-  const { language } = useLanguage();
+  const { lang } = useLanguage();
 
-  const isEn = language === 'en';
-  const isPt = language === 'pt';
+  const isEn = lang === 'en';
+  const isPt = lang === 'pt';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">

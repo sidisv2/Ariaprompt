@@ -130,15 +130,15 @@ export function useChat(options?: { initialContext?: string }) {
 
     setMessages((prev) => [...prev, placeholderBotMsg]);
 
-    try {
-      const history = messages
-        .filter((m) => m.content && m.content !== INITIAL_BOT_CONFIG.welcomeMessage)
-        .map((m) => ({ sender: m.sender === 'user' ? 'user' : 'bot', content: m.content || m.text || '' }));
+    const historyPayload = messages
+      .filter((m) => m.content && m.content !== INITIAL_BOT_CONFIG.welcomeMessage)
+      .map((m) => ({ sender: m.sender === 'user' ? 'user' : 'bot', content: m.content || m.text || '' }));
 
+    try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history, context: ctx, lang }),
+        body: JSON.stringify({ message: text, history: historyPayload, context: ctx, lang }),
       });
 
       if (!response.ok || !response.body) {
@@ -201,7 +201,7 @@ export function useChat(options?: { initialContext?: string }) {
 
       // If text stream ended up empty, apply fallback message so bubble is NEVER empty
       if (!accumulatedText.trim()) {
-        const fallbackText = generateClientFallbackText(text, ctx, history);
+        const fallbackText = generateClientFallbackText(text, ctx, historyPayload);
         const searchResult = searchMultiSourceRealEstate(text);
         setMessages((prev) =>
           prev.map((m) =>
@@ -223,7 +223,7 @@ export function useChat(options?: { initialContext?: string }) {
     } catch (err) {
       console.warn('Streaming fetch failed, applying client-side fallback:', err);
 
-      const fallbackText = generateClientFallbackText(text, ctx, history);
+      const fallbackText = generateClientFallbackText(text, ctx, historyPayload);
       const searchResult = searchMultiSourceRealEstate(text);
 
       setMessages((prev) =>

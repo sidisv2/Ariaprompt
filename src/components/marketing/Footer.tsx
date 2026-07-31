@@ -8,7 +8,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const handleNav = (route: AppRoute) => {
     if (onRouteChange) onRouteChange(route);
@@ -149,7 +149,7 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
               </li>
               <li>
                 <button onClick={() => handleNav('reembolsos')} className="hover:text-emerald-400 transition-colors text-left">
-                  {t('footer.refunds') || (language === 'en' ? 'Refund Policy' : language === 'pt' ? 'Política de Reembolso' : 'Política de Reembolso')}
+                  {t('footer.refunds') || (lang === 'en' ? 'Refund Policy' : lang === 'pt' ? 'Política de Reembolso' : 'Política de Reembolso')}
                 </button>
               </li>
             </ul>

@@ -79,7 +79,7 @@ export const ProfilePanel: React.FC = () => {
     if (!sessionUser) return;
     setLoading(true);
     try {
-      await supabase.from('profiles').upsert({ id: sessionUser.id, display_name: name, updated_at: new Date().toISOString() }, { returning: 'minimal' });
+      await supabase.from('profiles').upsert({ id: sessionUser.id, display_name: name, updated_at: new Date().toISOString() });
       if (avatarFile) {
         await uploadUserFile(sessionUser.id, avatarFile);
         // Optionally set avatar_url in profile to path or public URL depending on privacy

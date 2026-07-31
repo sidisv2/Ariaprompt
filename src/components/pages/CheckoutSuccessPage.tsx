@@ -11,9 +11,9 @@ interface CheckoutSuccessPageProps {
 }
 
 export const CheckoutSuccessPage: React.FC<CheckoutSuccessPageProps> = ({ onRouteChange }) => {
-  const { language } = useLanguage();
-  const isEn = language === 'en';
-  const isPt = language === 'pt';
+  const { lang } = useLanguage();
+  const isEn = lang === 'en';
+  const isPt = lang === 'pt';
 
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string>('pro');

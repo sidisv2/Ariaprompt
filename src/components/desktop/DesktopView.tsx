@@ -39,6 +39,9 @@ import { IntegrationsSection } from '../marketing/IntegrationsSection';
 import { FinalCtaSection } from '../marketing/FinalCtaSection';
 import { DiscountOfferModal } from '../common/DiscountOfferModal';
 import { RestructuredLandingPage } from '../marketing/RestructuredLandingPage';
+import { useAuth } from '../../context/AuthContext';
+import { Tag, Sparkles } from 'lucide-react';
+import { ComparisonPage } from '../pages/ComparisonPage';
 
 interface DesktopViewProps {
   currentRoute: AppRoute;
