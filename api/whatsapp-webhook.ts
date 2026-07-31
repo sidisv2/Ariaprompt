@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// Trigger fresh Vercel deployment to bind newly created WHATSAPP_ACCESS_TOKEN environment variable
+// Trigger fresh Vercel deployment for System User permanent access token test
 
 const MARKET_CATALOG = [
   {
