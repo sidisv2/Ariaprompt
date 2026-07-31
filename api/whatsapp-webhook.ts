@@ -424,36 +424,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (supabase) {
       const rawString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
 
-      // 1. Log to webhook_debug_log
-      supabase
-        .from('webhook_debug_log')
-        .insert({
-          received_at: new Date().toISOString(),
-          raw_body: rawString,
-        })
-        .then(() => {})
-        .catch(() => {});
+      (async () => {
+        try {
+          await supabase.from('webhook_debug_log').insert({
+            received_at: new Date().toISOString(),
+            raw_body: rawString,
+          });
+        } catch {}
 
-      // 2. Log to chat_messages (already active in production DB)
-      try {
-        let parsed = req.body || {};
-        if (typeof parsed === 'string') {
-          try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
-        }
-        const fromNum = parsed.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from || 'raw_webhook_post';
-        const txtMsg = parsed.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body || rawString.slice(0, 200);
+        try {
+          let parsed = req.body || {};
+          if (typeof parsed === 'string') {
+            try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+          }
+          const fromNum = parsed.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from || 'raw_webhook_post';
+          const txtMsg = parsed.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body || rawString.slice(0, 200);
 
-        supabase
-          .from('chat_messages')
-          .insert({
+          await supabase.from('chat_messages').insert({
             phone_number: fromNum,
             channel: 'whatsapp_raw_webhook',
             message_text: txtMsg,
             received_at: new Date().toISOString(),
-          })
-          .then(() => {})
-          .catch(() => {});
-      } catch {}
+          });
+        } catch {}
+      })();
     }
 
     try {
