@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { AppRoute, Property, Lead, BotConfig } from './types';
 import { INITIAL_PROPERTIES, INITIAL_LEADS, INITIAL_BOT_CONFIG } from './data/mockData';
-import { AuthProvider } from './context/AuthContext';
+import { useAuth, AuthProvider } from './context/AuthContext';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { LanguageProvider } from './context/LanguageContext';
 import { useDeviceType } from './hooks/useDeviceType';
 import { DesktopView } from './components/desktop/DesktopView';
 import { MobileView } from './components/mobile/MobileView';
 import { DeviceSwitcherBadge } from './components/common/DeviceSwitcherBadge';
-import { FloatingAssistant } from './components/common/FloatingAssistant';
 import { ChatSlideOver } from './components/chat/ChatSlideOver';
 import { BetaBanner, WhatsAppFloatingButton } from './components/common/BetaBanner';
 
@@ -68,10 +68,18 @@ const getPathFromRoute = (route: AppRoute): string => {
   }
 };
 
-export default function App() {
+function AppInner() {
+  const { user } = useAuth();
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => getRouteFromPath());
-  const [properties, setProperties] = useState<Property[]>(INITIAL_PROPERTIES);
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
+
+  // Real user accounts MUST start with empty properties [] and empty leads []
+  // Only explicit demo accounts (isDemoAccount === true) load mock example data INITIAL_PROPERTIES / INITIAL_LEADS
+  const [properties, setProperties] = useState<Property[]>(() => {
+    return user?.isDemoAccount ? INITIAL_PROPERTIES : [];
+  });
+  const [leads, setLeads] = useState<Lead[]>(() => {
+    return user?.isDemoAccount ? INITIAL_LEADS : [];
+  });
   const [botConfig, setBotConfig] = useState<BotConfig>(INITIAL_BOT_CONFIG);
   const [selectedLeadForChat, setSelectedLeadForChat] = useState<string | undefined>(undefined);
 
@@ -86,7 +94,6 @@ export default function App() {
   };
 
   useEffect(() => {
-    // If user loaded with legacy hash (e.g. /#/soluciones), convert to clean pathname (/soluciones)
     if (window.location.hash) {
       const initialRoute = getRouteFromPath();
       const cleanPath = getPathFromRoute(initialRoute);
@@ -116,59 +123,125 @@ export default function App() {
   // Device detection hook
   const { isMobile, deviceType, forcedDevice, overrideDevice, screenWidth } = useDeviceType();
 
-  // Fetch initial state from server API
+  // Load account properties and leads dynamically from Supabase or localStorage
   useEffect(() => {
-    fetch('/api/properties')
+    let isMounted = true;
+    const agencyId = user?.id;
+
+    if (user?.isDemoAccount) {
+      setProperties(INITIAL_PROPERTIES);
+      setLeads(INITIAL_LEADS);
+      return;
+    }
+
+    if (isSupabaseConfigured && supabase && agencyId) {
+      // Query properties for real account from Supabase
+      supabase
+        .from('propiedades')
+        .select('*')
+        .eq('agency_id', agencyId)
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (isMounted) {
+            if (!error && data) setProperties(data as any);
+            else setProperties([]);
+          }
+        });
+
+      // Query leads for real account from Supabase
+      supabase
+        .from('leads')
+        .select('*')
+        .eq('agency_id', agencyId)
+        .order('created_at', { ascending: false })
+        .then(({ data, error }) => {
+          if (isMounted) {
+            if (!error && data) setLeads(data as any);
+            else setLeads([]);
+          }
+        });
+    } else if (agencyId) {
+      // Local storage fallback for real account
+      try {
+        const savedProps = localStorage.getItem(`aria_props_${agencyId}`);
+        if (savedProps && isMounted) setProperties(JSON.parse(savedProps));
+        else if (isMounted) setProperties([]);
+
+        const savedLeads = localStorage.getItem(`aria_leads_${agencyId}`);
+        if (savedLeads && isMounted) setLeads(JSON.parse(savedLeads));
+        else if (isMounted) setLeads([]);
+      } catch {
+        if (isMounted) {
+          setProperties([]);
+          setLeads([]);
+        }
+      }
+    } else {
+      // Unauthenticated / fresh user: default properties & leads MUST be empty []
+      if (isMounted) {
+        setProperties([]);
+        setLeads([]);
+      }
+    }
+
+    // Fetch bot config
+    const botUrl = agencyId ? `/api/bot-config?agency_id=${encodeURIComponent(agencyId)}` : '/api/bot-config';
+    fetch(botUrl)
       .then((res) => res.json())
       .then((data) => {
-        if (data.data) setProperties(data.data);
+        if (data.data && isMounted) setBotConfig(data.data);
       })
       .catch(() => {});
 
-    fetch('/api/leads')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.data) setLeads(data.data);
-      })
-      .catch(() => {});
-
-    fetch('/api/bot-config')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.data) setBotConfig(data.data);
-      })
-      .catch(() => {});
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, user?.isDemoAccount]);
 
   const handleAddProperty = async (newPropData: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => {
-    try {
-      const res = await fetch('/api/properties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPropData),
-      });
-      const result = await res.json();
-      if (result.data) {
-        setProperties((prev) => [result.data, ...prev]);
-      } else {
-        const localProp: Property = {
-          id: `prop-${Date.now()}`,
-          createdAt: new Date().toISOString().split('T')[0],
-          documents: [],
-          featured: false,
-          ...newPropData,
-        };
-        setProperties((prev) => [localProp, ...prev]);
+    const agencyId = user?.id;
+
+    const propPayload: Property = {
+      id: `prop-${Date.now()}`,
+      code: newPropData.code || `PROP-${Math.floor(100 + Math.random() * 900)}`,
+      title: newPropData.title,
+      type: newPropData.type,
+      status: newPropData.status || 'available',
+      price: newPropData.price,
+      location: newPropData.location,
+      features: newPropData.features,
+      description: newPropData.description,
+      images: newPropData.images,
+      documents: [],
+      featured: false,
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+
+    if (isSupabaseConfigured && supabase && agencyId && !user?.isDemoAccount) {
+      try {
+        const { data, error } = await supabase
+          .from('propiedades')
+          .insert([{ agency_id: agencyId, ...propPayload }])
+          .select()
+          .single();
+
+        if (!error && data) {
+          setProperties((prev) => [data as any, ...prev]);
+          return;
+        }
+      } catch (err) {
+        console.warn('handleAddProperty Supabase error:', err);
       }
-    } catch {
-      const localProp: Property = {
-        id: `prop-${Date.now()}`,
-        createdAt: new Date().toISOString().split('T')[0],
-        documents: [],
-        featured: false,
-        ...newPropData,
-      };
-      setProperties((prev) => [localProp, ...prev]);
+    }
+
+    // Add to real user's properties array (starts from [] for fresh accounts)
+    setProperties((prev) => [propPayload, ...prev]);
+
+    if (agencyId) {
+      try {
+        const savedProps = JSON.parse(localStorage.getItem(`aria_props_${agencyId}`) || '[]');
+        localStorage.setItem(`aria_props_${agencyId}`, JSON.stringify([propPayload, ...savedProps]));
+      } catch {}
     }
   };
 
@@ -213,57 +286,65 @@ export default function App() {
   };
 
   return (
+    <>
+      {/* Beta testing banner — shown every new session */}
+      <BetaBanner />
+      {/* WhatsApp floating button — persistent across all pages */}
+      <WhatsAppFloatingButton />
+      {effectiveDevice === 'mobile' ? (
+        <MobileView
+          currentRoute={currentRoute}
+          onRouteChange={handleNavigate}
+          properties={properties}
+          leads={leads}
+          botConfig={botConfig}
+          selectedLeadForChat={selectedLeadForChat}
+          onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
+          onInterveneLead={handleInterveneLead}
+          onAddProperty={handleAddProperty}
+          onUpdateLeadStatus={handleUpdateLeadStatus}
+          onUpdateBotConfig={handleUpdateBotConfig}
+        />
+      ) : (
+        <DesktopView
+          currentRoute={currentRoute}
+          onRouteChange={handleNavigate}
+          properties={properties}
+          leads={leads}
+          botConfig={botConfig}
+          selectedLeadForChat={selectedLeadForChat}
+          onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
+          onInterveneLead={handleInterveneLead}
+          onAddProperty={handleAddProperty}
+          onUpdateLeadStatus={handleUpdateLeadStatus}
+          onUpdateBotConfig={handleUpdateBotConfig}
+          onOpenPrompt={handleOpenPrompt}
+        />
+      )}
+
+      {/* Slide-over Right Drawer Assistant */}
+      <ChatSlideOver
+        isOpen={slideOverOpen}
+        onClose={() => setSlideOverOpen(false)}
+        prefilledPrompt={prefilledPrompt}
+      />
+
+      {/* Floating Device Switcher Pill */}
+      <DeviceSwitcherBadge
+        deviceType={deviceType}
+        forcedDevice={forcedDevice}
+        overrideDevice={overrideDevice}
+        screenWidth={screenWidth}
+      />
+    </>
+  );
+}
+
+export default function App() {
+  return (
     <LanguageProvider>
-      <AuthProvider onRouteChange={handleNavigate}>
-        {/* Beta testing banner — shown every new session */}
-        <BetaBanner />
-        {/* WhatsApp floating button — persistent across all pages */}
-        <WhatsAppFloatingButton />
-        {effectiveDevice === 'mobile' ? (
-          <MobileView
-            currentRoute={currentRoute}
-            onRouteChange={handleNavigate}
-            properties={properties}
-            leads={leads}
-            botConfig={botConfig}
-            selectedLeadForChat={selectedLeadForChat}
-            onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
-            onInterveneLead={handleInterveneLead}
-            onAddProperty={handleAddProperty}
-            onUpdateLeadStatus={handleUpdateLeadStatus}
-            onUpdateBotConfig={handleUpdateBotConfig}
-          />
-        ) : (
-          <DesktopView
-            currentRoute={currentRoute}
-            onRouteChange={handleNavigate}
-            properties={properties}
-            leads={leads}
-            botConfig={botConfig}
-            selectedLeadForChat={selectedLeadForChat}
-            onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
-            onInterveneLead={handleInterveneLead}
-            onAddProperty={handleAddProperty}
-            onUpdateLeadStatus={handleUpdateLeadStatus}
-            onUpdateBotConfig={handleUpdateBotConfig}
-            onOpenPrompt={handleOpenPrompt}
-          />
-        )}
-
-        {/* Slide-over Right Drawer Assistant */}
-        <ChatSlideOver
-          isOpen={slideOverOpen}
-          onClose={() => setSlideOverOpen(false)}
-          prefilledPrompt={prefilledPrompt}
-        />
-
-        {/* Floating Device Switcher Pill */}
-        <DeviceSwitcherBadge
-          deviceType={deviceType}
-          forcedDevice={forcedDevice}
-          overrideDevice={overrideDevice}
-          screenWidth={screenWidth}
-        />
+      <AuthProvider>
+        <AppInner />
       </AuthProvider>
     </LanguageProvider>
   );

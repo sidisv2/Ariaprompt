@@ -283,24 +283,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getBackendSupabaseClient();
 
   if (req.method === 'GET') {
-    if (supabase) {
-      try {
-        const agencyId = (req.query.agency_id as string) || (req.headers['x-agency-id'] as string);
-        let query = supabase.from('propiedades').select('*').order('created_at', { ascending: false });
-        
-        if (agencyId) {
-          query = query.eq('agency_id', agencyId);
-        }
+    const agencyId = (req.query.agency_id as string) || (req.headers['x-agency-id'] as string);
+    const isDemoQuery = req.query.is_demo === 'true';
 
-        const { data, error } = await query;
-        if (!error && data && data.length > 0) {
+    if (supabase && agencyId) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_demo_account')
+          .eq('id', agencyId)
+          .maybeSingle();
+
+        const isDemo = Boolean(profile?.is_demo_account || isDemoQuery);
+
+        const { data, error } = await supabase
+          .from('propiedades')
+          .select('*')
+          .eq('agency_id', agencyId)
+          .order('created_at', { ascending: false });
+
+        if (!error && data) {
+          if (data.length === 0 && isDemo) {
+            return res.status(200).json({ success: true, data: INITIAL_PROPERTIES, source: 'memory_demo' });
+          }
           return res.status(200).json({ success: true, data, source: 'supabase' });
         }
       } catch (err) {
         console.warn('Vercel API fetch properties fallback:', err);
       }
     }
-    return res.status(200).json({ success: true, data: INITIAL_PROPERTIES, source: 'memory' });
+
+    if (isDemoQuery) {
+      return res.status(200).json({ success: true, data: INITIAL_PROPERTIES, source: 'memory_demo' });
+    }
+
+    return res.status(200).json({ success: true, data: [], source: 'empty_real_account' });
   }
 
   if (req.method === 'POST') {
