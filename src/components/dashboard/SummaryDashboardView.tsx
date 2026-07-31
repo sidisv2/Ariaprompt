@@ -97,7 +97,7 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
       )}
 
       {/* Demo Account Welcome Onboarding Banner */}
-      {user?.email?.includes('demo') && (
+      {user?.isDemoAccount && (
         <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-950/90 via-slate-900 to-indigo-950/90 border-2 border-emerald-500/50 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-page-fade">
           <div className="flex items-start gap-3.5">
             <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">

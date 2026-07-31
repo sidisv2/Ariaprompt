@@ -21,6 +21,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
   const [activeTab, setActiveTab] = useState<'all' | 'hot'>('all');
   const [dbLeads, setDbLeads] = useState<Lead[] | null>(null);
   const [dbMessagesCount, setDbMessagesCount] = useState<number | null>(null);
+  const [dbResponseTimesMs, setDbResponseTimesMs] = useState<number[] | null>(null);
 
   // Fetch real count/leads from Supabase if configured and authenticated user exists
   useEffect(() => {
@@ -39,14 +40,27 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
           setDbLeads(leadData as any);
         }
 
-        // Query real messages count for this user account
-        const { count: msgCount } = await supabase
+        // Query real messages count and response timestamps for this user account
+        const { data: msgData, count: msgCount } = await supabase
           .from('chat_messages')
-          .select('*', { count: 'exact', head: true })
+          .select('response_time_ms, received_at, sent_at', { count: 'exact' })
           .eq('user_id', user.id);
 
         if (isMounted && typeof msgCount === 'number') {
           setDbMessagesCount(msgCount);
+        }
+
+        if (isMounted && msgData && msgData.length > 0) {
+          const times: number[] = [];
+          msgData.forEach((m: any) => {
+            if (typeof m.response_time_ms === 'number' && m.response_time_ms > 0) {
+              times.push(m.response_time_ms);
+            } else if (m.received_at && m.sent_at) {
+              const diff = new Date(m.sent_at).getTime() - new Date(m.received_at).getTime();
+              if (diff > 0 && diff < 300000) times.push(diff);
+            }
+          });
+          setDbResponseTimesMs(times);
         }
       } catch (err) {
         console.warn('MetricsView Supabase query warning:', err);
@@ -59,13 +73,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
     };
   }, [user?.id]);
 
-  // Determine effective leads array for current account
+  // Determine effective leads array for current account using explicit isDemoAccount flag
   const accountLeads = useMemo(() => {
     // If Supabase returned leads for this user, use them
     if (dbLeads !== null) return dbLeads;
 
     // If non-demo user is logged in, filter or check local storage leads
-    if (user && !user.email?.includes('demo')) {
+    if (user && !user.isDemoAccount) {
       const savedUserLeads = localStorage.getItem(`aria_leads_${user.id}`);
       if (savedUserLeads) {
         try {
@@ -76,7 +90,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
       return [];
     }
 
-    // Demo account uses demo leads prop
+    // Explicit demo account uses demo leads prop
     return leads;
   }, [dbLeads, leads, user]);
 
@@ -102,6 +116,41 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
     if (totalLeadsCount === 0) return '0.0%';
     return `${((scheduledVisitsCount / totalLeadsCount) * 100).toFixed(1)}%`;
   }, [scheduledVisitsCount, totalLeadsCount]);
+
+  // Real Average Response Time calculation from timestamps
+  const averageResponseTimeText = useMemo(() => {
+    const times: number[] = [];
+
+    if (dbResponseTimesMs !== null && dbResponseTimesMs.length > 0) {
+      times.push(...dbResponseTimesMs);
+    }
+
+    if (times.length === 0 && accountLeads.length > 0) {
+      accountLeads.forEach((lead: any) => {
+        if (Array.isArray(lead.messages)) {
+          lead.messages.forEach((msg: any) => {
+            if (typeof msg.responseTimeMs === 'number' && msg.responseTimeMs > 0) {
+              times.push(msg.responseTimeMs);
+            } else if (msg.receivedAt && msg.sentAt) {
+              const diff = new Date(msg.sentAt).getTime() - new Date(msg.receivedAt).getTime();
+              if (diff > 0 && diff < 300000) times.push(diff);
+            }
+          });
+        }
+      });
+    }
+
+    if (times.length === 0) {
+      return 'Sin datos suficientes aún';
+    }
+
+    const sumMs = times.reduce((a, b) => a + b, 0);
+    const avgMs = sumMs / times.length;
+    if (avgMs < 1000) {
+      return `${Math.round(avgMs)} ms`;
+    }
+    return `${(avgMs / 1000).toFixed(1)}s`;
+  }, [dbResponseTimesMs, accountLeads]);
 
   const metricCards = useMemo(() => {
     const isZeroActivity = totalLeadsCount === 0 && totalConversationsCount === 0;
@@ -137,14 +186,16 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
       {
         id: 'met-4',
         label: 'Tiempo Medio de Respuesta',
-        value: isZeroActivity ? 'Sin datos suficientes aún' : '< 2.0s (Instantáneo)',
+        value: averageResponseTimeText,
         changePercent: 0,
         trend: 'up',
-        timeframe: isZeroActivity ? 'Requiere volumen de conversaciones' : 'Respuesta instantánea 24/7 en WhatsApp',
+        timeframe: averageResponseTimeText.includes('Sin datos')
+          ? 'Requiere volumen de conversaciones'
+          : 'Calculado de timestamps de mensajes reales',
         sparkline: [0, 0, 0, 0, 0, 0, 0],
       },
     ];
-  }, [totalLeadsCount, totalConversationsCount, qualifiedLeadsCount, conversionRatePercent]);
+  }, [totalLeadsCount, totalConversationsCount, qualifiedLeadsCount, conversionRatePercent, averageResponseTimeText]);
 
   const filteredLeads = activeTab === 'hot' 
     ? accountLeads.filter((l) => l.temperature === 'hot') 

@@ -14,6 +14,8 @@ export interface AppUser {
   role?: 'user' | 'admin';
   /** Real plan tier from public.profiles.estado_cuenta mapped through mapEstadoCuentaToPlanTier(). Defaults to 'normal'. */
   plan: PlanTier;
+  /** Explicit demo account flag */
+  isDemoAccount?: boolean;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -183,18 +185,21 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       meta?.picture ??
       `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=10b981&color=fff`;
 
-    // Fetch real plan from public.profiles — always defaults to 'normal'
+    // Fetch real plan and is_demo_account flag from public.profiles
     let plan: PlanTier = 'normal';
+    let isDemoAccount = Boolean(meta?.is_demo_account);
+
     if (isSupabaseConfigured) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('estado_cuenta')
+          .select('estado_cuenta, is_demo_account')
           .eq('id', sbUser.id)
           .maybeSingle();
 
         if (profile) {
           plan = mapEstadoCuentaToPlanTier(profile.estado_cuenta as string | null);
+          isDemoAccount = Boolean(profile.is_demo_account || meta?.is_demo_account);
         } else {
           // First login (Google or email) — create profile row with 'normal' plan
           plan = 'normal';
@@ -206,6 +211,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
             avatar_url: avatarUrl,
             estado_cuenta: 'gratis', // Supabase column value for 'normal'
             plan_id: 'normal',
+            is_demo_account: isDemoAccount,
           });
         }
       } catch (e) {
@@ -222,6 +228,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       createdAt: sbUser.created_at ?? new Date().toISOString(),
       role: 'user',
       plan,
+      isDemoAccount,
     };
 
     setUser(appUser);
@@ -388,6 +395,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
           createdAt: new Date().toISOString(),
           role: 'user',
           plan: 'normal',
+          isDemoAccount: true,
         };
 
         setUser(mockDemoUser);

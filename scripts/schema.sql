@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   agency_name TEXT DEFAULT 'Mi Agencia Inmobiliaria',
   estado_cuenta TEXT DEFAULT 'activo',
   plan_id TEXT DEFAULT 'solo_agent',
+  is_demo_account BOOLEAN DEFAULT false,
   fecha_registro TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

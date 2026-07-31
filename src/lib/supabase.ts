@@ -37,6 +37,7 @@ export interface UserProfile {
   plan_id?: string;
   fecha_registro?: string;
   avatar_url?: string;
+  is_demo_account?: boolean;
 }
 
 /**
@@ -81,7 +82,7 @@ export async function saveUserProfile(profile: UserProfile): Promise<{ success: 
 
   try {
     // Only send fields that match the public.profiles schema columns exactly:
-    // id, email, nombre, agency_name, estado_cuenta, plan_id, fecha_registro, updated_at
+    // id, email, nombre, agency_name, estado_cuenta, plan_id, fecha_registro, is_demo_account, updated_at
     const payload: Record<string, any> = {
       id: profile.id,
       email: profile.email,
@@ -93,6 +94,7 @@ export async function saveUserProfile(profile: UserProfile): Promise<{ success: 
     if (profile.estado_cuenta) payload.estado_cuenta = profile.estado_cuenta;
     if (profile.plan_id) payload.plan_id = profile.plan_id;
     if (profile.fecha_registro) payload.fecha_registro = profile.fecha_registro;
+    if (profile.is_demo_account !== undefined) payload.is_demo_account = profile.is_demo_account;
 
     const { error: errorProfiles } = await supabase
       .from('profiles')
