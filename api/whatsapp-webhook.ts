@@ -249,6 +249,30 @@ Responde siempre en ${targetLangName} con mensajes cortos, amables y conversacio
   return buildMemoryAwareResponse(trimmedMsg, history).text;
 }
 
+export function formatArgentinePhoneForWhatsApp(phone: string): string {
+  const clean = phone.replace(/[^0-9]/g, '');
+
+  if (clean.startsWith('549')) {
+    const without549 = clean.slice(3);
+
+    if (without549.length === 10) {
+      if (without549.startsWith('11')) {
+        const area = without549.slice(0, 2);
+        const num = without549.slice(2);
+        return '54' + area + '15' + num;
+      }
+      const area = without549.slice(0, 3);
+      const num = without549.slice(3);
+      return '54' + area + '15' + num;
+    }
+    if (without549.startsWith('15')) {
+      return '54' + without549;
+    }
+  }
+
+  return clean;
+}
+
 export async function sendWhatsAppTextMessage({
   to,
   text,
@@ -258,6 +282,8 @@ export async function sendWhatsAppTextMessage({
   text: string;
   phoneNumberId?: string;
 }): Promise<{ success: boolean; data?: any; error?: string; diagnostic?: any }> {
+  const formattedTo = formatArgentinePhoneForWhatsApp(to);
+
   const rawToken =
     process.env.WHATSAPP_ACCESS_TOKEN ||
     process.env.META_WHATSAPP_ACCESS_TOKEN ||
@@ -303,6 +329,7 @@ export async function sendWhatsAppTextMessage({
   const url = `https://graph.facebook.com/v20.0/${phoneId}/messages`;
 
   try {
+    console.log(`📱 Sending WhatsApp Message: raw "to"="${to}" -> formatted "to"="${formattedTo}"`);
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -312,7 +339,7 @@ export async function sendWhatsAppTextMessage({
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
-        to: to.replace(/[^0-9]/g, ''),
+        to: formattedTo,
         type: 'text',
         text: {
           preview_url: false,
