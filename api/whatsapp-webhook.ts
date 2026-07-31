@@ -280,6 +280,7 @@ export async function sendWhatsAppTextMessage({
       'WHATSAPP_TOKEN',
       'META_ACCESS_TOKEN',
     ].filter((k) => Boolean(process.env[k] && process.env[k]!.trim().length > 0)),
+    allEnvKeys: Object.keys(process.env).sort(),
   };
 
   const rawPhoneId =
