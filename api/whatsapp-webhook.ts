@@ -265,6 +265,23 @@ export async function sendWhatsAppTextMessage({
     '';
   const token = rawToken.replace(/^["']|["']$/g, '').trim();
 
+  const tokenDiagnostic = {
+    exists: Boolean(rawToken && rawToken.length > 0),
+    rawLength: rawToken.length,
+    cleanLength: token.length,
+    startsWithEAA: token.startsWith('EAA'),
+    prefix: token.length >= 4 ? token.slice(0, 4) : token,
+    suffix: token.length >= 4 ? token.slice(-4) : token,
+    hasWhitespace: rawToken !== rawToken.trim(),
+    hasQuotes: /^["']|["']$/.test(rawToken),
+    envKeysFound: [
+      'WHATSAPP_ACCESS_TOKEN',
+      'META_WHATSAPP_ACCESS_TOKEN',
+      'WHATSAPP_TOKEN',
+      'META_ACCESS_TOKEN',
+    ].filter((k) => Boolean(process.env[k] && process.env[k]!.trim().length > 0)),
+  };
+
   const rawPhoneId =
     phoneNumberId ||
     process.env.WHATSAPP_PHONE_NUMBER_ID ||
@@ -277,6 +294,7 @@ export async function sendWhatsAppTextMessage({
     return {
       success: false,
       error: 'WHATSAPP_ACCESS_TOKEN environment variable is empty or missing in Vercel deployment.',
+      diagnostic: tokenDiagnostic,
     };
   }
 
@@ -304,14 +322,14 @@ export async function sendWhatsAppTextMessage({
     const data = await res.json();
     if (!res.ok) {
       console.error('❌ Meta Graph API Send Error:', data);
-      return { success: false, error: data?.error?.message || 'Meta Graph API Error', data };
+      return { success: false, error: data?.error?.message || 'Meta Graph API Error', data, diagnostic: tokenDiagnostic };
     }
 
     console.log('✅ Meta WhatsApp Message Sent Successfully:', data);
-    return { success: true, data };
+    return { success: true, data, diagnostic: tokenDiagnostic };
   } catch (err: any) {
     console.error('❌ Network error sending WhatsApp message:', err.message);
-    return { success: false, error: err.message };
+    return { success: false, error: err.message, diagnostic: tokenDiagnostic };
   }
 }
 
@@ -414,6 +432,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         aiResponse,
         sent: sendResult.success,
         metaResult: sendResult.data || sendResult.error,
+        tokenDiagnostic: (sendResult as any).diagnostic || null,
       });
     } catch (err: any) {
       console.error('❌ Error processing WhatsApp webhook POST payload:', err);
