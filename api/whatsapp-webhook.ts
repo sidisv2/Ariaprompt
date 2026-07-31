@@ -418,6 +418,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 2. POST Handler: Receive Incoming Webhook Event from Meta
   if (req.method === 'POST') {
+    // ABSOLUTE FIRST EXECUTABLE LINE: Direct console log without any DB dependency
+    console.log("🔥 WEBHOOK POST RECEIVED AT:", new Date().toISOString());
+    console.log("📩 RAW REQUEST BODY:", typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}));
+
     const supabase = getBackendSupabaseClient();
 
     // FIRST EXECUTABLE LINE: Log raw incoming POST payload immediately to Supabase
