@@ -378,11 +378,15 @@ export async function sendWhatsAppTextMessage({
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // ABSOLUTE ENTRY POINT: Print all request headers, method, query, and URL
+  console.log('🔥 ENTRY POINT METHOD:', req.method, 'URL:', req.url);
+  console.log('ALL HEADERS:', JSON.stringify(req.headers));
+
   // CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Hub-Signature-256');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
