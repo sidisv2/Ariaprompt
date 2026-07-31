@@ -1,5 +1,20 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// Trigger fresh Vercel deployment for System User permanent access token test
+import { createClient } from '@supabase/supabase-js';
+
+function getBackendSupabaseClient() {
+  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
+  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
+    return null;
+  }
+  try {
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  } catch (err) {
+    return null;
+  }
+}
 
 const MARKET_CATALOG = [
   {
@@ -403,6 +418,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // 2. POST Handler: Receive Incoming Webhook Event from Meta
   if (req.method === 'POST') {
+    const supabase = getBackendSupabaseClient();
+
+    // FIRST EXECUTABLE LINE: Log raw incoming POST payload immediately to Supabase
+    if (supabase) {
+      const rawString = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
+
+      // 1. Log to webhook_debug_log
+      supabase
+        .from('webhook_debug_log')
+        .insert({
+          received_at: new Date().toISOString(),
+          raw_body: rawString,
+        })
+        .then(() => {})
+        .catch(() => {});
+
+      // 2. Log to chat_messages (already active in production DB)
+      try {
+        let parsed = req.body || {};
+        if (typeof parsed === 'string') {
+          try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+        }
+        const fromNum = parsed.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from || 'raw_webhook_post';
+        const txtMsg = parsed.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body || rawString.slice(0, 200);
+
+        supabase
+          .from('chat_messages')
+          .insert({
+            phone_number: fromNum,
+            channel: 'whatsapp_raw_webhook',
+            message_text: txtMsg,
+            received_at: new Date().toISOString(),
+          })
+          .then(() => {})
+          .catch(() => {});
+      } catch {}
+    }
+
     try {
       let body = req.body || {};
       if (typeof body === 'string') {
