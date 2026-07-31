@@ -256,7 +256,7 @@ export async function sendWhatsAppTextMessage({
   to: string;
   text: string;
   phoneNumberId?: string;
-}): Promise<{ success: boolean; data?: any; error?: string }> {
+}): Promise<{ success: boolean; data?: any; error?: string; diagnostic?: any }> {
   const rawToken =
     process.env.WHATSAPP_ACCESS_TOKEN ||
     process.env.META_WHATSAPP_ACCESS_TOKEN ||
