@@ -196,6 +196,79 @@ async function generateAriaAiResponse({
   lang?: string;
 }): Promise<string> {
   const trimmedMsg = message.trim();
+
+  const catalogContext = MARKET_CATALOG.map(
+    (p) =>
+      `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en ${p.address}, ${p.zone}, ${p.city}, ${p.country}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.bedrooms} hab, ${p.areaM2} m². FUENTE: Catálogo Directo de la Agencia. ${p.description}`
+  ).join('\n');
+
+  // 1. Primary LLM Provider: OpenRouter API (google/gemini-2.5-flash)
+  const openRouterKey = (
+    process.env.OPENROUTER_API_KEY ||
+    process.env.VITE_OPENROUTER_API_KEY ||
+    ''
+  ).replace(/^["']|["']$/g, '').trim();
+
+  if (openRouterKey) {
+    try {
+      const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
+      const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
+      const targetLangName = langNames[lang] || 'Español';
+
+      const systemPrompt = `
+Eres Aria Prop, la asesora virtual comercial 24/7 de una plataforma inmobiliaria de alta conversión que opera en toda América.
+
+IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
+Debes responder SIEMPRE en este idioma (${targetLangName}).
+
+Tus objetivos:
+1. Calificar activamente al cliente: identificar presupuesto, zona de interés, tipo de operación (alquiler/compra) y número de contacto.
+2. Responder de forma directa, empática y en un MÁXIMO DE 3 PÁRRAFOS (2-4 líneas cada uno).
+3. Consultar la FUENTE DE DATOS y recomendar propiedades relevantes del catálogo.
+4. Recordar la información previa proporcionada en la conversación y NO volver a preguntar datos ya especificados.
+
+## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
+${catalogContext}
+`;
+
+      const formattedMessages = [
+        { role: 'system', content: systemPrompt },
+        ...history.map((h) => ({
+          role: h.sender === 'user' ? 'user' : 'assistant',
+          content: h.content,
+        })),
+        { role: 'user', content: trimmedMsg },
+      ];
+
+      const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterKey}`,
+          'HTTP-Referer': 'https://ariaprop.online',
+          'X-Title': 'Aria Prop',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: formattedMessages,
+          temperature: 0.3,
+          max_tokens: 800,
+        }),
+      });
+
+      if (openRouterRes.ok) {
+        const json = await openRouterRes.json();
+        const reply = json?.choices?.[0]?.message?.content;
+        if (reply && reply.trim()) {
+          return reply.trim();
+        }
+      }
+    } catch (openRouterErr) {
+      console.warn('OpenRouter API Call Warning in WhatsApp webhook:', openRouterErr);
+    }
+  }
+
+  // 2. Secondary LLM Provider: Direct Google Gemini REST API
   const rawKey =
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_API_KEY ||
@@ -205,11 +278,6 @@ async function generateAriaAiResponse({
 
   const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
   const targetLangName = langNames[lang] || 'Español';
-
-  const catalogContext = MARKET_CATALOG.map(
-    (p) =>
-      `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en ${p.address}, ${p.zone}, ${p.city}, ${p.country}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.bedrooms} hab, ${p.areaM2} m². FUENTE: Catálogo Directo de la Agencia. ${p.description}`
-  ).join('\n');
 
   const systemPrompt = `
 Eres Aria Prop, el asistente virtual de una plataforma inmobiliaria que opera en toda América.

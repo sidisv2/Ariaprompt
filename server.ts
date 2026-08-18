@@ -277,30 +277,19 @@ ${propertyCatalogContext}
           `- **Certificación Energética**: Etiqueta A++ (Consumo ultra eficiente).\n\n` +
           `🔒 *Los suscriptores tienen habilitada la descarga directa del expediente técnico en su directorio privado.*`;
       } else {
-        fallbackText = `### 🏛️ **Análisis Ejecutivo Inmobiliario Personalizado**\n\n` +
-          `Estimado cliente, analizando tu consulta para un departamento valorado en **$${customPrice.toLocaleString('en-US')} USD**:\n\n` +
-          `#### 📌 **Resumen Ejecutivo**:\n` +
-          `- **Valor de Inmueble Analizado**: **$${customPrice.toLocaleString('en-US')} USD**\n` +
-          `- **Alquiler Mensual Ingresado**: **$${customRent.toLocaleString('en-US')} USD / mes**\n` +
-          `- **Ubicación de Referencia**: ${matchingProp.location.zone} (${matchingProp.location.city})\n\n` +
-          `#### 💰 **Estudio Financiero & Proyección de Rentabilidad**:\n` +
-          `| Criterio Financiero | Valor Calculado (USD) |\n` +
-          `| :--- | :--- |\n` +
-          `| **Inversión Inicial** | $${customPrice.toLocaleString('en-US')} USD |\n` +
-          `| **Renta Bruta Anual** | $${(customRent * 12).toLocaleString('en-US')} USD / año |\n` +
-          `| **ROI Bruto Anual** | **~${grossYield}% Anual** |\n` +
-          `| **ROI Neto Estimado** | **~${netYield}% Anual** |\n` +
-          `| **Tiempo de Retorno (Payback)** | **${paybackYears} Años** |\n` +
-          `| **Plusvalía Proyectada (5 Años)** | **$${Math.round(customPrice * 1.25).toLocaleString('en-US')} USD (+25%)** |\n\n` +
-          `¿Te gustaría coordinar una reunión financiera o agendar una asesoría de inversión personalizada?`;
+        fallbackText = `¡Hola! Soy **${botConfig.agentName}**, tu asesora inmobiliaria comercial 24/7.\n\n` +
+          `Basado en lo que buscas, te recomiendo el **${matchingProp.title}** ubicado en **${matchingProp.location.zone}, ${matchingProp.location.city}** con un valor de **$${matchingProp.price.toLocaleString('en-US')} USD**.\n\n` +
+          `¿Te gustaría agendar una visita presencial o recibir más detalles sobre la propiedad?`;
       }
 
-      const words = fallbackText.split(' ');
-      for (const word of words) {
-        res.write(`data: ${JSON.stringify({ text: word + ' ' })}\n\n`);
-        await new Promise((r) => setTimeout(r, 20));
+      const chunks = fallbackText.split(' ');
+      for (let i = 0; i < chunks.length; i++) {
+        const textChunk = (i === 0 ? '' : ' ') + chunks[i];
+        res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
+        await new Promise((r) => setTimeout(r, 25));
       }
-      res.write(`data: ${JSON.stringify({ done: true, recommendedPropertyId: matchingProp.id })}\n\n`);
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       return res.end();
     }
 
