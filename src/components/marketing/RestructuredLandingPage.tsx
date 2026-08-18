@@ -34,11 +34,19 @@ interface RestructuredLandingPageProps {
 export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = ({
   onRouteChange,
 }) => {
-  const { openAuthModal } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
   const isAnnual = billingCycle === 'annual';
+
+  const handleStartTrial = (planId: string = 'pro', targetRoute: AppRoute = 'dashboard-checkout') => {
+    if (user) {
+      onRouteChange(targetRoute === 'dashboard-checkout' ? 'dashboard-checkout' : 'app');
+    } else {
+      openAuthModal('signup', planId, targetRoute);
+    }
+  };
 
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
@@ -84,7 +92,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <button
-              onClick={() => openAuthModal('signup')}
+              onClick={() => handleStartTrial('pro', 'app')}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
             >
               <span>Probar Gratis (7 Días)</span>
@@ -360,7 +368,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
       {/* SECCIÓN INTERACTIVA — Calculadora de Impacto de Leads Perdidos    */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-800/80">
-        <RoiLeadCalculator onPlanSelect={() => openAuthModal('signup')} />
+        <RoiLeadCalculator onPlanSelect={(planId) => handleStartTrial(planId || 'pro', 'dashboard-checkout')} />
       </section>
 
 
@@ -436,7 +444,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
             </div>
 
             <button
-              onClick={() => openAuthModal('signup')}
+              onClick={() => handleStartTrial('solo', 'dashboard-checkout')}
               className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all cursor-pointer"
             >
               Comenzar Prueba Solo Agent
@@ -488,7 +496,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
             </div>
 
             <button
-              onClick={() => openAuthModal('signup')}
+              onClick={() => handleStartTrial('pro', 'dashboard-checkout')}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
             >
               Comenzar Prueba Agency Pro

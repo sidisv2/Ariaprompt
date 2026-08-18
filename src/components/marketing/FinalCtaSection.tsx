@@ -3,9 +3,17 @@ import { Sparkles, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const FinalCtaSection: React.FC = () => {
-  const { openAuthModal } = useAuth();
+export const FinalCtaSection: React.FC<{ onRouteChange?: (route: any) => void }> = ({ onRouteChange }) => {
+  const { user, openAuthModal } = useAuth();
   const { t } = useLanguage();
+
+  const handleStart = (planId: string) => {
+    if (user) {
+      if (onRouteChange) onRouteChange('dashboard-checkout');
+    } else {
+      openAuthModal('signup', planId, 'dashboard-checkout');
+    }
+  };
 
   return (
     <section className="py-24 bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-950 text-white border-t border-white/10 relative overflow-hidden text-center">
@@ -34,7 +42,7 @@ export const FinalCtaSection: React.FC = () => {
         {/* CTAs Group */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
           <button
-            onClick={() => openAuthModal('signup', 'pro', 'dashboard-checkout')}
+            onClick={() => handleStart('pro')}
             className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-2xl shadow-emerald-500/30 transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-105"
           >
             <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
@@ -43,7 +51,7 @@ export const FinalCtaSection: React.FC = () => {
           </button>
 
           <button
-            onClick={() => openAuthModal('signup', 'custom', 'dashboard-checkout')}
+            onClick={() => handleStart('custom')}
             className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 font-extrabold text-sm border border-white/15 hover:border-indigo-400 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
           >
             <Zap className="w-4 h-4 text-indigo-400" />

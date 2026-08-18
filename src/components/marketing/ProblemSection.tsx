@@ -3,9 +3,17 @@ import { Clock, AlertTriangle, MessageSquareOff, TrendingDown, ArrowRight } from
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
-export const ProblemSection: React.FC = () => {
-  const { openAuthModal } = useAuth();
+export const ProblemSection: React.FC<{ onRouteChange?: (route: any) => void }> = ({ onRouteChange }) => {
+  const { user, openAuthModal } = useAuth();
   const { t } = useLanguage();
+
+  const handleCta = () => {
+    if (user) {
+      if (onRouteChange) onRouteChange('app');
+    } else {
+      openAuthModal('signup', 'pro', 'dashboard-checkout');
+    }
+  };
 
   const problems = [
     {
@@ -72,7 +80,7 @@ export const ProblemSection: React.FC = () => {
         {/* Section Action CTA */}
         <div className="mt-12 text-center">
           <button
-            onClick={() => openAuthModal('signup', 'pro', 'dashboard-checkout')}
+            onClick={handleCta}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer hover:scale-105"
           >
             <span>{t('problem.cta')}</span>
