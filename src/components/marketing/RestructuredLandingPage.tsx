@@ -42,7 +42,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
 
   const handleStartTrial = (planId: string = 'pro', targetRoute: AppRoute = 'dashboard-checkout') => {
     if (user) {
-      onRouteChange(targetRoute === 'dashboard-checkout' ? 'dashboard-checkout' : 'app');
+      onRouteChange(targetRoute);
     } else {
       openAuthModal('signup', planId, targetRoute);
     }
@@ -92,7 +92,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <button
-              onClick={() => handleStartTrial('pro', 'app')}
+              onClick={() => handleStartTrial('pro', 'dashboard-checkout')}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
             >
               <span>Probar Gratis (7 Días)</span>

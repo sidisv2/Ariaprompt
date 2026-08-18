@@ -1,6 +1,5 @@
 import { AppUser } from '../src/context/AuthContext';
 
-// Helper simulating Hero CTA handler logic from RestructuredLandingPage.tsx
 function handleHeroCtaClick(
   user: AppUser | null,
   callbacks: {
@@ -9,8 +8,8 @@ function handleHeroCtaClick(
   }
 ) {
   if (user) {
-    callbacks.onRouteChange('app');
-    return 'navigated_to_app';
+    callbacks.onRouteChange('dashboard-checkout');
+    return 'navigated_to_checkout';
   } else {
     callbacks.openAuthModal('signup', 'pro', 'dashboard-checkout');
     return 'opened_auth_modal';
@@ -19,7 +18,7 @@ function handleHeroCtaClick(
 
 async function runHeroAuthCtaVerification() {
   console.log('================================================================');
-  console.log('🧪 VERIFICATION TEST: HERO CTA AUTHENTICATION BEHAVIOR');
+  console.log('🧪 VERIFICATION TEST: HERO CTA AUTHENTICATION & CHECKOUT BEHAVIOR');
   console.log('================================================================\n');
 
   let routeNavigated: string | null = null;
@@ -32,8 +31,8 @@ async function runHeroAuthCtaVerification() {
     },
   };
 
-  // --- TEST CASE 1: LOGGED-IN USER (Session Active: Valentin) ---
-  console.log('--- TEST CASE 1: LOGGED-IN USER (e.g. Valentin - Badge GRATIS) ---');
+  // --- TEST CASE 1: LOGGED-IN USER (Session Active: Valentin - Badge GRATIS) ---
+  console.log('--- TEST CASE 1: LOGGED-IN USER (Session Active: Valentin) ---');
   const mockUser: AppUser = {
     id: 'usr_valentin_123',
     email: 'valentin@ariaprop.online',
@@ -53,10 +52,10 @@ async function runHeroAuthCtaVerification() {
   console.log('Route Navigated:', routeNavigated);
   console.log('Auth Modal Opened:', authModalOpened);
 
-  if (routeNavigated === 'app' && authModalOpened === null) {
-    console.log('✅ TEST CASE 1 PASSED: Authenticated user is taken directly to Workspace (/app) without showing AuthModal.\n');
+  if (routeNavigated === 'dashboard-checkout' && authModalOpened === null) {
+    console.log('✅ TEST CASE 1 PASSED: Authenticated user is taken directly to Checkout (/dashboard/checkout) for Paddle trial activation.\n');
   } else {
-    console.error('❌ TEST CASE 1 FAILED: AuthModal was unexpectedly shown for logged-in user.\n');
+    console.error('❌ TEST CASE 1 FAILED: Expected navigation to dashboard-checkout for logged-in user.\n');
   }
 
   // --- TEST CASE 2: LOGGED-OUT USER (No Session) ---
@@ -70,10 +69,10 @@ async function runHeroAuthCtaVerification() {
   console.log('Route Navigated:', routeNavigated);
   console.log('Auth Modal Opened:', JSON.stringify(authModalOpened));
 
-  if (routeNavigated === null && authModalOpened?.tab === 'signup') {
-    console.log('✅ TEST CASE 2 PASSED: Unauthenticated user is correctly prompted with Register/Login Modal.\n');
+  if (routeNavigated === null && authModalOpened?.tab === 'signup' && authModalOpened?.targetRoute === 'dashboard-checkout') {
+    console.log('✅ TEST CASE 2 PASSED: Unauthenticated user is prompted with AuthModal and targetRoute is preserved to dashboard-checkout post-login.\n');
   } else {
-    console.error('❌ TEST CASE 2 FAILED: Unauthenticated user was not shown AuthModal.\n');
+    console.error('❌ TEST CASE 2 FAILED: Unauthenticated user was not prompted with AuthModal.\n');
   }
 
   console.log('================================================================');
