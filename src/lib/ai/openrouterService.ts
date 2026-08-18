@@ -1,1 +1,1 @@
-export * from '../../../api/_lib/openrouterService';
+export * from '../../../api/_lib/openrouterService.js';

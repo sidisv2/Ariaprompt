@@ -38,7 +38,13 @@ export function getOpenRouterApiKey(explicitKey?: string): string {
     process.env.OPENROUTER_API_KEY ||
     process.env.VITE_OPENROUTER_API_KEY ||
     '';
-  return rawKey.replace(/^["']|["']$/g, '').trim();
+  const cleanKey = rawKey.replace(/^["']|["']$/g, '').trim();
+
+  if (!cleanKey) {
+    throw new Error('Variable OPENROUTER_API_KEY no detectada en el entorno.');
+  }
+
+  return cleanKey;
 }
 
 /**
@@ -113,19 +119,35 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
     { role: 'user', content: trimmedMsg },
   ];
 
-  const completion = await openai.chat.completions.create({
-    model,
-    messages,
-    temperature: 0.3,
-    max_tokens: 800,
-  });
+  try {
+    const completion = await openai.chat.completions.create({
+      model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 800,
+    });
 
-  const reply = completion.choices?.[0]?.message?.content;
-  if (!reply || !reply.trim()) {
-    throw new Error('OpenRouter API returned empty response payload.');
+    const reply = completion.choices?.[0]?.message?.content;
+    if (!reply || !reply.trim()) {
+      throw new Error('OpenRouter API devolvió una respuesta vacía.');
+    }
+
+    return reply.trim();
+  } catch (err: any) {
+    const status = err?.status || err?.statusCode;
+    const errorMessage = err?.error?.message || err?.message || String(err);
+    console.error(`❌ OpenRouter API Exception [Status ${status || 'N/A'}]:`, errorMessage);
+
+    if (status === 401) {
+      throw new Error(`Error de autenticación con OpenRouter (401): API Key no válida o expirada. (${errorMessage})`);
+    } else if (status === 402) {
+      throw new Error(`Error de saldo en OpenRouter (402): Cuenta sin créditos disponibles. (${errorMessage})`);
+    } else if (status === 429) {
+      throw new Error(`Límite de solicitudes en OpenRouter (429): Rate limit excedido. (${errorMessage})`);
+    } else {
+      throw new Error(`Fallo en OpenRouter API (${status || 'Error'}): ${errorMessage}`);
+    }
   }
-
-  return reply.trim();
 }
 
 /**
@@ -136,15 +158,16 @@ export async function extractLeadQualificationOpenRouter(options: {
   history?: ChatMessage[];
   apiKey?: string;
 }): Promise<LeadQualificationResult | null> {
-  const openai = getOpenAIClient(options.apiKey);
-  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  try {
+    const openai = getOpenAIClient(options.apiKey);
+    const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
 
-  const conversationText = [
-    ...(options.history || []).map((h) => `${h.sender.toUpperCase()}: ${h.content}`),
-    `USER: ${options.message}`,
-  ].join('\n');
+    const conversationText = [
+      ...(options.history || []).map((h) => `${h.sender.toUpperCase()}: ${h.content}`),
+      `USER: ${options.message}`,
+    ].join('\n');
 
-  const systemPrompt = `
+    const systemPrompt = `
 Eres un analizador de datos estructurados para una plataforma inmobiliaria.
 Analiza la conversación y extrae la calificación del cliente en formato JSON estricto.
 
@@ -161,7 +184,6 @@ FORMATO DE SALIDA (JSON ÚNICAMENTE, SIN MARKDOWN NI TEXTO ADICIONAL):
 }
 `;
 
-  try {
     const completion = await openai.chat.completions.create({
       model,
       messages: [
@@ -176,7 +198,8 @@ FORMATO DE SALIDA (JSON ÚNICAMENTE, SIN MARKDOWN NI TEXTO ADICIONAL):
     const rawText = completion.choices?.[0]?.message?.content || '';
     const cleanJson = rawText.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanJson) as LeadQualificationResult;
-  } catch {
+  } catch (err: any) {
+    console.warn('Lead qualification extraction exception:', err?.message || err);
     return null;
   }
 }

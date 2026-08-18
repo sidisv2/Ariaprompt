@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { generateOpenRouterRealEstateResponse } from './_lib/openrouterService';
+import { generateOpenRouterRealEstateResponse } from './_lib/openrouterService.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -292,26 +292,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sendChunk({ text: generatedText });
       return endResponse({ done: true });
     } catch (openRouterErr: any) {
-      console.error('❌ OpenRouter API Call Error in api/chat:', openRouterErr?.message || openRouterErr);
+      const errMsg = openRouterErr?.message || 'Error interno del servidor';
+      const errDetails = openRouterErr?.stack || String(openRouterErr);
+      console.error('❌ OpenRouter API Call Error in api/chat:', errMsg);
       if (isSSE) {
-        sendChunk({ error: 'Error calling OpenRouter API', details: openRouterErr?.message || 'LLM service unavailable' });
+        sendChunk({ error: errMsg, details: errDetails });
         return res.end();
       } else {
         return res.status(500).json({
-          error: 'Error calling OpenRouter API',
-          details: openRouterErr?.message || 'LLM service unavailable',
+          error: errMsg,
+          details: errDetails,
         });
       }
     }
   } catch (globalErr: any) {
-    console.error('❌ API Chat Global Error:', globalErr?.message || globalErr);
+    const errMsg = globalErr?.message || 'Error interno del servidor';
+    const errDetails = globalErr?.stack || String(globalErr);
+    console.error('❌ API Chat Global Error:', errMsg);
     if (isSSE) {
-      sendChunk({ error: 'Global API Chat Error', details: globalErr?.message || 'Server error' });
+      sendChunk({ error: errMsg, details: errDetails });
       return res.end();
     } else {
       return res.status(500).json({
-        error: 'Global API Chat Error',
-        details: globalErr?.message || 'Server error',
+        error: errMsg,
+        details: errDetails,
       });
     }
   }
