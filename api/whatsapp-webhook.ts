@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { generateOpenRouterRealEstateResponse } from '../src/lib/ai/openrouterService';
+import { generateOpenRouterRealEstateResponse } from './_lib/openrouterService';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import { INITIAL_PROPERTIES, INITIAL_LEADS, INITIAL_BOT_CONFIG } from './src/data/mockData.js';
-import { generateOpenRouterRealEstateResponse } from './src/lib/ai/openrouterService.js';
+import { generateOpenRouterRealEstateResponse } from './api/_lib/openrouterService.js';
 
 dotenv.config();
 

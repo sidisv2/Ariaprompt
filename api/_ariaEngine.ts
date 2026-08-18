@@ -168,7 +168,7 @@ export function buildMemoryAwareResponse(
   };
 }
 
-import { generateOpenRouterRealEstateResponse } from '../src/lib/ai/openrouterService';
+import { generateOpenRouterRealEstateResponse } from './_lib/openrouterService';
 
 export async function generateAriaAiResponse({
   message,
