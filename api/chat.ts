@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { generateOpenRouterRealEstateResponse } from './_lib/openrouterService.js';
+import {
+  generateOpenRouterRealEstateResponse,
+  streamOpenRouterRealEstateResponse,
+} from './_lib/openrouterService.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -72,129 +75,10 @@ const MARKET_CATALOG = [
   },
 ];
 
-function buildMemoryAwareResponse(
-  message: string,
-  history: { sender: string; content: string }[]
-) {
-  const trimmed = message.trim();
-  const lowerMsg = trimmed.toLowerCase();
-
-  const fullUserQuery = [
-    ...history.filter((h) => h && h.sender === 'user').map((h) => h.content || (h as any).text || ''),
-    trimmed,
-  ].join(' ');
-  const fullLowerQuery = fullUserQuery.toLowerCase();
-
-  let lastProp: (typeof MARKET_CATALOG)[0] | undefined = undefined;
-
-  for (let i = history.length - 1; i >= 0; i--) {
-    const item = history[i];
-    if (item && (item.sender === 'bot' || item.sender === 'model')) {
-      const textContent = item.content || (item as any).text || '';
-      const matched = MARKET_CATALOG.find(
-        (p) => textContent.includes(p.title) || textContent.includes(p.address) || textContent.includes(p.id) || textContent.includes(p.zone)
-      );
-      if (matched) {
-        lastProp = matched;
-        break;
-      }
-    }
-  }
-
-  if (!lastProp) {
-    lastProp = MARKET_CATALOG.find(
-      (p) =>
-        fullLowerQuery.includes(p.city.toLowerCase()) ||
-        fullLowerQuery.includes(p.zone.toLowerCase())
-    );
-  }
-
-  const hasHistory = history && history.length > 0;
-  const isAskingArea = hasHistory && (lowerMsg.includes('metro') || lowerMsg.includes('m2') || lowerMsg.includes('superficie') || lowerMsg.includes('calle') || lowerMsg.includes('queda') || lowerMsg.includes('direccion') || lowerMsg.includes('dirección'));
-  const isAskingPrice = hasHistory && (lowerMsg.includes('precio') || lowerMsg.includes('cuanto cuesta') || lowerMsg.includes('cuánto cuesta') || lowerMsg.includes('valor'));
-  const isAskingBedrooms = hasHistory && (lowerMsg.includes('cuántos dormitorios') || lowerMsg.includes('cuantos dormitorios') || lowerMsg.includes('cuántos cuartos') || lowerMsg.includes('cuantos cuartos') || lowerMsg.includes('dijiste'));
-  const isAskingZoneOptions = hasHistory && (lowerMsg.includes('zona') || lowerMsg.includes('opción') || lowerMsg.includes('opcion') || lowerMsg.includes('disponible'));
-
-  if (lastProp && history.length > 0) {
-    if (isAskingArea) {
-      return {
-        text: `La propiedad **${lastProp.title}** tiene **${lastProp.areaM2} m²** de superficie y está ubicada sobre la calle **${lastProp.address}** (${lastProp.zone}, ${lastProp.city}).\n\n¿Te gustaría coordinar una visita presencial?`,
-        recommendedPropId: lastProp.id,
-      };
-    }
-    if (isAskingPrice) {
-      return {
-        text: `El precio de **${lastProp.title}** es de **$${lastProp.price.toLocaleString('en-US')} USD** ${lastProp.price < 5000 ? '/mes' : ''}.\n\n¿Deseas conocer las condiciones de ingreso o agendar una visita?`,
-        recommendedPropId: lastProp.id,
-      };
-    }
-    if (isAskingBedrooms) {
-      return {
-        text: `Como mencionamos, **${lastProp.title}** cuenta con **${lastProp.bedrooms} dormitorio(s)** y un diseño con excelente distribución.\n\n¿Quieres que te envíe más fotos o los detalles completos?`,
-        recommendedPropId: lastProp.id,
-      };
-    }
-    if (isAskingZoneOptions) {
-      const zoneProps = MARKET_CATALOG.filter((p) => p.city.toLowerCase() === lastProp?.city.toLowerCase() || p.zone.toLowerCase() === lastProp?.zone.toLowerCase());
-      if (zoneProps.length > 0) {
-        const propList = zoneProps.map((p) => `• **${p.title}** ($${p.price.toLocaleString('en-US')} USD) en ${p.address}`).join('\n');
-        return {
-          text: `En ${lastProp.city} (${lastProp.zone}) tenemos las siguientes opciones disponibles en nuestro catálogo verificado:\n\n${propList}\n\n¿Cuál de ellas te gustaría consultar en detalle?`,
-          recommendedPropId: zoneProps[0].id,
-        };
-      }
-    }
-  }
-
-  if (
-    lowerMsg === 'hola' ||
-    lowerMsg === 'hola!' ||
-    lowerMsg === 'buenas' ||
-    lowerMsg === 'buenos dias' ||
-    lowerMsg === 'hello' ||
-    lowerMsg === 'hi'
-  ) {
-    return {
-      text: `¡Hola! Soy Aria, tu asistente inmobiliario 24/7. ¿Buscas comprar o alquilar alguna propiedad en particular hoy?`,
-      recommendedPropId: undefined,
-    };
-  }
-
-  const matches = MARKET_CATALOG.filter((p) => {
-    const city = p.city.toLowerCase();
-    const zone = p.zone.toLowerCase();
-    const type = p.type.toLowerCase();
-    const isAlquiler = fullLowerQuery.includes('alquiler') || fullLowerQuery.includes('rent');
-
-    const matchesCityOrZone = fullLowerQuery.includes(city) || fullLowerQuery.includes(zone);
-    const matchesType = fullLowerQuery.includes(type);
-
-    if (isAlquiler && p.price >= 5000) return false;
-    return matchesCityOrZone || matchesType;
-  });
-
-  if (matches.length > 0) {
-    const topProp = matches[0];
-    return {
-      text: `¡Hola! Encontré esta excelente opción en nuestro catálogo verificado:\n\n🏡 **${topProp.title}** en ${topProp.zone}, ${topProp.city}\n• **Precio:** $${topProp.price.toLocaleString('en-US')} USD ${topProp.price < 5000 ? '/mes' : ''}\n• **Ambientes:** ${topProp.bedrooms} dormitorios (${topProp.areaM2} m²)\n• **Dirección:** ${topProp.address}\n\n¿Te gustaría agendar una visita presencial o recibir más detalles por WhatsApp?`,
-      recommendedPropId: topProp.id,
-    };
-  }
-
-  return {
-    text: `Hola. Recordando tu consulta sobre propiedades, actualmente estamos actualizando las opciones verificadas para esa zona en nuestro catálogo directo. ¿Te gustaría que te conecte con un asesor humano por WhatsApp para enviarte las opciones disponibles?`,
-    recommendedPropId: undefined,
-  };
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -204,48 +88,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const isSSE = Boolean(req.headers.accept && req.headers.accept.includes('text/event-stream'));
-  let accumulatedText = '';
+  // Force SSE headers for Vercel Serverless Function response streaming
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
 
-  if (isSSE) {
-    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    if (typeof (res as any).flushHeaders === 'function') {
-      try { (res as any).flushHeaders(); } catch {}
-    }
+  if (typeof (res as any).flushHeaders === 'function') {
+    try { (res as any).flushHeaders(); } catch {}
   }
 
   const sendChunk = (data: any) => {
-    if (data?.text) {
-      accumulatedText += data.text;
-    }
-
-    if (isSSE && typeof (res as any).write === 'function') {
-      try {
-        (res as any).write(`data: ${JSON.stringify(data)}\n\n`);
-        if (typeof (res as any).flush === 'function') {
-          (res as any).flush();
-        }
-      } catch (err) {
-        console.warn('SSE sendChunk write warning:', err);
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
       }
-    }
-  };
-
-  const endResponse = (finalData?: any) => {
-    if (isSSE) {
-      if (finalData) sendChunk(finalData);
-      return res.end();
-    } else {
-      return res.status(200).json({
-        success: true,
-        text: accumulatedText,
-        done: true,
-        ...finalData,
-      });
+    } catch (err) {
+      console.warn('SSE sendChunk write warning:', err);
     }
   };
 
@@ -258,24 +118,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       sendChunk({ text: '⚠️ Por favor ingresa una consulta válida.' });
-      return endResponse({ done: true });
+      sendChunk({ done: true });
+      return res.end();
     }
 
     const trimmedMsg = message.trim();
 
-    const langNames: Record<string, string> = {
-      es: 'Español',
-      en: 'English',
-      pt: 'Português',
-    };
-    const targetLangName = langNames[lang] || 'Español';
     const catalogContext = MARKET_CATALOG.map(
       (p) =>
         `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en ${p.address}, ${p.zone}, ${p.city}, ${p.country}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.bedrooms} hab, ${p.areaM2} m². FUENTE: Catálogo Directo de la Agencia. ${p.description}`
     ).join('\n');
 
     try {
-      const generatedText = await generateOpenRouterRealEstateResponse({
+      const textStream = streamOpenRouterRealEstateResponse({
         message: trimmedMsg,
         history: history.map((h: { sender: string; content: string }) => ({
           sender: h.sender as 'user' | 'bot',
@@ -289,34 +144,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         apiKey,
       });
 
-      sendChunk({ text: generatedText });
-      return endResponse({ done: true });
-    } catch (openRouterErr: any) {
-      const errMsg = openRouterErr?.message || 'Error interno del servidor';
-      const errDetails = openRouterErr?.stack || String(openRouterErr);
-      console.error('❌ OpenRouter API Call Error in api/chat:', errMsg);
-      if (isSSE) {
-        sendChunk({ error: errMsg, details: errDetails });
-        return res.end();
-      } else {
-        return res.status(500).json({
-          error: errMsg,
-          details: errDetails,
-        });
+      let tokenCount = 0;
+      for await (const chunkText of textStream) {
+        tokenCount++;
+        sendChunk({ text: chunkText });
       }
+
+      if (tokenCount === 0) {
+        const generatedText = await generateOpenRouterRealEstateResponse({
+          message: trimmedMsg,
+          history: history.map((h: { sender: string; content: string }) => ({
+            sender: h.sender as 'user' | 'bot',
+            content: h.content,
+          })),
+          propertyContext: catalogContext,
+          lang,
+          contextRole: context,
+          agentName: 'Aria',
+          agencyName: 'Aria Prop LATAM',
+          apiKey,
+        });
+        sendChunk({ text: generatedText });
+      }
+
+      sendChunk({ done: true });
+      return res.end();
+    } catch (openRouterErr: any) {
+      const errMsg = openRouterErr?.message || 'Error al comunicar con la IA de OpenRouter';
+      console.error('❌ OpenRouter API Call Error in api/chat:', errMsg);
+      sendChunk({ error: errMsg });
+      return res.end();
     }
   } catch (globalErr: any) {
     const errMsg = globalErr?.message || 'Error interno del servidor';
-    const errDetails = globalErr?.stack || String(globalErr);
     console.error('❌ API Chat Global Error:', errMsg);
-    if (isSSE) {
-      sendChunk({ error: errMsg, details: errDetails });
-      return res.end();
-    } else {
-      return res.status(500).json({
-        error: errMsg,
-        details: errDetails,
-      });
-    }
+    sendChunk({ error: errMsg });
+    return res.end();
   }
 }

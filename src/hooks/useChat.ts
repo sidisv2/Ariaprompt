@@ -58,7 +58,10 @@ export function useChat(options?: { initialContext?: string }) {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream, application/json',
+        },
         body: JSON.stringify({ message: text, history: historyPayload, context: ctx, lang }),
       });
 

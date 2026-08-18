@@ -27,7 +27,7 @@ export interface LeadQualificationResult {
   summary: string;
 }
 
-const DEFAULT_MODEL = 'google/gemini-2.5-flash';
+const DEFAULT_MODEL = 'google/gemini-2.0-flash-001';
 
 /**
  * Clean and retrieve OpenRouter API key from environment variables.
@@ -63,7 +63,98 @@ export function getOpenAIClient(apiKey?: string): OpenAI {
 }
 
 /**
- * Generate commercial real estate AI response using OpenRouter API (google/gemini-2.5-flash)
+ * Stream commercial real estate AI response using OpenRouter API
+ */
+export async function* streamOpenRouterRealEstateResponse(
+  options: RealEstateAIOptions
+): AsyncGenerator<string, void, unknown> {
+  const {
+    message,
+    history = [],
+    propertyContext = '',
+    lang = 'es',
+    contextRole = 'general',
+    agentName = 'Aria',
+    agencyName = 'Aria Prop LATAM',
+    apiKey,
+  } = options;
+
+  const openai = getOpenAIClient(apiKey);
+  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  const trimmedMsg = message.trim();
+
+  const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
+  const targetLangName = langNames[lang] || 'Español';
+
+  let roleDescription = 'asesora comercial inmobiliaria 24/7 experta en alta conversión';
+  if (contextRole === 'finance') {
+    roleDescription = 'evaluadora de rentabilidad, ROI, Cap Rate y apreciación de capital inmobiliario';
+  } else if (contextRole === 'rag') {
+    roleDescription = 'especialista en dossiers técnicos, planos, acabados y memorias descriptivas del catálogo';
+  }
+
+  const systemPrompt = `
+Eres "${agentName}", ${roleDescription} para "${agencyName}" en América Latina.
+
+IDIOMA OBLIGATORIO DE RESPUESTA: ${targetLangName.toUpperCase()}.
+Debes responder SIEMPRE en ${targetLangName}. (Si el usuario habla en otro idioma, responde en ese mismo idioma).
+
+REGLAS DE ACTUACIÓN COMERCIAL:
+1. Actúa como asesora experta, empática y de alta conversión.
+2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Operación (comprar/alquilar) y (d) Número de teléfono/contacto para WhatsApp.
+3. Longitud máxima: Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS (2 a 4 líneas por párrafo).
+4. Recuerda el historial previo y NUNCA repitas preguntas sobre datos ya especificados.
+5. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio y ubicación.
+
+## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
+${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al cliente a especificar sus criterios.'}
+`;
+
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...history.map((h) => ({
+      role: (h.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: h.content,
+    })),
+    { role: 'user', content: trimmedMsg },
+  ];
+
+  try {
+    const stream = await openai.chat.completions.create({
+      model,
+      messages,
+      temperature: 0.3,
+      max_tokens: 800,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || '';
+      if (text) {
+        yield text;
+      }
+    }
+  } catch (err: any) {
+    const status = err?.status || err?.statusCode;
+    const errorMessage = err?.error?.message || err?.message || String(err);
+    console.error(`❌ OpenRouter Streaming API Exception [Status ${status || 'N/A'}]:`, errorMessage);
+
+    if (status === 401) {
+      throw new Error(`Error de autenticación con OpenRouter (401): API Key no válida o expirada. (${errorMessage})`);
+    } else if (status === 402) {
+      throw new Error(`Error de saldo en OpenRouter (402): Cuenta sin créditos disponibles. (${errorMessage})`);
+    } else if (status === 404) {
+      throw new Error(`Modelo no encontrado en OpenRouter (404): '${model}' no existe o no está disponible. (${errorMessage})`);
+    } else if (status === 429) {
+      throw new Error(`Límite de solicitudes en OpenRouter (429): Rate limit excedido. (${errorMessage})`);
+    } else {
+      throw new Error(`Fallo en OpenRouter Streaming API (${status || 'Error'}): ${errorMessage}`);
+    }
+  }
+}
+
+/**
+ * Generate commercial real estate AI response using OpenRouter API
  */
 export async function generateOpenRouterRealEstateResponse(
   options: RealEstateAIOptions
@@ -142,6 +233,8 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
       throw new Error(`Error de autenticación con OpenRouter (401): API Key no válida o expirada. (${errorMessage})`);
     } else if (status === 402) {
       throw new Error(`Error de saldo en OpenRouter (402): Cuenta sin créditos disponibles. (${errorMessage})`);
+    } else if (status === 404) {
+      throw new Error(`Modelo no encontrado en OpenRouter (404): '${model}' no existe o no está disponible. (${errorMessage})`);
     } else if (status === 429) {
       throw new Error(`Límite de solicitudes en OpenRouter (429): Rate limit excedido. (${errorMessage})`);
     } else {
@@ -151,7 +244,7 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
 }
 
 /**
- * Extract structured lead qualification JSON from conversation using OpenRouter (google/gemini-2.5-flash)
+ * Extract structured lead qualification JSON from conversation using OpenRouter
  */
 export async function extractLeadQualificationOpenRouter(options: {
   message: string;
