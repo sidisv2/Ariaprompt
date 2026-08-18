@@ -1,3 +1,5 @@
+import OpenAI from 'openai';
+
 export interface ChatMessage {
   sender: 'user' | 'bot' | 'model' | 'assistant';
   content: string;
@@ -25,13 +27,10 @@ export interface LeadQualificationResult {
   summary: string;
 }
 
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
-const HTTP_REFERER = 'https://ariaprop.online';
-const X_TITLE = 'Aria Prop';
 
 /**
- * Clean and retrieve OpenRouter API key from environment or explicit parameter.
+ * Clean and retrieve OpenRouter API key from environment variables.
  */
 export function getOpenRouterApiKey(explicitKey?: string): string {
   const rawKey =
@@ -43,10 +42,18 @@ export function getOpenRouterApiKey(explicitKey?: string): string {
 }
 
 /**
- * Returns configured OpenRouter model or defaults to google/gemini-2.5-flash
+ * Instantiate standard OpenAI SDK client configured for OpenRouter.ai
  */
-export function getOpenRouterModel(): string {
-  return process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+export function getOpenAIClient(apiKey?: string): OpenAI {
+  const key = getOpenRouterApiKey(apiKey);
+  return new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: key,
+    defaultHeaders: {
+      'HTTP-Referer': 'https://ariaprop.online',
+      'X-Title': 'Aria Prop',
+    },
+  });
 }
 
 /**
@@ -54,7 +61,7 @@ export function getOpenRouterModel(): string {
  */
 export async function generateOpenRouterRealEstateResponse(
   options: RealEstateAIOptions
-): Promise<{ text: string; source: 'openrouter' | 'fallback' }> {
+): Promise<string> {
   const {
     message,
     history = [],
@@ -66,12 +73,8 @@ export async function generateOpenRouterRealEstateResponse(
     apiKey,
   } = options;
 
-  const cleanKey = getOpenRouterApiKey(apiKey);
-  if (!cleanKey) {
-    throw new Error('OPENROUTER_API_KEY is missing or empty.');
-  }
-
-  const model = getOpenRouterModel();
+  const openai = getOpenAIClient(apiKey);
+  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
   const trimmedMsg = message.trim();
 
   const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
@@ -101,49 +104,28 @@ REGLAS DE ACTUACIÓN COMERCIAL:
 ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al cliente a especificar sus criterios.'}
 `;
 
-  const formattedMessages = [
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
     ...history.map((h) => ({
-      role: h.sender === 'user' ? 'user' : 'assistant',
+      role: (h.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
       content: h.content,
     })),
     { role: 'user', content: trimmedMsg },
   ];
 
-  const payload = {
+  const completion = await openai.chat.completions.create({
     model,
-    messages: formattedMessages,
+    messages,
     temperature: 0.3,
     max_tokens: 800,
-  };
-
-  const response = await fetch(OPENROUTER_BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${cleanKey}`,
-      'HTTP-Referer': HTTP_REFERER,
-      'X-Title': X_TITLE,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
-  }
-
-  const data = await response.json();
-  const replyContent = data?.choices?.[0]?.message?.content;
-
-  if (!replyContent) {
+  const reply = completion.choices?.[0]?.message?.content;
+  if (!reply || !reply.trim()) {
     throw new Error('OpenRouter API returned empty response payload.');
   }
 
-  return {
-    text: replyContent.trim(),
-    source: 'openrouter',
-  };
+  return reply.trim();
 }
 
 /**
@@ -154,12 +136,11 @@ export async function extractLeadQualificationOpenRouter(options: {
   history?: ChatMessage[];
   apiKey?: string;
 }): Promise<LeadQualificationResult | null> {
-  const cleanKey = getOpenRouterApiKey(options.apiKey);
-  if (!cleanKey) return null;
+  const openai = getOpenAIClient(options.apiKey);
+  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
 
-  const model = getOpenRouterModel();
   const conversationText = [
-    ...options.history.map((h) => `${h.sender.toUpperCase()}: ${h.content}`),
+    ...(options.history || []).map((h) => `${h.sender.toUpperCase()}: ${h.content}`),
     `USER: ${options.message}`,
   ].join('\n');
 
@@ -181,29 +162,18 @@ FORMATO DE SALIDA (JSON ÚNICAMENTE, SIN MARKDOWN NI TEXTO ADICIONAL):
 `;
 
   try {
-    const response = await fetch(OPENROUTER_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${cleanKey}`,
-        'HTTP-Referer': HTTP_REFERER,
-        'X-Title': X_TITLE,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: conversationText },
-        ],
-        temperature: 0.1,
-        max_tokens: 300,
-        response_format: { type: 'json_object' },
-      }),
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: conversationText },
+      ],
+      temperature: 0.1,
+      max_tokens: 300,
+      response_format: { type: 'json_object' },
     });
 
-    if (!response.ok) return null;
-    const data = await response.json();
-    const rawText = data?.choices?.[0]?.message?.content || '';
+    const rawText = completion.choices?.[0]?.message?.content || '';
     const cleanJson = rawText.replace(/```json|```/g, '').trim();
     return JSON.parse(cleanJson) as LeadQualificationResult;
   } catch {

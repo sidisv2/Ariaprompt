@@ -2,9 +2,9 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { INITIAL_PROPERTIES, INITIAL_LEADS, INITIAL_BOT_CONFIG } from './src/data/mockData.js';
+import { generateOpenRouterRealEstateResponse } from './src/lib/ai/openrouterService.js';
 
 dotenv.config();
 
@@ -21,22 +21,6 @@ async function startServer() {
   let properties = [...INITIAL_PROPERTIES];
   let leads = [...INITIAL_LEADS];
   let botConfig = { ...INITIAL_BOT_CONFIG };
-
-  // Helper for lazy Gemini initialization
-  function getGeminiClient(customApiKey?: string) {
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey.trim() === '') {
-      return null;
-    }
-    return new GoogleGenAI({
-      apiKey: apiKey.trim(),
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
-  }
 
   // Optional Supabase DB initialization if credentials exist
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -172,7 +156,6 @@ async function startServer() {
     const targetLangName = langNames[lang] || 'Español';
 
     const trimmedMsg = message.trim().toLowerCase();
-    const ai = getGeminiClient(apiKey);
 
     // Prepare RAG Context from active properties
     const propertyCatalogContext = properties
@@ -209,123 +192,28 @@ ${propertyCatalogContext}
 4. SÉ ALTAMENTE DESCRIPTIVO Y COMPLETO. Proporciona argumentos sólidos de inversión, comparativas de mercado y consejos de valor en ${targetLangName}. Evita respuestas escuetas.
 `;
 
-    if (!ai) {
-      // Fallback simulated streaming response if no API key is provided
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
-      const matchingProp = properties.find((p) =>
-        message.toLowerCase().includes(p.location.city.toLowerCase()) ||
-        message.toLowerCase().includes(p.type) ||
-        message.toLowerCase().includes('lujo') ||
-        message.toLowerCase().includes('madrid')
-      ) || properties[0];
-
-      // Extract custom user financial values if provided (e.g. 123k usd, 1000usd/mes)
-      let customPrice = matchingProp.price;
-      let customRent = Math.round(matchingProp.price * 0.0075);
-
-      const priceKMatch = message.match(/(?:costo|costó|precio|compr[ae]|valio|valió|depto|propiedad|valor)?\s*(?:de\s*)?\$?\s*(\d+(?:\.\d+)?)\s*(?:k|mil)/i);
-      const priceRawMatch = message.match(/(?:costo|costó|precio|compr[ae]|valio|valió|valor)?\s*(?:de\s*)?\$?\s*(\d{5,8})/i);
-      if (priceKMatch) {
-        customPrice = parseFloat(priceKMatch[1]) * 1000;
-      } else if (priceRawMatch) {
-        customPrice = parseInt(priceRawMatch[1], 10);
-      }
-
-      const rentMatch = message.match(/(?:renta|alquiler|arriendo|canon|rento)?\s*(?:mensual|mes|de)?\s*\$?\s*(\d{3,6})\s*(?:usd|dolares|dólares|\/mes|mensuales)?/i);
-      if (rentMatch && parseInt(rentMatch[1], 10) < customPrice) {
-        customRent = parseInt(rentMatch[1], 10);
-      }
-
-      const grossYield = ((customRent * 12 / customPrice) * 100).toFixed(2);
-      const netRent = Math.round(customRent * 0.85);
-      const netYield = ((netRent * 12 / customPrice) * 100).toFixed(2);
-      const paybackYears = (customPrice / (customRent * 12)).toFixed(1);
-
-      let fallbackText = '';
-
-      // Handle simple greetings cleanly
-      if (trimmedMsg === 'hola' || trimmedMsg === 'hola!' || trimmedMsg === 'buenas' || trimmedMsg === 'buenos dias' || trimmedMsg === 'buenas tardes') {
-        fallbackText = `¡Hola! 👋 Bienvenido a **${botConfig.agencyName}**. Soy **${botConfig.agentName}**, tu asistente inmobiliario de IA 24/7.\n\n` +
-          `¿En qué puedo ayudarte hoy?\n` +
-          `- 🏠 **Buscar propiedades** en venta o alquiler por zona o presupuesto.\n` +
-          `- 📊 **Calcular el ROI y flujo de caja** de una inversión inmobiliaria especificando precio y alquiler.\n` +
-          `- 📄 **Consultar memorias técnicas y dossiers PDF** de nuestro catálogo.\n\n` +
-          `¿Qué tipo de propiedad estás buscando o qué consulta deseas realizar?`;
-      } else if (context === 'finance') {
-        fallbackText = `### 📊 **Análisis Financiero & Cálculo de ROI Personalizado**\n\n` +
-          `Procesando tus datos específicos: **Precio de Adquisición: $${customPrice.toLocaleString('en-US')} USD** y **Canon de Arriendo: $${customRent.toLocaleString('en-US')} USD/mes**.\n\n` +
-          `#### 📈 **Métricas Financieras Calculadas Exactas**:\n` +
-          `1. **Precio de Compra**: **$${customPrice.toLocaleString('en-US')} USD**\n` +
-          `2. **Ingreso Anual por Renta**: **$${(customRent * 12).toLocaleString('en-US')} USD / año**\n` +
-          `3. **ROI Bruto Anual (Cap Rate)**: **${grossYield}% Anual** ${parseFloat(grossYield) >= 8 ? '🔥 *(¡Excelente rendimiento por encima de la media de mercado!)*' : '👍 *(Rendimiento estable para la zona)*'}\n` +
-          `4. **Gastos Operativos Estimados (HOA/Impuestos 15%)**: ~$${Math.round(customRent * 0.15).toLocaleString('en-US')} USD/mes\n` +
-          `5. **Flujo de Caja Neto Libre (Cash Flow)**: **$${netRent.toLocaleString('en-US')} USD / mes** ($${(netRent * 12).toLocaleString('en-US')} USD/año)\n` +
-          `6. **Período de Recuperación de Inversión**: **${paybackYears} Años**\n\n` +
-          `#### 🏢 **Proyección de Valorización Patrimonial a 5 Años**:\n` +
-          `- **Año 1 (+5.0%)**: $${Math.round(customPrice * 1.05).toLocaleString('en-US')} USD\n` +
-          `- **Año 3 (+15.0%)**: $${Math.round(customPrice * 1.15).toLocaleString('en-US')} USD\n` +
-          `- **Año 5 (+25.0%)**: **$${Math.round(customPrice * 1.25).toLocaleString('en-US')} USD** (Ganancia de capital de +$${Math.round(customPrice * 0.25).toLocaleString('en-US')} USD)\n\n` +
-          `🔒 *Los suscriptores pueden descargar el informe financiero en PDF en su directorio privado.*`;
-      } else if (context === 'rag') {
-        fallbackText = `### 📄 **Informe RAG Técnico Personalizado**\n\n` +
-          `Analizando especificaciones para inmuebles en el rango de **$${customPrice.toLocaleString('en-US')} USD** (${matchingProp.title}):\n\n` +
-          `- **Metraje Privativo**: ${matchingProp.features.areaM2} m² (Distribución de ${matchingProp.features.bedrooms} habitaciones / ${matchingProp.features.bathrooms} baños).\n` +
-          `- **Memoria de Calidades**: Aislamiento acústico de triple cristal, pavimento de roble natural y climatización domótica.\n` +
-          `- **Certificación Energética**: Etiqueta A++ (Consumo ultra eficiente).\n\n` +
-          `🔒 *Los suscriptores tienen habilitada la descarga directa del expediente técnico en su directorio privado.*`;
-      } else {
-        fallbackText = `¡Hola! Soy **${botConfig.agentName}**, tu asesora inmobiliaria comercial 24/7.\n\n` +
-          `Basado en lo que buscas, te recomiendo el **${matchingProp.title}** ubicado en **${matchingProp.location.zone}, ${matchingProp.location.city}** con un valor de **$${matchingProp.price.toLocaleString('en-US')} USD**.\n\n` +
-          `¿Te gustaría agendar una visita presencial o recibir más detalles sobre la propiedad?`;
-      }
-
-      const chunks = fallbackText.split(' ');
-      for (let i = 0; i < chunks.length; i++) {
-        const textChunk = (i === 0 ? '' : ' ') + chunks[i];
-        res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
-        await new Promise((r) => setTimeout(r, 25));
-      }
-
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      return res.end();
-    }
-
     try {
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      // Format conversation history for Gemini chat
-      const formattedContents = [
-        ...history.map((h: { sender: string; content: string }) => ({
-          role: h.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: h.content }],
-        })),
-        { role: 'user', parts: [{ text: message }] },
-      ];
-
-      const responseStream = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
-        contents: formattedContents,
-        config: {
-          systemInstruction: systemPrompt,
-        },
+      const responseText = await generateOpenRouterRealEstateResponse({
+        message: trimmedMsg,
+        history,
+        propertyContext: propertyCatalogContext,
+        lang,
+        contextRole: context,
+        agentName: botConfig.agentName,
+        agencyName: botConfig.agencyName,
+        apiKey,
       });
 
-      for await (const chunk of responseStream) {
-        if (chunk.text) {
-          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
-        }
-      }
-
+      res.write(`data: ${JSON.stringify({ text: responseText })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
-    } catch (err: unknown) {
-      console.error('Gemini API Streaming Error:', err);
-      res.write(`data: ${JSON.stringify({ error: 'Error procesando la respuesta de la IA' })}\n\n`);
+    } catch (err: any) {
+      console.error('❌ OpenRouter Express Chat Error:', err?.message || err);
+      res.write(`data: ${JSON.stringify({ error: 'Error calling OpenRouter API', details: err?.message || 'LLM error' })}\n\n`);
       res.end();
     }
   });

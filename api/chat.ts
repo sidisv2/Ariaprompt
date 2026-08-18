@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { generateOpenRouterRealEstateResponse } from '../src/lib/ai/openrouterService';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -273,162 +274,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `- [ID: ${p.id}] "${p.title}" (${p.type.toUpperCase()} - ${p.price < 5000 ? 'ALQUILER' : 'VENTA'}) en ${p.address}, ${p.zone}, ${p.city}, ${p.country}. Precio: $${p.price.toLocaleString('en-US')} USD ${p.price < 5000 ? '/mes' : ''}. ${p.bedrooms} hab, ${p.areaM2} m². FUENTE: Catálogo Directo de la Agencia. ${p.description}`
     ).join('\n');
 
-    // 1. Primary LLM Provider: OpenRouter API (google/gemini-2.5-flash)
-    const openRouterKey = (
-      process.env.OPENROUTER_API_KEY ||
-      process.env.VITE_OPENROUTER_API_KEY ||
-      ''
-    ).replace(/^["']|["']$/g, '').trim();
+    try {
+      const generatedText = await generateOpenRouterRealEstateResponse({
+        message: trimmedMsg,
+        history: history.map((h: { sender: string; content: string }) => ({
+          sender: h.sender as 'user' | 'bot',
+          content: h.content,
+        })),
+        propertyContext: catalogContext,
+        lang,
+        contextRole: context,
+        agentName: 'Aria',
+        agencyName: 'Aria Prop LATAM',
+        apiKey,
+      });
 
-    if (openRouterKey) {
-      try {
-        const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
-        const systemPrompt = `
-Eres Aria Prop, la asesora virtual comercial 24/7 de una plataforma inmobiliaria de alta conversión que opera en toda América.
-
-IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
-Debes responder SIEMPRE en este idioma (${targetLangName}).
-
-Tus objetivos:
-1. Calificar activamente al cliente: identificar presupuesto, zona de interés, tipo de operación (alquiler/compra) y número de contacto.
-2. Responder de forma directa, empática y en un MÁXIMO DE 3 PÁRRAFOS (2-4 líneas cada uno).
-3. Consultar la FUENTE DE DATOS y recomendar propiedades relevantes del catálogo.
-4. Recordar la información previa proporcionada en la conversación y NO volver a preguntar datos ya especificados.
-
-## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
-${catalogContext}
-`;
-
-        const formattedMessages = [
-          { role: 'system', content: systemPrompt },
-          ...history.map((h: { sender: string; content: string }) => ({
-            role: h.sender === 'user' ? 'user' : 'assistant',
-            content: h.content,
-          })),
-          { role: 'user', content: trimmedMsg },
-        ];
-
-        const openRouterRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openRouterKey}`,
-            'HTTP-Referer': 'https://ariaprop.online',
-            'X-Title': 'Aria Prop',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            messages: formattedMessages,
-            temperature: 0.3,
-            max_tokens: 800,
-          }),
+      sendChunk({ text: generatedText });
+      return endResponse({ done: true });
+    } catch (openRouterErr: any) {
+      console.error('❌ OpenRouter API Call Error in api/chat:', openRouterErr?.message || openRouterErr);
+      if (isSSE) {
+        sendChunk({ error: 'Error calling OpenRouter API', details: openRouterErr?.message || 'LLM service unavailable' });
+        return res.end();
+      } else {
+        return res.status(500).json({
+          error: 'Error calling OpenRouter API',
+          details: openRouterErr?.message || 'LLM service unavailable',
         });
-
-        if (openRouterRes.ok) {
-          const json = await openRouterRes.json();
-          const generatedText = json?.choices?.[0]?.message?.content;
-          if (generatedText && generatedText.trim()) {
-            sendChunk({ text: generatedText.trim() });
-            return endResponse({ done: true });
-          }
-        }
-      } catch (openRouterErr: any) {
-        console.warn('OpenRouter API Call Error in api/chat:', openRouterErr?.message || openRouterErr);
       }
-    }
-
-    // 2. Secondary LLM Provider: Direct Google Gemini REST API
-    const rawKey =
-      apiKey ||
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      process.env.VITE_GEMINI_API_KEY ||
-      '';
-    const cleanApiKey = rawKey.replace(/^["']|["']$/g, '').trim();
-
-    const systemPrompt = `
-Eres Aria Prop, el asistente virtual de una plataforma inmobiliaria que opera en toda América.
-
-IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
-Debes responder SIEMPRE en este idioma (${targetLangName}).
-
-Tus objetivos:
-1. Entender qué busca el usuario (comprar o alquilar, tipo de propiedad, zona, presupuesto).
-2. Consultar los datos disponibles en FUENTE_DE_DATOS y recomendar opciones.
-3. Recordar siempre la información previamente provista en la conversación (historial) y NO volver a preguntar datos que el usuario ya especificó.
-4. Facilitar el contacto directo o agendar una visita.
-
-## FUENTE_DE_DATOS:
-${catalogContext}
-
-Responde siempre en ${targetLangName} con mensajes cortos, amables y conversacionales (2-4 líneas).
-`;
-
-    if (cleanApiKey) {
-      try {
-        const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${cleanApiKey}`;
-
-        const contents = [
-          ...history.map((h: { sender: string; content: string }) => ({
-            role: h.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: h.content }],
-          })),
-          { role: 'user', parts: [{ text: trimmedMsg }] },
-        ];
-
-        const geminiRes = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents,
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-          }),
-        });
-
-        if (geminiRes.ok) {
-          const json = await geminiRes.json();
-          const generatedText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (generatedText) {
-            sendChunk({ text: generatedText });
-            return endResponse({ done: true });
-          }
-        }
-      } catch (geminiErr: any) {
-        console.warn('Gemini REST Call Error:', geminiErr?.message || geminiErr);
-      }
-    }
-
-    // Deterministic Memory-Aware Fallback Response
-    const memoryResult = buildMemoryAwareResponse(trimmedMsg, history);
-    let responseText = memoryResult.text;
-    const primaryPropId = memoryResult.recommendedPropId;
-
-    if (isSSE) {
-      const words = responseText.split(' ');
-      for (const word of words) {
-        sendChunk({ text: word + ' ' });
-        await new Promise((r) => setTimeout(r, 12));
-      }
-      return endResponse({ done: true, recommendedPropertyId: primaryPropId });
-    } else {
-      accumulatedText = responseText;
-      return endResponse({ recommendedPropertyId: primaryPropId });
     }
   } catch (globalErr: any) {
-    console.error('API Chat Global Error:', globalErr);
+    console.error('❌ API Chat Global Error:', globalErr?.message || globalErr);
     if (isSSE) {
-      try {
-        sendChunk({
-          text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
-        });
-      } catch {}
+      sendChunk({ error: 'Global API Chat Error', details: globalErr?.message || 'Server error' });
       return res.end();
     } else {
-      return res.status(200).json({
-        success: true,
-        text: '⚠️ **Aviso**: Ocurrió una desconexión temporal en el servidor. Tu consulta fue procesada mediante nuestro catálogo directo de contingencia.',
-        done: true,
+      return res.status(500).json({
+        error: 'Global API Chat Error',
+        details: globalErr?.message || 'Server error',
       });
     }
   }

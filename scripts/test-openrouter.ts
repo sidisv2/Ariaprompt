@@ -6,27 +6,21 @@ import {
   generateOpenRouterRealEstateResponse,
   extractLeadQualificationOpenRouter,
   getOpenRouterApiKey,
-  getOpenRouterModel,
 } from '../src/lib/ai/openrouterService';
 
 async function runOpenRouterSmokeTest() {
   console.log('================================================================');
-  console.log('🤖 ARIA PROP - OPENROUTER LLM ENGINE SMOKE TEST');
+  console.log('🤖 ARIA PROP - OPENROUTER LLM ENGINE SMOKE TEST (OPENAI SDK)');
   console.log('================================================================\n');
 
   const apiKey = getOpenRouterApiKey();
-  const model = getOpenRouterModel();
+  const model = process.env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
 
   console.log('🔑 API Key detected:', apiKey ? `Yes (${apiKey.slice(0, 8)}...${apiKey.slice(-4)})` : 'No (Missing)');
   console.log('🎯 Target Model:', model);
   console.log('🌐 Base Endpoint: https://openrouter.ai/api/v1/chat/completions');
   console.log('🏷️ Custom Headers: HTTP-Referer="https://ariaprop.online", X-Title="Aria Prop"');
   console.log('⚙️ Parameters: temperature=0.3, max_tokens=800\n');
-
-  if (!apiKey) {
-    console.warn('⚠️ WARNING: OPENROUTER_API_KEY is not set in environment.');
-    console.warn('   Testing fallback / mock engine mode...\n');
-  }
 
   // --- TEST 1: OpenRouter Completion with RAG Context ---
   console.log('--- TEST 1: OpenRouter Real Estate Completion (RAG Injection) ---');
@@ -39,7 +33,7 @@ async function runOpenRouterSmokeTest() {
 
   try {
     const startTime = Date.now();
-    const response = await generateOpenRouterRealEstateResponse({
+    const responseText = await generateOpenRouterRealEstateResponse({
       message: userQuery,
       history: [],
       propertyContext: sampleRAGContext,
@@ -50,9 +44,9 @@ async function runOpenRouterSmokeTest() {
     });
     const elapsedMs = Date.now() - startTime;
 
-    console.log(`✅ TEST 1 SUCCESS (${elapsedMs} ms) | Source: ${response.source}`);
+    console.log(`✅ TEST 1 SUCCESS (${elapsedMs} ms)`);
     console.log('--- AI RESPONSE BODY ---');
-    console.log(response.text);
+    console.log(responseText);
     console.log('------------------------\n');
   } catch (err: any) {
     console.error('❌ TEST 1 FAILED:', err?.message || err);
@@ -82,7 +76,7 @@ async function runOpenRouterSmokeTest() {
       console.log(JSON.stringify(qualification, null, 2));
       console.log('-------------------------------------\n');
     } else {
-      console.warn('⚠️ TEST 2 RETURNED NULL (OpenRouter key missing or extraction unsupported)');
+      console.warn('⚠️ TEST 2 RETURNED NULL');
     }
   } catch (err: any) {
     console.error('❌ TEST 2 FAILED:', err?.message || err);
