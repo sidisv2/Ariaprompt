@@ -118,8 +118,7 @@ export const InteractiveSandboxWidget: React.FC<InteractiveSandboxWidgetProps> =
         ...prev,
         {
           sender: 'agent',
-          text: 'Disculpa, ocurrió una pequeña interrupción en la conexión. Te recomiendo nuestro Chalet de Lujo en La Moraleja (3.450.000€).',
-          property: sampleProperties[0],
+          text: '⚠️ **Error de conexión con el motor de IA**: Ocurrió una interrupción temporal. Por favor, reintente en unos momentos.',
         },
       ]);
     } finally {

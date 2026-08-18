@@ -1,85 +1,6 @@
 import { useState } from 'react';
 import { INITIAL_BOT_CONFIG } from '../data/mockData';
 import { useLanguage } from '../context/LanguageContext';
-import {
-  searchMultiSourceRealEstate,
-  SearchEngineResult,
-} from '../lib/multiSourceRealEstateEngine';
-
-function generateClientFallbackText(
-  message: string,
-  context: string,
-  history: { sender: string; content: string }[] = []
-): string {
-  const trimmed = message.trim();
-  const lowerMsg = trimmed.toLowerCase();
-
-  const fullUserQuery = [
-    ...history.filter((h) => h.sender === 'user').map((h) => h.content),
-    trimmed,
-  ].join(' ');
-
-  if (
-    lowerMsg === 'hola' ||
-    lowerMsg === 'hola!' ||
-    lowerMsg === 'buenas' ||
-    lowerMsg === 'buenos dias' ||
-    lowerMsg === 'hello' ||
-    lowerMsg === 'hi'
-  ) {
-    return (
-      `¡Hola! Soy Aria Prop, tu asistente comercial inmobiliario 24/7.\n\n` +
-      `Analizo el catálogo inmobiliario de tu agencia para responder dudas de prospectos y agendar visitas en vivo.\n\n` +
-      `Para empezar, ¿buscas comprar o alquilar, y en qué zona estás interesado?`
-    );
-  }
-
-  const searchResult: SearchEngineResult = searchMultiSourceRealEstate(fullUserQuery);
-
-  const isAskingArea = lowerMsg.includes('metro') || lowerMsg.includes('m2') || lowerMsg.includes('superficie') || lowerMsg.includes('calle') || lowerMsg.includes('queda') || lowerMsg.includes('direccion') || lowerMsg.includes('dirección');
-  const isAskingPrice = lowerMsg.includes('precio') || lowerMsg.includes('cuanto cuesta') || lowerMsg.includes('cuánto cuesta') || lowerMsg.includes('valor');
-  const isAskingBedrooms = lowerMsg.includes('dormitorio') || lowerMsg.includes('habitacion') || lowerMsg.includes('habitación') || lowerMsg.includes('cuarto') || lowerMsg.includes('ambiente');
-
-  if (searchResult.exactMatches.length > 0) {
-    const topProp = searchResult.exactMatches[0];
-    if (isAskingArea) {
-      return `La propiedad **${topProp.title}** tiene **${topProp.features.areaM2} m²** de superficie y está ubicada en **${topProp.location.address || topProp.location.zone}** (${topProp.location.zone}, ${topProp.location.city}).\n\n¿Te gustaría agendar una visita presencial?`;
-    }
-    if (isAskingPrice) {
-      return `El precio de **${topProp.title}** es de **$${topProp.price.toLocaleString('en-US')} USD**.\n\n¿Deseas coordinar un contacto directo o agendar una llamada?`;
-    }
-    if (isAskingBedrooms) {
-      return `Como comentamos, **${topProp.title}** cuenta con **${topProp.features.bedrooms} dormitorio(s)** y ${topProp.features.rooms || topProp.features.bedrooms + 1} ambientes.\n\n¿Te gustaría ver más fotos o agendar una visita?`;
-    }
-
-    const items = searchResult.exactMatches.slice(0, 2);
-    return (
-      `Analizando mis fuentes integradas, te recomiendo estas opciones principales:\n\n` +
-      items
-        .map((p, idx) => (
-          `**Opción ${idx + 1}**: ${p.title}\n` +
-          `• **Precio**: $${p.price.toLocaleString('en-US')} USD | ${p.features.bedrooms} hab (${p.features.areaM2} m²)\n` +
-          `• **Ubicación**: ${p.location.zone}, ${p.location.city}\n` +
-          `• **Punto fuerte**: Excelente relación m²/precio\n`
-        ))
-        .join('\n') +
-      `\n¿Te interesa agendar una visita o coordinar contacto directo con la inmobiliaria de alguna de ellas?`
-    );
-  }
-
-  if (searchResult.unmatchedLocationName) {
-    return (
-      `Revisé en mis fuentes integradas y actualmente no tengo publicaciones verificadas activas en **${searchResult.unmatchedLocationName}**.\n\n` +
-      `Cuento con opciones disponibles en **Mendoza**, **Buenos Aires**, **Ciudad de México**, **Medellín** y **Lima**.\n\n` +
-      `¿Te gustaría explorar alguna de estas ciudades o prefieres que un asesor busque algo puntual en ${searchResult.unmatchedLocationName}?`
-    );
-  }
-
-  return (
-    `¡Hola! Soy Aria Prop, tu comparador inmobiliario neutral.\n\n` +
-    `¿Podrías decirme qué tipo de propiedad buscas (depto, casa), la ciudad y tu presupuesto aproximado?`
-  );
-}
 
 export interface ChatMessage {
   id: string;
@@ -141,8 +62,19 @@ export function useChat(options?: { initialContext?: string }) {
         body: JSON.stringify({ message: text, history: historyPayload, context: ctx, lang }),
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error(`API response error status ${response.status}`);
+      if (!response.ok) {
+        let errDetails = `Error de servidor HTTP ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error || errJson.details) {
+            errDetails = `${errJson.error || 'Error'}: ${errJson.details || ''}`;
+          }
+        } catch {}
+        throw new Error(errDetails);
+      }
+
+      if (!response.body) {
+        throw new Error('Servidor devolvió respuesta vacía.');
       }
 
       const reader = response.body.getReader();
@@ -168,6 +100,14 @@ export function useChat(options?: { initialContext?: string }) {
                 const jsonStr = line.replace('data: ', '').trim();
                 if (jsonStr) {
                   const parsed = JSON.parse(jsonStr);
+                  if (parsed.error) {
+                    accumulatedText = `⚠️ **Error de la IA**: ${parsed.error}${parsed.details ? ` (${parsed.details})` : ''}. Por favor, reintente en unos momentos.`;
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === botMessageId ? { ...m, content: accumulatedText, text: accumulatedText } : m))
+                    );
+                    setIsTyping(false);
+                    return;
+                  }
                   if (parsed.text) {
                     accumulatedText += parsed.text;
                     setMessages((prev) =>
@@ -192,48 +132,35 @@ export function useChat(options?: { initialContext?: string }) {
           const jsonStr = buffer.trim().replace('data: ', '').trim();
           if (jsonStr) {
             const parsed = JSON.parse(jsonStr);
-            if (parsed.text) {
+            if (parsed.error) {
+              accumulatedText = `⚠️ **Error de la IA**: ${parsed.error}${parsed.details ? ` (${parsed.details})` : ''}. Por favor, reintente en unos momentos.`;
+            } else if (parsed.text) {
               accumulatedText += parsed.text;
             }
           }
         } catch {}
       }
 
-      // If text stream ended up empty, apply fallback message so bubble is NEVER empty
       if (!accumulatedText.trim()) {
-        const fallbackText = generateClientFallbackText(text, ctx, historyPayload);
-        const searchResult = searchMultiSourceRealEstate(text);
+        const fallbackErr = '⚠️ **Error de conexión con el motor de IA**: No se recibió respuesta. Por favor, reintente en unos momentos.';
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === botMessageId
-              ? {
-                  ...m,
-                  content: fallbackText,
-                  text: fallbackText,
-                  recommendedPropertyId: searchResult.exactMatches.length > 0 ? searchResult.exactMatches[0].id : undefined,
-                }
-              : m
-          )
+          prev.map((m) => (m.id === botMessageId ? { ...m, content: fallbackErr, text: fallbackErr } : m))
         );
       } else if (recommendedPropId) {
         setMessages((prev) =>
           prev.map((m) => (m.id === botMessageId ? { ...m, recommendedPropertyId: recommendedPropId } : m))
         );
       }
-    } catch (err) {
-      console.warn('Streaming fetch failed, applying client-side fallback:', err);
-
-      const fallbackText = generateClientFallbackText(text, ctx, historyPayload);
-      const searchResult = searchMultiSourceRealEstate(text);
-
+    } catch (err: any) {
+      console.error('❌ Chat API Fetch error:', err);
+      const errorMsg = `⚠️ **Error de conexión con el motor de IA**: ${err?.message || 'No fue posible comunicar con el servidor'}. Por favor, intente nuevamente.`;
       setMessages((prev) =>
         prev.map((m) =>
           m.id === botMessageId
             ? {
                 ...m,
-                content: fallbackText,
-                text: fallbackText,
-                recommendedPropertyId: searchResult.exactMatches.length > 0 ? searchResult.exactMatches[0].id : undefined,
+                content: errorMsg,
+                text: errorMsg,
               }
             : m
         )

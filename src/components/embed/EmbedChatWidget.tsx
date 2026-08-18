@@ -142,8 +142,7 @@ export const EmbedChatWidget: React.FC<EmbedChatWidgetProps> = ({ botConfig, pro
         ...prev,
         {
           sender: 'agent',
-          text: 'Con mucho gusto te asesoro. Te recomiendo consultar nuestro catálogo. Si lo prefieres, agenda una visita con nosotros.',
-          property: properties[0],
+          text: '⚠️ **Error de conexión con el motor de IA**: Ocurrió una interrupción temporal en la red. Por favor, intente nuevamente.',
         },
       ]);
     } finally {
