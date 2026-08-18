@@ -27,7 +27,7 @@ export interface LeadQualificationResult {
   summary: string;
 }
 
-const DEFAULT_MODEL = 'google/gemini-2.0-flash-001';
+const DEFAULT_MODEL = 'google/gemini-2.5-flash';
 
 /**
  * Clean and retrieve OpenRouter API key from environment variables.
