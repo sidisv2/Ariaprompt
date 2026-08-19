@@ -14,6 +14,8 @@ import {
   Zap
 } from 'lucide-react';
 
+import { WhatsAppSettings } from './WhatsAppSettings';
+
 interface BotConfigViewProps {
   botConfig: BotConfig;
   onUpdateBotConfig: (updated: Partial<BotConfig>) => void;
@@ -252,6 +254,11 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
           </div>
         </div>
 
+      </div>
+
+      {/* Official WhatsApp Business Embedded Signup Onboarding Section */}
+      <div className="pt-6 border-t border-white/10">
+        <WhatsAppSettings />
       </div>
 
     </div>
