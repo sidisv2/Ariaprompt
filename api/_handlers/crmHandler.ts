@@ -16,11 +16,22 @@ function getBackendSupabaseClient() {
   }
 }
 
+export interface CrmMetricsData {
+  totalLeads: number;
+  qualifiedLeads: number;
+  handedOver: number;
+  activeLeads: number;
+  closedLeads: number;
+  conversionRate: number;
+}
+
 /**
- * Handle Sub-Routes:
- * - /api/crm/leads       (GET: Paginado y filtrado de leads)
- * - /api/crm/credentials (GET/POST: Credenciales CRM de Tokko/EasyBroker)
- * - /api/crm/sync        (POST: Sincronización de catálogo partner)
+ * Handle Sub-Routes & Actions:
+ * - /api/crm?action=get_metrics     (GET: Métricas y porcentaje de conversión)
+ * - /api/crm?action=export_leads    (GET: Exportación directa en CSV)
+ * - /api/crm/leads                  (GET: Listado paginado y filtrado de leads)
+ * - /api/crm/credentials            (GET/POST: Credenciales CRM de Tokko/EasyBroker)
+ * - /api/crm/sync                   (POST: Sincronización de catálogo partner)
  */
 export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, subRoute: string) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -36,28 +47,117 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
     return res.status(500).json({ error: 'Supabase service is not configured' });
   }
 
-  // 1. SUB-ROUTE: LEADS (/api/crm/leads)
-  if (subRoute === 'leads' || subRoute === 'crm-leads') {
+  const action = (req.query.action as string) || '';
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim() || (req.query.token as string) || '';
+  let organizationId: string | null = (req.query.organizationId as string) || (req.query.organization_id as string) || null;
+
+  if (token) {
+    const { data: userData } = await supabase.auth.getUser(token);
+    if (userData?.user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (profile?.organization_id) {
+        organizationId = profile.organization_id;
+      }
+    }
+  }
+
+  // 1. ACTION: GET METRICS (action=get_metrics)
+  if (action === 'get_metrics' || subRoute === 'metrics') {
     try {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.replace(/^Bearer\s+/i, '').trim() || (req.query.token as string) || '';
-      let organizationId: string | null = (req.query.organization_id as string) || null;
-
-      if (token) {
-        const { data: userData } = await supabase.auth.getUser(token);
-        if (userData?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id')
-            .eq('id', userData.user.id)
-            .single();
-
-          if (profile?.organization_id) {
-            organizationId = profile.organization_id;
-          }
-        }
+      let query = supabase.from('wa_conversations').select('status');
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
       }
 
+      const { data: convs, error } = await query;
+      if (error) {
+        console.warn('⚠️ Error fetching metrics from wa_conversations:', error.message);
+      }
+
+      const list = convs || [];
+      const totalLeads = list.length;
+      const qualifiedLeads = list.filter((c) => c.status === 'qualified').length;
+      const handedOver = list.filter((c) => c.status === 'handover' || c.status === 'human_handoff').length;
+      const activeLeads = list.filter((c) => c.status === 'active' || !c.status).length;
+      const closedLeads = list.filter((c) => c.status === 'closed').length;
+
+      const conversionRate = totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 1000) / 10 : 0;
+
+      const metrics: CrmMetricsData = {
+        totalLeads,
+        qualifiedLeads,
+        handedOver,
+        activeLeads,
+        closedLeads,
+        conversionRate,
+      };
+
+      return res.status(200).json({
+        success: true,
+        metrics,
+      });
+    } catch (err: any) {
+      console.error('❌ Exception in get_metrics:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // 2. ACTION: EXPORT LEADS CSV (action=export_leads)
+  if (action === 'export_leads' || subRoute === 'export') {
+    try {
+      let query = supabase.from('crm_leads_overview').select('*');
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const { data: leads, error } = await query.order('last_message_at', { ascending: false });
+
+      let list = leads || [];
+      if (error || list.length === 0) {
+        // Fallback to wa_conversations if view is empty or unavailable
+        let fbQuery = supabase.from('wa_conversations').select('*');
+        if (organizationId) {
+          fbQuery = fbQuery.eq('organization_id', organizationId);
+        }
+        const { data: fbList } = await fbQuery.order('last_message_at', { ascending: false });
+        list = fbList || [];
+      }
+
+      const headers = ['Nombre', 'Teléfono', 'Estado', 'Zona', 'Presupuesto USD', 'Tipo Inmueble', 'Total Mensajes', 'Fecha Último Mensaje'];
+      const rows = list.map((l: any) => {
+        const name = (l.user_name || 'Sin nombre').replace(/"/g, '""');
+        const phone = (l.user_phone || '').replace(/"/g, '""');
+        const status = (l.status || 'active').replace(/"/g, '""');
+        const zone = (l.preferred_zone || 'N/A').replace(/"/g, '""');
+        const budget = l.budget_max_usd ? `$${Number(l.budget_max_usd).toLocaleString('en-US')}` : 'N/A';
+        const type = (l.property_type || 'N/A').replace(/"/g, '""');
+        const totalMsgs = String(l.total_messages || 1);
+        const dateStr = l.last_message_at || l.created_at ? new Date(l.last_message_at || l.created_at).toLocaleString('es-ES') : 'N/A';
+
+        return `"${name}","${phone}","${status}","${zone}","${budget}","${type}","${totalMsgs}","${dateStr}"`;
+      });
+
+      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n'); // UTF-8 BOM for Excel compatibility
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="leads-${timestamp}.csv"`);
+      return res.status(200).send(csvContent);
+    } catch (err: any) {
+      console.error('❌ Exception in export_leads CSV:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // 3. SUB-ROUTE: LEADS LIST (/api/crm/leads)
+  if (subRoute === 'leads' || subRoute === 'crm-leads' || !subRoute) {
+    try {
       const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
       const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
       const status = (req.query.status as string) || 'all';
@@ -125,7 +225,7 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
     }
   }
 
-  // 2. SUB-ROUTE: CREDENTIALS & SYNC (/api/crm/credentials, /api/crm/sync)
+  // 4. SUB-ROUTE: CREDENTIALS & SYNC
   if (subRoute === 'credentials' || subRoute === 'crm-credentials' || subRoute === 'sync' || subRoute === 'crm-sync') {
     return res.status(200).json({
       success: true,

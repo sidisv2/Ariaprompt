@@ -10,6 +10,7 @@ import {
   Flame, 
   Clock
 } from 'lucide-react';
+import { CrmMetrics } from './CrmMetrics';
 
 interface MetricsViewProps {
   leads: Lead[];
@@ -223,6 +224,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
           <span>Última sincronización: En vivo</span>
         </div>
       </div>
+
+      {/* Real-Time CRM Metrics & CSV Exporter */}
+      <CrmMetrics />
 
       {/* KPI Cards Grid with Sparkline */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
