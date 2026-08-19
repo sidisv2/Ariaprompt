@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
-import { generateOpenRouterRealEstateResponse } from './_lib/openrouterService.js';
+import {
+  generateOpenRouterRealEstateResponse,
+  generateStructuredAriaRealEstateResponse,
+  ExtractedLeadData,
+} from './_lib/openrouterService.js';
 
 export interface PropertyItem {
   id: string;
@@ -105,13 +109,15 @@ export interface ProcessAriaMessageOptions {
 export interface ProcessAriaMessageResult {
   text: string;
   conversationId: string;
+  extractedData?: ExtractedLeadData;
   recommendedPropId?: string;
 }
 
 /**
- * Multi-Tenant AI Engine Execution for WhatsApp Automation
+ * Multi-Tenant Structured AI Engine Execution for WhatsApp Automation
  * Connects to Supabase using Service Role Key, retrieves organization properties,
- * reads conversation history, calls OpenRouter (google/gemini-2.5-flash) and records messages.
+ * reads conversation history, calls OpenRouter (google/gemini-2.5-flash) returning JSON structured response,
+ * updates lead metadata in wa_conversations and records messages in wa_messages.
  */
 export async function processAriaMessage({
   organizationId,
@@ -127,7 +133,7 @@ export async function processAriaMessage({
   if (supabase) {
     try {
       // 1. Get or create conversation record for (organization_id, user_phone)
-      const { data: convData, error: convErr } = await supabase
+      const { data: convData } = await supabase
         .from('wa_conversations')
         .upsert(
           {
@@ -205,8 +211,8 @@ export async function processAriaMessage({
     ).join('\n');
   }
 
-  // 5. Generate response using OpenRouter (google/gemini-2.5-flash)
-  const aiText = await generateOpenRouterRealEstateResponse({
+  // 5. Generate structured response using OpenRouter (google/gemini-2.5-flash)
+  const { replyText, extractedData } = await generateStructuredAriaRealEstateResponse({
     message: userMessage,
     history: history.map((h) => ({ sender: h.sender, content: h.content })),
     propertyContext: catalogContext,
@@ -215,22 +221,52 @@ export async function processAriaMessage({
     agencyName: 'Aria Prop',
   });
 
-  // 6. Save assistant response into wa_messages
+  // 6. Update wa_conversations and wa_messages in Supabase
   if (supabase && conversationId) {
+    try {
+      const updateData: Record<string, any> = {
+        last_message_at: new Date().toISOString(),
+      };
+
+      if (extractedData.budget_max_usd !== null) {
+        updateData.budget_max_usd = extractedData.budget_max_usd;
+      }
+      if (extractedData.preferred_zone !== null) {
+        updateData.preferred_zone = extractedData.preferred_zone;
+      }
+      if (extractedData.property_type !== null) {
+        updateData.property_type = extractedData.property_type;
+      }
+      if (extractedData.lead_name !== null) {
+        updateData.user_name = extractedData.lead_name;
+      }
+      if (extractedData.status) {
+        updateData.status = extractedData.status;
+      }
+
+      await supabase
+        .from('wa_conversations')
+        .update(updateData)
+        .eq('id', conversationId);
+    } catch (updateErr) {
+      console.warn('⚠️ wa_conversations metadata update warning:', updateErr);
+    }
+
     try {
       await supabase.from('wa_messages').insert({
         conversation_id: conversationId,
         organization_id: organizationId,
         sender_type: 'assistant',
-        message_text: aiText,
+        message_text: replyText,
         created_at: new Date().toISOString(),
       });
     } catch {}
   }
 
   return {
-    text: aiText,
+    text: replyText,
     conversationId,
+    extractedData,
   };
 }
 
@@ -281,22 +317,6 @@ export function buildMemoryAwareResponse(
     trimmed,
   ].join(' ');
   const fullLowerQuery = fullUserQuery.toLowerCase();
-
-  let lastProp: (typeof MARKET_CATALOG)[0] | undefined = undefined;
-
-  for (let i = history.length - 1; i >= 0; i--) {
-    const item = history[i];
-    if (item && (item.sender === 'bot' || item.sender === 'model')) {
-      const textContent = item.content || (item as any).text || '';
-      const matched = MARKET_CATALOG.find(
-        (p) => textContent.includes(p.title) || textContent.includes(p.address || '') || textContent.includes(p.id) || textContent.includes(p.zone)
-      );
-      if (matched) {
-        lastProp = matched;
-        break;
-      }
-    }
-  }
 
   if (
     lowerMsg === 'hola' ||
