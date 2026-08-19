@@ -27,7 +27,7 @@ async function inspectProfiles() {
     console.error('Error fetching auth users:', authErr);
   } else {
     console.log(`Total auth users found: ${authUsers.users.length}`);
-    authUsers.users.forEach(u => {
+    (authUsers.users as any[]).forEach(u => {
       console.log(`- ID: ${u.id} | Email: ${u.email} | Provider: ${u.app_metadata?.provider} | Created: ${u.created_at}`);
     });
   }

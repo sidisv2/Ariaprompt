@@ -1,4 +1,4 @@
-import { sendWhatsAppTextMessage } from '../whatsapp-webhook.js';
+import { sendWhatsAppTextMessage } from './whatsappClient.js';
 
 export interface NotifyQualifiedLeadOptions {
   organizationId: string;

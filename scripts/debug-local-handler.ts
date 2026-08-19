@@ -1,6 +1,5 @@
-import usageHandler from '../api/usage';
-import crmCredentialsHandler from '../api/crm-credentials';
-import chatHandler from '../api/chat';
+import { handleV1Route as v1Handler } from '../api/_handlers/v1Handler';
+import { handleCrmRoute as crmHandler } from '../api/_handlers/crmHandler';
 
 async function debugHandlers() {
   console.log('🐞 Debugging handlers locally...');
@@ -14,25 +13,25 @@ async function debugHandlers() {
     }),
   });
 
-  console.log('\n--- Testing usageHandler ---');
+  console.log('\n--- Testing v1Handler usage ---');
   try {
-    await usageHandler({ method: 'GET', query: {}, headers: {} } as any, createMockRes('usage') as any);
+    await v1Handler({ method: 'GET', query: {}, headers: {} } as any, createMockRes('usage') as any, 'usage');
   } catch (err: any) {
-    console.error('❌ usageHandler Error:', err);
+    console.error('❌ v1Handler Error:', err);
   }
 
-  console.log('\n--- Testing crmCredentialsHandler ---');
+  console.log('\n--- Testing crmHandler credentials ---');
   try {
-    await crmCredentialsHandler({ method: 'GET', query: {}, headers: {} } as any, createMockRes('crmCredentials') as any);
+    await crmHandler({ method: 'GET', query: {}, headers: {} } as any, createMockRes('crmCredentials') as any, 'credentials');
   } catch (err: any) {
-    console.error('❌ crmCredentialsHandler Error:', err);
+    console.error('❌ crmHandler Error:', err);
   }
 
-  console.log('\n--- Testing chatHandler ---');
+  console.log('\n--- Testing v1Handler chat ---');
   try {
-    await chatHandler({ method: 'POST', body: { message: 'hi' }, query: {}, headers: {} } as any, createMockRes('chat') as any);
+    await v1Handler({ method: 'POST', body: { message: 'hi' }, query: {}, headers: {} } as any, createMockRes('chat') as any, 'chat');
   } catch (err: any) {
-    console.error('❌ chatHandler Error:', err);
+    console.error('❌ v1Handler Error:', err);
   }
 }
 

@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/clean-demo-accounts",
+      "path": "/api/v1/cron/clean-demo-accounts",
       "schedule": "0 3 * * *"
     }
   ],
@@ -12,8 +12,64 @@
   },
   "rewrites": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "source": "/api/whatsapp-webhook",
+      "destination": "/api/whatsapp/webhook"
+    },
+    {
+      "source": "/api/whatsapp/oauth",
+      "destination": "/api/whatsapp/oauth"
+    },
+    {
+      "source": "/api/whatsapp/webhook",
+      "destination": "/api/whatsapp/webhook"
+    },
+    {
+      "source": "/api/crm/leads",
+      "destination": "/api/crm/leads"
+    },
+    {
+      "source": "/api/crm-credentials",
+      "destination": "/api/crm/credentials"
+    },
+    {
+      "source": "/api/crm-sync",
+      "destination": "/api/crm/sync"
+    },
+    {
+      "source": "/api/leads",
+      "destination": "/api/crm/leads"
+    },
+    {
+      "source": "/api/chat",
+      "destination": "/api/v1/chat"
+    },
+    {
+      "source": "/api/paddle-webhook",
+      "destination": "/api/v1/paddle-webhook"
+    },
+    {
+      "source": "/api/verify-transaction",
+      "destination": "/api/v1/verify-transaction"
+    },
+    {
+      "source": "/api/properties",
+      "destination": "/api/v1/properties"
+    },
+    {
+      "source": "/api/bot-config",
+      "destination": "/api/v1/bot-config"
+    },
+    {
+      "source": "/api/usage",
+      "destination": "/api/v1/usage"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/v1/health"
+    },
+    {
+      "source": "/api/cron/clean-demo-accounts",
+      "destination": "/api/v1/cron/clean-demo-accounts"
     },
     {
       "source": "/(.*)",

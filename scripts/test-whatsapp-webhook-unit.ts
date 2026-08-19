@@ -1,4 +1,5 @@
-import handler, { sendWhatsAppTextMessage } from '../api/whatsapp-webhook';
+import { handleWhatsAppRoute as handler } from '../api/_handlers/whatsappHandler';
+import { sendWhatsAppTextMessage } from '../api/_lib/whatsappClient';
 
 async function runWhatsAppWebhookUnitTest() {
   console.log('====================================================');
@@ -41,7 +42,7 @@ async function runWhatsAppWebhookUnitTest() {
     },
   } as any;
 
-  await handler(mockReqGet, mockResGet);
+  await handler(mockReqGet, mockResGet, 'webhook');
   console.log('   HTTP Status:', getStatus);
   console.log('   Returned Challenge Body:', getSentBody);
   console.log('   Result:', getStatus === 200 && getSentBody === 'CHALLENGE_CODE_98765' ? '✅ PASSED' : '❌ FAILED');
@@ -68,7 +69,7 @@ async function runWhatsAppWebhookUnitTest() {
     json: () => mockResGetInvalid,
   } as any;
 
-  await handler(mockReqGetInvalid, mockResGetInvalid);
+  await handler(mockReqGetInvalid, mockResGetInvalid, 'webhook');
   console.log('   HTTP Status:', getStatusInvalid);
   console.log('   Result:', getStatusInvalid === 403 ? '✅ PASSED (Forbidden 403 correctly returned)' : '❌ FAILED');
 
@@ -124,7 +125,7 @@ async function runWhatsAppWebhookUnitTest() {
     },
   } as any;
 
-  await handler(mockReqPost, mockResPost);
+  await handler(mockReqPost, mockResPost, 'webhook');
   console.log('   HTTP Status:', postStatus);
   console.log('   Processed Event:', postJsonData);
   console.log('   Generated AI Response Text:', postJsonData?.aiResponse);
