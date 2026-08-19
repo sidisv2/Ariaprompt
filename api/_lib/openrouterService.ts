@@ -315,7 +315,11 @@ REGLAS DE EXTRACCIÓN:
 - budget_max_usd: presupuesto numérico en USD si el usuario lo menciona o null.
 - preferred_zone: zona o barrio especificado (ej. "Barrio Bombal", "Polanco", "Puerto Madero") o null.
 - property_type: tipo de inmueble y operación (ej. "Alquiler 2 ambientes", "Venta casa") o null.
-- status: "qualified" si ya se identificó la zona, tipo de inmueble y presupuesto; "closed" si cerró acuerdo; "active" en conversación inicial.
+- status:
+  * "handover": SI EL USUARIO PIDE EXPLÍCITAMENTE "hablar con una persona", "un asesor humano", "un agente", "hablar con alguien" o solicita atención humana directa. En este caso, genera en "replyText" un mensaje de despedida cordial indicando que un asesor del equipo se comunicará inmediatamente.
+  * "qualified": si ya se identificó al menos la zona, el tipo de inmueble y el presupuesto estimado.
+  * "closed": si cerró la operación o no requiere más seguimiento.
+  * "active": en conversación inicial o exploratoria.
 - lead_name: nombre del prospecto si se identifica en el chat o null.
 
 ## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):

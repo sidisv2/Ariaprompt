@@ -4,6 +4,7 @@ import {
   generateStructuredAriaRealEstateResponse,
   ExtractedLeadData,
 } from './_lib/openrouterService.js';
+import { notifyAgentLeadQualified } from './_lib/notificationService.js';
 
 export interface PropertyItem {
   id: string;
@@ -224,6 +225,17 @@ export async function processAriaMessage({
   // 6. Update wa_conversations and wa_messages in Supabase
   if (supabase && conversationId) {
     try {
+      let previousStatus = 'active';
+      const { data: currentConv } = await supabase
+        .from('wa_conversations')
+        .select('status')
+        .eq('id', conversationId)
+        .single();
+
+      if (currentConv?.status) {
+        previousStatus = currentConv.status;
+      }
+
       const updateData: Record<string, any> = {
         last_message_at: new Date().toISOString(),
       };
@@ -248,6 +260,20 @@ export async function processAriaMessage({
         .from('wa_conversations')
         .update(updateData)
         .eq('id', conversationId);
+
+      // Trigger automatic agent notification if lead transitioned to 'qualified' for the first time
+      if (extractedData.status === 'qualified' && previousStatus !== 'qualified') {
+        notifyAgentLeadQualified({
+          organizationId,
+          userPhone,
+          userName: extractedData.lead_name,
+          budgetMaxUsd: extractedData.budget_max_usd,
+          preferredZone: extractedData.preferred_zone,
+          propertyType: extractedData.property_type,
+          conversationId,
+          supabaseClient: supabase,
+        }).catch((err) => console.warn('⚠️ Agent notification trigger warning:', err));
+      }
     } catch (updateErr) {
       console.warn('⚠️ wa_conversations metadata update warning:', updateErr);
     }

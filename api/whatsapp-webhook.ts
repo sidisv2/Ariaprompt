@@ -209,6 +209,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // Check existing conversation status in Supabase for handover or closed states
+      let conversationStatus = 'active';
+      let existingConvId: string | null = null;
+
+      if (supabase) {
+        const { data: conv } = await supabase
+          .from('wa_conversations')
+          .select('id, status')
+          .eq('organization_id', organizationId)
+          .eq('user_phone', fromNumber)
+          .single();
+
+        if (conv) {
+          existingConvId = conv.id;
+          conversationStatus = conv.status || 'active';
+        }
+      }
+
+      const cleanLowerMsg = textBody.toLowerCase().trim();
+      const isReactivationKeyword =
+        cleanLowerMsg === 'activar bot' ||
+        cleanLowerMsg === 'reiniciar ia' ||
+        cleanLowerMsg === 'hablar con bot' ||
+        cleanLowerMsg === 'reiniciar bot';
+
+      if (isReactivationKeyword && supabase && existingConvId) {
+        conversationStatus = 'active';
+        await supabase
+          .from('wa_conversations')
+          .update({ status: 'active', updated_at: new Date().toISOString() })
+          .eq('id', existingConvId);
+      }
+
+      // Handover / Paused Mode Check: If status is 'handover' or 'closed', log incoming message without bot auto-response
+      if ((conversationStatus === 'handover' || conversationStatus === 'closed') && !isReactivationKeyword) {
+        console.log(`👤 Handover/Closed Active for ${fromNumber} (Status: ${conversationStatus}). Skipping AI automated reply.`);
+
+        if (supabase && existingConvId) {
+          try {
+            await supabase.from('wa_messages').insert({
+              conversation_id: existingConvId,
+              organization_id: organizationId,
+              wamid: wamid || undefined,
+              sender_type: 'user',
+              message_text: textBody,
+              created_at: new Date().toISOString(),
+            });
+          } catch {}
+
+          try {
+            await supabase.from('wa_conversations').update({
+              last_message_at: new Date().toISOString(),
+            }).eq('id', existingConvId);
+          } catch {}
+        }
+
+        return res.status(200).json({
+          status: 'HANDOVER_HUMAN_ACTIVE',
+          conversationStatus,
+          message: 'User message logged, AI auto-reply bypassed for human agent handover.',
+        });
+      }
+
       // Process message using AI Engine (RAG property context + OpenRouter LLM)
       const { text: aiResponseText, conversationId } = await processAriaMessage({
         organizationId,
