@@ -15,6 +15,7 @@ import {
   FileText,
   Zap
 } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 import { CrmOnboardingModal } from './CrmOnboardingModal';
 
 interface SummaryDashboardViewProps {
@@ -34,6 +35,34 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
   const [showOnboarding, setShowOnboarding] = React.useState<boolean>(() => {
     return localStorage.getItem('aria_onboarding_completed') !== 'true';
   });
+
+  const [waConnected, setWaConnected] = React.useState<boolean>(false);
+  const [waPhoneId, setWaPhoneId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    async function checkWhatsAppStatus() {
+      try {
+        let token = '';
+        if (supabase) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          token = sessionData.session?.access_token || '';
+        }
+        const res = await fetch('/api/whatsapp/oauth', {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.organization) {
+            setWaConnected(Boolean(data.organization.wa_connected));
+            setWaPhoneId(data.organization.wa_phone_number_id || null);
+          }
+        }
+      } catch (err) {
+        console.warn('WhatsApp status check error:', err);
+      }
+    }
+    checkWhatsAppStatus();
+  }, []);
 
   // Check if agency has connected any CRM or has manual properties
   const hasConnectedCrm = React.useMemo(() => {
@@ -154,6 +183,68 @@ export const SummaryDashboardView: React.FC<SummaryDashboardViewProps> = ({
           </button>
         </div>
       )}
+
+      {/* PROMINENT WHATSAPP CONNECTION CTA BANNER */}
+      <div
+        className={`p-6 rounded-3xl border-2 transition-all backdrop-blur-xl shadow-2xl relative overflow-hidden animate-page-fade ${
+          waConnected
+            ? 'bg-gradient-to-r from-emerald-950/80 via-slate-900 to-slate-900 border-emerald-500/40'
+            : 'bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950/90 border-emerald-500/60 shadow-emerald-500/10'
+        }`}
+      >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+          <div className="flex items-start gap-4">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+              <MessageSquare className="w-7 h-7 text-emerald-400" />
+            </div>
+            <div className="space-y-1.5 text-left">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                    waConnected
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      : 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                  }`}
+                >
+                  {waConnected ? '🟢 WHATSAPP BUSINESS OFICIAL ACTIVO' : '⚡ PENDIENTE DE CONEXIÓN'}
+                </span>
+                {waConnected && waPhoneId && (
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    Phone ID: {waPhoneId}
+                  </span>
+                )}
+              </div>
+
+              <h3 className="text-lg sm:text-xl font-extrabold text-white">
+                {waConnected
+                  ? 'Tu Inmobiliaria ya tiene a Aria respondiendo en WhatsApp 24/7'
+                  : '🚀 Conecta tu WhatsApp Comercial para activar a Aria'}
+              </h3>
+
+              <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                {waConnected
+                  ? 'Cualquier consulta enviada a tu línea oficial de WhatsApp será atendida automáticamente recomendando inmuebles de tu catálogo y registrando leads en tu CRM.'
+                  : 'Sigue 2 simples pasos: 1. Haz clic en "Conectar WhatsApp" -> 2. Inicia sesión con Facebook y valida el número oficial de tu inmobiliaria.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            <button
+              onClick={() => onRouteChange('dashboard-bot-config')}
+              className={`w-full sm:w-auto px-6 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center justify-center gap-2.5 cursor-pointer hover:scale-105 shadow-xl ${
+                waConnected
+                  ? 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/30'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 fill-current text-slate-950" />
+              <span>{waConnected ? 'Gestionar Conexión' : 'Conectar WhatsApp en 1 Clic'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Welcome Banner */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-emerald-500/30 shadow-2xl relative overflow-hidden">

@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Globe2,
   Link2,
+  MessageSquare,
   Sparkles,
   Zap,
   Lock
@@ -83,9 +84,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     },
     {
       id: 'dashboard-bot-config' as AppRoute,
-      label: t('sidebar.botConfig'),
-      icon: Bot,
-      badge: 'Script Embed',
+      label: 'Conexión WhatsApp & Bot',
+      icon: MessageSquare,
+      badge: '⚡ Meta 1-Clic',
       locked: false,
     },
     {
