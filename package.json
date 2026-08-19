@@ -9,7 +9,8 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:webhook": "tsx scripts/test-e2e-webhook.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

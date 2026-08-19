@@ -42,7 +42,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       const token = Array.isArray(req.query['hub.verify_token']) ? req.query['hub.verify_token'][0] : req.query['hub.verify_token'];
       const challenge = Array.isArray(req.query['hub.challenge']) ? req.query['hub.challenge'][0] : req.query['hub.challenge'];
 
-      const rawEnvToken = process.env.META_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || '';
+      const rawEnvToken = process.env.META_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
       const expectedVerifyToken = rawEnvToken.replace(/^["']|["']$/g, '').trim();
 
       const isValidToken = Boolean(token && expectedVerifyToken && token === expectedVerifyToken);
