@@ -20,7 +20,8 @@ import {
   X,
   Send,
   Building,
-  Check
+  Check,
+  Bot
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { exportPropertySheetToPdf, generatePropertySheetDataUri } from '../../../lib/pdf/property-sheet';
@@ -203,6 +204,50 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     fetchLeads();
     fetchMetrics();
   }, [fetchLeads, fetchMetrics]);
+
+  // ---------------------------------------------------------------------------
+  // SUPABASE REALTIME SUBSCRIPTION (Instant incoming messages & status changes)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('public:wa_realtime_crm')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wa_conversations' },
+        (payload: any) => {
+          console.log('⚡ Supabase Realtime wa_conversations event:', payload.eventType);
+          fetchLeads();
+          fetchMetrics();
+
+          if (payload.new && selectedLead && payload.new.id === selectedLead.id) {
+            setSelectedLead((prev) => (prev ? { ...prev, ...payload.new } : null));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'wa_messages' },
+        (payload: any) => {
+          console.log('⚡ Supabase Realtime wa_messages event:', payload);
+          if (payload.new && selectedLead && payload.new.conversation_id === selectedLead.id) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === payload.new.id)) return prev;
+              return [...prev, payload.new];
+            });
+          }
+          fetchLeads();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [fetchLeads, fetchMetrics, selectedLead?.id]);
 
   useEffect(() => {
     if (selectedLead) {
@@ -518,8 +563,34 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                   </div>
                 </div>
 
-                {/* Direct Action Buttons */}
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                {/* Direct Action Buttons & Toggle Bot/Human */}
+                <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      const isCurrentlyHandover = selectedLead.status === 'handover';
+                      const targetStatus: CrmLead['status'] = isCurrentlyHandover ? 'active' : 'handover';
+                      handleUpdateStatus(targetStatus);
+                    }}
+                    title="Alternar entre respuestas automáticas de la IA y modo atención humana"
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
+                      selectedLead.status === 'handover'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30 animate-pulse'
+                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                    }`}
+                  >
+                    {selectedLead.status === 'handover' ? (
+                      <>
+                        <Bot className="w-3.5 h-3.5 text-amber-400" />
+                        <span>🤖 IA Pausada (Reanudar)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>✨ IA Activa (Pausar)</span>
+                      </>
+                    )}
+                  </button>
+
                   <a
                     href={waWebUrl}
                     target="_blank"
