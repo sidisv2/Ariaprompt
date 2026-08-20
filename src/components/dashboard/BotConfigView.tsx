@@ -55,6 +55,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   // Notifications Settings State
   const [alertEmail, setAlertEmail] = useState<string>('alertas@inmobiliariapalermo.com');
   const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>('5491123456789');
+  const [notifyWhatsappVisit, setNotifyWhatsappVisit] = useState<boolean>(true);
   const [notifyEmailHandover, setNotifyEmailHandover] = useState<boolean>(true);
   const [desktopPermission, setDesktopPermission] = useState<string>(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
@@ -422,6 +423,22 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                   />
                 </div>
               </div>
+
+              {/* Immediate Visit Alert Switch */}
+              <label className="p-3.5 rounded-2xl bg-slate-950/80 border border-white/10 flex items-center justify-between gap-3 cursor-pointer">
+                <div>
+                  <p className="text-xs font-bold text-white">Recibir alertas inmediatas cuando un cliente pida visita</p>
+                  <p className="text-[11px] text-slate-400">
+                    Despacha mensaje automático al WhatsApp del asesor al detectar solicitud de visita o score ≥ 80.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifyWhatsappVisit}
+                  onChange={(e) => setNotifyWhatsappVisit(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer shrink-0"
+                />
+              </label>
 
               {/* Desktop Browser Notifications Button */}
               <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-white/10 flex items-center justify-between gap-3">

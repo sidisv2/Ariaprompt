@@ -21,12 +21,19 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { uploadFileToSupabase } from '../../lib/storageService';
+import { supabase } from '../../lib/supabaseClient';
 
 export const ProfileSettingsView: React.FC = () => {
   const { user, userPreferences, updateUserProfile, updateUserPreferences, openAuthModal, requestSignOut } = useAuth();
 
   const [nombre, setNombre] = useState<string>(user?.nombre || '');
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatarUrl || '');
+  const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>(
+    (user as any)?.advisor_alert_phone || (user as any)?.phone || '5491140143729'
+  );
+  const [notifyWhatsappVisit, setNotifyWhatsappVisit] = useState<boolean>(
+    (user as any)?.notify_whatsapp_visit ?? true
+  );
   const [uploadingAvatar, setUploadingAvatar] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
@@ -87,7 +94,19 @@ export const ProfileSettingsView: React.FC = () => {
         avatarUrl,
       });
 
-      // 2. Update preferences
+      // 2. Direct save to Supabase profiles table
+      if (supabase && user?.id) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          nombre: nombre.trim(),
+          avatar_url: avatarUrl,
+          advisor_alert_phone: advisorAlertPhone.trim(),
+          notify_whatsapp_visit: notifyWhatsappVisit,
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      // 3. Update preferences
       updateUserPreferences({
         theme,
         language,
@@ -308,12 +327,43 @@ export const ProfileSettingsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Notifications */}
-            <div className="space-y-2 pt-1 border-t border-slate-800/80">
-              <span className="block text-xs font-semibold text-slate-300">Notificaciones</span>
-              
+            {/* Notifications & WhatsApp Advisor Alerts */}
+            <div className="space-y-3 pt-2 border-t border-slate-800/80">
+              <span className="block text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                🔔 Notificaciones & Alertas WhatsApp Asesor
+              </span>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  Teléfono de Alertas WhatsApp (Asesor)
+                </label>
+                <input
+                  type="tel"
+                  value={advisorAlertPhone}
+                  onChange={(e) => setAdvisorAlertPhone(e.target.value)}
+                  placeholder="Ej: 5491140143729"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Número que recibirá las alertas ejecutivas de leads calificados y visitas agendadas.
+                </p>
+              </div>
+
+              <label className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80 cursor-pointer">
+                <div>
+                  <span className="text-xs font-bold text-white block">Recibir alertas inmediatas cuando un cliente pida visita</span>
+                  <span className="text-[10px] text-slate-400">Despacha alerta instantánea por WhatsApp cuando un cliente solicite agendar visita.</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifyWhatsappVisit}
+                  onChange={(e) => setNotifyWhatsappVisit(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer ml-3"
+                />
+              </label>
+
               <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 cursor-pointer">
-                <span className="text-xs text-slate-300">Alertas por Correo</span>
+                <span className="text-xs text-slate-300">Alertas por Correo Electrónico</span>
                 <input
                   type="checkbox"
                   checked={notificationsEmail}
