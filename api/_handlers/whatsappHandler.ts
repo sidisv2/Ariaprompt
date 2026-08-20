@@ -41,25 +41,26 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
   if (subRoute === 'webhook' || subRoute === 'whatsapp-webhook') {
     // GET: Meta Webhook Handshake
     if (req.method === 'GET') {
+      const rawEnvToken =
+        process.env.WHATSAPP_VERIFY_TOKEN ||
+        process.env.META_VERIFY_TOKEN ||
+        process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ||
+        process.env.WEBHOOK_VERIFY_TOKEN ||
+        'aria_prop_whatsapp_webhook_secret_verify_token_2026';
+      const expectedToken = (rawEnvToken || '').replace(/^["']|["']$/g, '').trim();
+
       const mode = Array.isArray(req.query['hub.mode']) ? req.query['hub.mode'][0] : req.query['hub.mode'];
-      const token = Array.isArray(req.query['hub.verify_token']) ? req.query['hub.verify_token'][0] : req.query['hub.verify_token'];
+      const rawQueryToken = Array.isArray(req.query['hub.verify_token']) ? req.query['hub.verify_token'][0] : req.query['hub.verify_token'];
+      const token = (typeof rawQueryToken === 'string' ? rawQueryToken : '').replace(/^["']|["']$/g, '').trim();
       const challenge = Array.isArray(req.query['hub.challenge']) ? req.query['hub.challenge'][0] : req.query['hub.challenge'];
 
-      const rawEnvToken = process.env.META_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
-      const expectedVerifyToken = rawEnvToken.replace(/^["']|["']$/g, '').trim();
-
-      const isValidToken = Boolean(token && expectedVerifyToken && token === expectedVerifyToken);
-
-      if (mode === 'subscribe' && isValidToken) {
+      if (mode === 'subscribe' && token && expectedToken && token === expectedToken) {
         console.log('✅ Meta Webhook Verification Handshake Successful!');
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         return res.status(200).send(challenge || '');
       } else {
-        console.warn('❌ Meta Webhook Verification Failed: Token Mismatch.');
-        return res.status(403).json({
-          error: 'Webhook verification failed',
-          message: 'hub.verify_token does not match META_VERIFY_TOKEN',
-        });
+        console.error(`❌ Token Mismatch. Esperado: "${expectedToken}", Recibido: "${token}"`);
+        return res.status(403).send('Forbidden');
       }
     }
 
