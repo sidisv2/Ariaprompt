@@ -47,6 +47,35 @@ async function startServer() {
     });
   });
 
+  // Open Graph Property Meta Tag Endpoint (/api/og/property)
+  app.get('/api/og/property', async (req, res) => {
+    try {
+      const { handleOgPropertyRoute } = await import('./api/og-property.js');
+      return handleOgPropertyRoute(req, res);
+    } catch (err: any) {
+      console.error('❌ Express /api/og/property error:', err);
+      res.status(500).send('Error generating Open Graph metadata');
+    }
+  });
+
+  // Crawler Bot Interceptor for /properties/:id
+  app.get(['/properties/:id', '/properties/:id/*'], async (req, res, next) => {
+    const userAgent = req.headers['user-agent'] || '';
+    const CRAWLER_REGEX = /WhatsApp|TelegramBot|facebookexternalhit|Twitterbot|LinkedInBot|Discordbot|Slackbot|googlebot/i;
+
+    if (CRAWLER_REGEX.test(userAgent)) {
+      try {
+        const { handleOgPropertyRoute } = await import('./api/og-property.js');
+        req.query = req.query || {};
+        req.query.id = req.params.id;
+        return handleOgPropertyRoute(req, res);
+      } catch (err) {
+        console.warn('⚠️ Crawler OG interceptor fallback:', err);
+      }
+    }
+    next();
+  });
+
   // Get Properties (Fetch from Supabase DB if connected, fallback to in-memory)
   app.get('/api/properties', async (req, res) => {
     if (supabaseClient) {

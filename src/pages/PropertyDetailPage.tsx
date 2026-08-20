@@ -25,6 +25,7 @@ import {
 import { ChatSlideOver } from '../components/chat/ChatSlideOver';
 import { INITIAL_PROPERTIES } from '../data/mockData';
 import { supabase } from '../lib/supabaseClient';
+import { SEO } from '../components/common/SEO';
 
 interface PropertyDetailPageProps {
   onRouteChange: (route: AppRoute) => void;
@@ -191,8 +192,19 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
     setIsAriaChatOpen(true);
   };
 
+  const seoOp = propData.operation_type === 'rent' ? 'Alquiler' : 'Venta';
+  const seoPrice = `${propData.currency || 'USD'} $${propData.price.toLocaleString()}`;
+  const seoLoc = `${propData.location?.address || ''}, ${propData.location?.city || ''}`;
+  const seoFeat = `${propData.features?.bedrooms || 0} dorm, ${propData.features?.areaM2 || 0} m²`;
+  const seoDescription = `${seoOp} - ${seoPrice} · ${seoLoc} · ${seoFeat}`;
+
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
+      <SEO
+        title={`${propData.title} | Aria Prop`}
+        description={seoDescription}
+        image={currentGalleryImg}
+      />
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
         {/* Navigation Toolbar */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
