@@ -44,6 +44,8 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
   const [ariaPrefilledPrompt, setAriaPrefilledPrompt] = useState('');
   const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [visitorWhatsapp, setVisitorWhatsapp] = useState('');
+  const [waSentSuccess, setWaSentSuccess] = useState(false);
 
   useEffect(() => {
     async function fetchProperty() {
@@ -190,6 +192,16 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
     }
     setAriaPrefilledPrompt(promptText);
     setIsAriaChatOpen(true);
+  };
+
+  const handleSendVisitorWhatsapp = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!visitorWhatsapp.trim()) return;
+    setWaSentSuccess(true);
+    const msg = encodeURIComponent(
+      `¡Hola! Mi WhatsApp es ${visitorWhatsapp.trim()}. Quisiera coordinar una visita para la propiedad "${propData.title}" (Ref: ${propData.code || propData.id}).`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
   };
 
   const seoOp = propData.operation_type === 'rent' ? 'Alquiler' : 'Venta';
@@ -427,6 +439,40 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
                 <MessageSquare className="w-4 h-4 fill-current" />
                 <span>{t('book_visit_whatsapp')}</span>
               </a>
+            </div>
+
+            {/* Quick Visitor WhatsApp Capture Card */}
+            <div className="p-5 rounded-3xl bg-slate-900 border border-emerald-500/40 space-y-3 shadow-xl">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                <Calendar className="w-4 h-4" />
+                <span>¿Te gustaría dejar tu WhatsApp para que un asesor te contacte y coordine una visita?</span>
+              </div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                Ingresá tu número telefónico para recibir atención prioritaria del corredor asignado.
+              </p>
+
+              <form onSubmit={handleSendVisitorWhatsapp} className="space-y-2 pt-1">
+                <input
+                  type="tel"
+                  value={visitorWhatsapp}
+                  onChange={(e) => setVisitorWhatsapp(e.target.value)}
+                  placeholder="Ej: +54 9 11 4014-3729"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500/50 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none font-mono"
+                  required
+                />
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 fill-current" />
+                  <span>Coordinar Visita por WhatsApp</span>
+                </button>
+              </form>
+              {waSentSuccess && (
+                <p className="text-[10px] text-emerald-400 font-semibold text-center animate-fadeIn">
+                  ✓ Abriendo canal directo de WhatsApp...
+                </p>
+              )}
             </div>
 
             {/* Guarantee Box */}

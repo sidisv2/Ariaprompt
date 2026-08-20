@@ -64,6 +64,15 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
     localStorage.getItem('aria_prop_mock_role') === 'admin'
   );
 
+  const isSubscriber = Boolean(
+    user &&
+    (user as any).role !== 'guest' &&
+    (user as any).subscriptionTier &&
+    (user as any).subscriptionTier !== 'free'
+  );
+
+  const isLimitReached = !isAdmin && !isSubscriber && getSentCount() >= 3;
+
   const renderMarkdown = (text: string) => {
     const raw = marked.parse(text || '') as string;
     const clean = DOMPurify.sanitize(raw);
@@ -72,6 +81,8 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
 
   const submit = async (e?: React.FormEvent, customText?: string) => {
     e?.preventDefault();
+    if (isLimitReached) return;
+
     const textToSend = customText || input;
     if (!textToSend.trim()) return;
 
@@ -103,12 +114,14 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
               </div>
               <p className="text-[10px] text-slate-400">
-                {isAdmin ? (
+                {isAdmin || isSubscriber ? (
                   <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3 inline" /> {t('chat.devAdmin')}
+                    <ShieldCheck className="w-3 h-3 inline" /> Acceso Ilimitado Activo
                   </span>
                 ) : (
-                  t('chat.freeTrial').replace('{{count}}', String(getSentCount()))
+                  <span className={isLimitReached ? 'text-amber-400 font-bold' : 'text-slate-400'}>
+                    Prueba Gratis ({Math.min(getSentCount(), 3)}/3 Mensajes)
+                  </span>
                 )}
               </p>
             </div>
@@ -155,6 +168,42 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
               <span>{t('chat.typing')}</span>
             </div>
           )}
+
+          {/* Friendly Paywall Banner when 3-message limit is reached */}
+          {isLimitReached && (
+            <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center space-y-3 my-3 shadow-xl animate-fadeIn">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-white">Límite de prueba alcanzado</p>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {initialContext === 'property'
+                    ? '¿Te gustaría dejar tu WhatsApp para que un asesor te contacte y coordine una visita?'
+                    : 'Has alcanzado el límite de 3 mensajes de prueba. Crea tu cuenta gratis o contacta a un asesor para continuar.'}
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('signup')}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                >
+                  ✨ Crear Cuenta Gratis
+                </button>
+                <a
+                  href="https://wa.me/5491140143729?text=Hola,%20alcanc%C3%A9%20el%20l%C3%ADmite%20de%203%20mensajes%20de%20prueba%20y%20quisiera%20coordinar%20una%20visita."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-all text-center block"
+                >
+                  📱 Contactar Asesor por WhatsApp
+                </a>
+              </div>
+            </div>
+          )}
+
           <div ref={endRef} />
         </div>
 
@@ -162,15 +211,16 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
         <form onSubmit={submit} className="p-3.5 bg-slate-900 border-t border-white/10 flex items-center gap-2">
           <input
             type="text"
-            className="input flex-1 bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
+            disabled={isLimitReached}
+            className="input flex-1 bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={t('chat.placeholder')}
+            placeholder={isLimitReached ? 'Límite de 3 mensajes alcanzado' : t('chat.placeholder')}
           />
           <button
             type="submit"
-            disabled={!input.trim()}
-            className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all disabled:opacity-50 cursor-pointer"
+            disabled={isLimitReached || !input.trim()}
+            className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Send className="w-4 h-4" />
           </button>
