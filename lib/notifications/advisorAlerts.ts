@@ -1,4 +1,4 @@
-import { sendWhatsAppTextMessage } from '../../api/_lib/whatsappClient';
+import { sendWhatsAppTextMessage } from '../../api/_lib/whatsappClient.js';
 
 export interface AdvisorAlertParams {
   orgId?: string;

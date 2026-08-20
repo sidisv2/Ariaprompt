@@ -1,4 +1,4 @@
-import { sendAdvisorWhatsAppAlert } from './advisorAlerts';
+import { sendAdvisorWhatsAppAlert } from './advisorAlerts.js';
 
 /**
  * Deprecated Telegram Alert fallback -> redirects to Advisor WhatsApp Text Alert

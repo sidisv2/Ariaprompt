@@ -188,13 +188,17 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             supabaseClient: supabase,
           }).catch((err) => console.warn('⚠️ Handover email trigger warning:', err));
 
-          sendAdvisorWhatsAppAlert({
-            orgId: organizationId,
-            leadPhone: fromNumber,
-            lastMessage: textBody,
-            reason: 'handover',
-            supabaseClient: supabase,
-          }).catch((err) => console.warn('⚠️ Handover advisor WhatsApp alert trigger warning:', err));
+          try {
+            sendAdvisorWhatsAppAlert({
+              orgId: organizationId,
+              leadPhone: fromNumber,
+              lastMessage: textBody,
+              reason: 'handover',
+              supabaseClient: supabase,
+            }).catch((err) => console.warn('⚠️ Handover advisor WhatsApp alert trigger warning:', err));
+          } catch (alertErr) {
+            console.warn('⚠️ Handover advisor WhatsApp alert isolated exception:', alertErr);
+          }
 
           return res.status(200).json({
             status: 'HANDOVER_HUMAN_ACTIVE',
