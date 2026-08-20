@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import { PropertyImporterModal, ImportedPropertyItem } from '../properties/PropertyImporterModal';
+import { PropertyPdfExportModal } from '../properties/PropertyPdfExportModal';
 
 interface PropertiesViewProps {
   properties: Property[];
@@ -31,6 +32,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
+  const [selectedPdfProperty, setSelectedPdfProperty] = useState<Property | null>(null);
   const [isSyncingAI, setIsSyncingAI] = useState(false);
 
   const handleSyncAI = () => {
@@ -251,15 +253,24 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
               </div>
             </div>
 
-            {/* Document RAG Status Footer */}
+            {/* Document RAG Status Footer & PDF Dossier Action */}
             <div className="p-4 bg-black/30 border-t border-white/5 flex items-center justify-between text-xs text-slate-400">
               <div className="flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{prop.documents.length} RAG PDF Docs</span>
               </div>
-              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                AI Synced
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedPdfProperty(prop)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[10px] border border-emerald-500/40 transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <FileText className="w-3 h-3 text-emerald-400" />
+                  <span>📄 Ficha PDF</span>
+                </button>
+                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  AI Synced
+                </span>
+              </div>
             </div>
 
           </div>
@@ -519,6 +530,13 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
             });
           });
         }}
+      />
+
+      {/* Property PDF Export Modal */}
+      <PropertyPdfExportModal
+        isOpen={Boolean(selectedPdfProperty)}
+        onClose={() => setSelectedPdfProperty(null)}
+        property={selectedPdfProperty}
       />
 
     </div>
