@@ -74,7 +74,7 @@ export const WhatsAppSettings: React.FC = () => {
   useEffect(() => {
     fetchStatus();
 
-    const appId = import.meta.env.VITE_META_APP_ID || '891096146948210';
+    const appId = import.meta.env.VITE_META_APP_ID || '891096146948509';
 
     if (!document.getElementById('facebook-jssdk')) {
       const js = document.createElement('script');
@@ -191,7 +191,7 @@ export const WhatsAppSettings: React.FC = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const appId = import.meta.env.VITE_META_APP_ID || '891096146948210';
+    const appId = import.meta.env.VITE_META_APP_ID || '891096146948509';
     const configId = import.meta.env.VITE_META_CONFIG_ID || '';
 
     if (!window.FB) {

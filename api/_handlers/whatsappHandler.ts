@@ -338,12 +338,12 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       }
 
       const code = body.code;
-      let wabaId = body.wabaId || body.waba_id || process.env.META_WABA_ID || 'waba-embedded-signup';
+      let wabaId = body.wabaId || body.waba_id || process.env.META_WABA_ID || '1056979960613159';
       let phoneNumberId = body.phoneNumberId || body.phone_number_id || process.env.WHATSAPP_PHONE_ID || process.env.META_PHONE_NUMBER_ID || '5491140143729';
       let accessToken = process.env.META_SYSTEM_USER_TOKEN || process.env.WHATSAPP_TOKEN || '';
 
-      const appId = (process.env.META_APP_ID || process.env.VITE_META_APP_ID || '891096146948210').trim();
-      const appSecret = (process.env.META_APP_SECRET || process.env.WHATSAPP_APP_SECRET || '').trim();
+      const appId = (process.env.META_APP_ID || process.env.VITE_META_APP_ID || '891096146948509').trim();
+      const appSecret = (process.env.META_APP_SECRET || process.env.WHATSAPP_APP_SECRET || 'cb334e158d0866dcaf9b0224cedb0493').trim();
 
       if (code && appId && appSecret) {
         try {
