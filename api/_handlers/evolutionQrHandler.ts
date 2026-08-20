@@ -177,13 +177,13 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
       }
     }
 
-    // Generate simulated QR code base64 SVG data URI fallback if Evolution API URL is not reachable locally
-    const fallbackQr = generateQrDataUri(instanceName);
+    const qrDataUrl = qrResult.qr || qrResult.qrcode || null;
 
     return res.status(200).json({
       success: true,
       instanceName,
-      qrcode: qrResult.qrcode || fallbackQr,
+      qr: qrDataUrl,
+      qrcode: qrDataUrl,
       pairingCode: qrResult.pairingCode || undefined,
       state: qrResult.state || 'connecting',
       wa_status: qrResult.state === 'open' ? 'connected' : 'connecting',

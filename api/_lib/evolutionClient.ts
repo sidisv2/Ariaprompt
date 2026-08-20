@@ -1,7 +1,4 @@
-/**
- * Evolution API Helper Client for WhatsApp Baileys Integration
- * Handles QR instance creation, webhook configuration, QR code fetching, and text message dispatch.
- */
+import QRCode from 'qrcode';
 
 export interface EvolutionConfig {
   baseUrl: string;
@@ -12,7 +9,7 @@ export function getEvolutionConfig(): EvolutionConfig {
   const baseUrl = (
     process.env.EVOLUTION_API_URL ||
     process.env.VITE_EVOLUTION_API_URL ||
-    'https://evolution-api.up.railway.app'
+    'https://evolution-api-production-2f52.up.railway.app'
   ).replace(/\/+$/, '');
 
   const apiKey = (
@@ -90,9 +87,9 @@ export async function setEvolutionWebhook(instanceName: string, webhookUrl: stri
 }
 
 /**
- * Connects to instance and retrieves current QR Code (Base64) or pairing code
+ * Connects to instance and retrieves current QR Code (DataURL) or pairing code
  */
-export async function getEvolutionConnectQr(instanceName: string): Promise<{ success: boolean; qrcode?: string; pairingCode?: string; state?: string; error?: string }> {
+export async function getEvolutionConnectQr(instanceName: string): Promise<{ success: boolean; qr?: string; qrcode?: string; pairingCode?: string; state?: string; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL not configured' };
@@ -108,13 +105,31 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
     });
 
     const data = await res.json().catch(() => ({}));
-    const qrcode = data.base64 || data.qrcode?.base64 || data.code || null;
-    const pairingCode = data.pairingCode || data.pairing_code || null;
+    const rawQr: string | null = data.base64 || data.qrcode?.base64 || data.code || data.qrcode?.code || null;
+    const pairingCode: string | null = data.pairingCode || data.pairing_code || null;
     const state = data.instance?.state || data.state || 'connecting';
 
+    let qrDataUrl: string | undefined = undefined;
+
+    if (rawQr && typeof rawQr === 'string') {
+      const trimmed = rawQr.trim();
+      if (trimmed.startsWith('data:image')) {
+        qrDataUrl = trimmed;
+      } else if (trimmed.startsWith('iVBORw0KGgo') || (trimmed.length > 100 && !trimmed.includes(' '))) {
+        qrDataUrl = `data:image/png;base64,${trimmed}`;
+      } else {
+        try {
+          qrDataUrl = await QRCode.toDataURL(trimmed);
+        } catch (qrErr) {
+          console.warn('⚠️ Error generating QR DataURL from code text:', qrErr);
+        }
+      }
+    }
+
     return {
-      success: res.ok || Boolean(qrcode || pairingCode),
-      qrcode: qrcode || undefined,
+      success: res.ok || Boolean(qrDataUrl || pairingCode),
+      qr: qrDataUrl,
+      qrcode: qrDataUrl,
       pairingCode: pairingCode || undefined,
       state,
     };

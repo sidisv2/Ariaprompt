@@ -155,7 +155,7 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
           setQrCodeData(null);
           if (onConnectionChange) onConnectionChange(true);
         } else {
-          setQrCodeData(data.qrcode || null);
+          setQrCodeData(data.qr || data.qrcode || null);
           setWaStatus('connecting');
           setRefreshCountdown(30);
         }
@@ -276,8 +276,8 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
 
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center space-y-3 text-slate-400 text-xs">
-              <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
-              <span>Verificando estado de la instancia...</span>
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+              <span className="font-semibold text-slate-300">Conectando con Evolution API...</span>
             </div>
           ) : waStatus === 'connected' ? (
             /* CONNECTED STATE CARD */
@@ -317,7 +317,12 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
           ) : (
             /* DISCONNECTED ONBOARDING WITH QR CODE MODAL */
             <div className="space-y-6">
-              {!qrCodeData ? (
+              {connecting && !qrCodeData ? (
+                <div className="p-8 flex flex-col items-center justify-center space-y-3 text-slate-400 text-xs">
+                  <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+                  <span className="font-semibold text-slate-300">Conectando con Evolution API...</span>
+                </div>
+              ) : !qrCodeData ? (
                 <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-white/10 rounded-2xl space-y-4 text-center">
                   <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
                     <QrCode className="w-7 h-7" />
@@ -337,7 +342,7 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
                     {connecting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Generando Código QR...</span>
+                        <span>Conectando con Evolution API...</span>
                       </>
                     ) : (
                       <>
@@ -361,11 +366,11 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
                   </div>
 
                   {/* QR Image Display */}
-                  <div className="p-4 rounded-2xl bg-white shadow-2xl border-4 border-emerald-500/50">
-                    <img
-                      src={qrCodeData.startsWith('data:') ? qrCodeData : `data:image/png;base64,${qrCodeData}`}
-                      alt="Código QR WhatsApp"
-                      className="w-56 h-56 object-contain"
+                  <div className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-xl border-4 border-emerald-500/40">
+                    <img 
+                      src={qrCodeData} 
+                      alt="Código QR de WhatsApp" 
+                      className="w-64 h-64 object-contain" 
                     />
                   </div>
 
