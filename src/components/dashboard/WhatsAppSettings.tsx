@@ -74,7 +74,7 @@ export const WhatsAppSettings: React.FC = () => {
   useEffect(() => {
     fetchStatus();
 
-    const appId = import.meta.env.VITE_META_APP_ID || '1234567890';
+    const appId = import.meta.env.VITE_META_APP_ID || '891096146948210';
 
     if (!document.getElementById('facebook-jssdk')) {
       const js = document.createElement('script');
@@ -162,15 +162,14 @@ export const WhatsAppSettings: React.FC = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const appId = import.meta.env.VITE_META_APP_ID || '891096146948210';
     const configId = import.meta.env.VITE_META_CONFIG_ID || '';
 
     if (!window.FB) {
-      // Fallback modal setup or alert if Facebook SDK is blocked by browser extension
-      console.warn('Facebook SDK not initialized yet.');
-      handleCompleteSignup({
-        wabaId: 'waba-demo-agency',
-        phoneNumberId: '1092837465',
-      });
+      // Direct OAuth dialog URL fallback if Facebook SDK is blocked
+      const redirectUri = `${window.location.origin}/api/whatsapp/oauth`;
+      const oauthUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public_profile,email,whatsapp_business_management,whatsapp_business_messaging&response_type=code`;
+      window.open(oauthUrl, 'FacebookLogin', 'width=600,height=700');
       return;
     }
 
@@ -187,7 +186,8 @@ export const WhatsAppSettings: React.FC = () => {
         }
       },
       {
-        config_id: configId,
+        scope: 'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
+        config_id: configId || undefined,
         response_type: 'code',
         override_default_response_type: true,
         extras: {

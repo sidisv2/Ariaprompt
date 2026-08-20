@@ -171,17 +171,18 @@ export async function processAriaMessage({
         });
       } catch {}
 
-      // 3. Fetch recent conversation history for this conversation
+      // 3. Fetch latest 10 conversation messages for context retention (oldest -> newest)
       const { data: msgHistory } = await supabase
         .from('wa_messages')
         .select('sender_type, message_text')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(10);
 
       if (msgHistory && Array.isArray(msgHistory)) {
-        for (const m of msgHistory) {
-          if (m.message_text && m.message_text !== userMessage) {
+        const recentMsgs = [...msgHistory].reverse();
+        for (const m of recentMsgs) {
+          if (m.message_text && m.message_text.trim() && m.message_text !== userMessage) {
             history.push({
               sender: m.sender_type === 'user' ? 'user' : 'assistant',
               content: m.message_text,
