@@ -22,6 +22,7 @@ import {
 import { WhatsAppSettings } from './WhatsAppSettings';
 import { AgentWizardModal, AgentData } from './AgentWizardModal';
 import { TeamAssignmentSettings } from '../settings/TeamAssignmentSettings';
+import { WebchatWidgetSnippet } from '../settings/WebchatWidgetSnippet';
 import { supabase } from '../../lib/supabaseClient';
 
 export interface FaqItem {
@@ -545,6 +546,15 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
 
         </div>
 
+      </div>
+
+      {/* Webchat Embeddable Widget Customizer */}
+      <div className="pt-6 border-t border-white/10">
+        <WebchatWidgetSnippet
+          agentName={agentName}
+          agencyName={agencyName}
+          initialWelcome={welcomeMsg}
+        />
       </div>
 
       {/* Commercial Team Round-Robin Lead Assignment */}
