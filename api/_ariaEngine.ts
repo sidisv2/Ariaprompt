@@ -131,6 +131,12 @@ export async function processAriaMessage({
   const history: { sender: 'user' | 'assistant' | 'bot'; content: string }[] = [];
   let catalogContext = '';
 
+  let botName = 'Aria';
+  let agencyName = 'Aria Prop';
+  let botTone: 'friendly' | 'formal' | 'luxury' | 'direct' = 'friendly';
+  let customInstructions = '';
+  let faqKnowledge: Array<{ question: string; answer: string }> = [];
+
   if (supabase) {
     try {
       // 1. Get or create conversation record for (organization_id, user_phone)
@@ -199,6 +205,33 @@ export async function processAriaMessage({
           })
           .join('\n');
       }
+
+      // 4b. Fetch organization bot identity & custom business rules
+      try {
+        const { data: orgConfig } = await supabase
+          .from('organizations')
+          .select('name, bot_name, bot_tone, custom_prompt_instructions, faq_knowledge')
+          .eq('id', organizationId)
+          .single();
+
+        if (orgConfig) {
+          if (orgConfig.name) agencyName = orgConfig.name;
+          if (orgConfig.bot_name) botName = orgConfig.bot_name;
+          if (['friendly', 'formal', 'luxury', 'direct'].includes(orgConfig.bot_tone)) {
+            botTone = orgConfig.bot_tone;
+          }
+          if (orgConfig.custom_prompt_instructions) {
+            customInstructions = orgConfig.custom_prompt_instructions;
+          }
+          if (orgConfig.faq_knowledge) {
+            try {
+              faqKnowledge = typeof orgConfig.faq_knowledge === 'string'
+                ? JSON.parse(orgConfig.faq_knowledge)
+                : orgConfig.faq_knowledge;
+            } catch {}
+          }
+        }
+      } catch {}
     } catch (dbErr) {
       console.warn('⚠️ Supabase context lookup warning in processAriaMessage:', dbErr);
     }
@@ -218,8 +251,11 @@ export async function processAriaMessage({
     history: history.map((h) => ({ sender: h.sender, content: h.content })),
     propertyContext: catalogContext,
     lang: 'es',
-    agentName: 'Aria',
-    agencyName: 'Aria Prop',
+    agentName: botName,
+    agencyName: agencyName,
+    botTone: botTone,
+    customInstructions: customInstructions,
+    faqKnowledge: faqKnowledge,
   });
 
   // 6. Update wa_conversations and wa_messages in Supabase
@@ -333,7 +369,7 @@ export async function generateAriaAiResponse({
       message,
       history: history.map((h) => ({ sender: h.sender as 'user' | 'bot', content: h.content })),
       propertyContext: catalogContext,
-      lang,
+      lang: (lang as 'es' | 'en' | 'pt') || 'es',
       agentName: 'Aria',
       agencyName: 'Aria Prop LATAM',
     });

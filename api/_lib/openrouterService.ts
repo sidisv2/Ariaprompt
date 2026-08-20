@@ -9,10 +9,13 @@ export interface RealEstateAIOptions {
   message: string;
   history?: ChatMessage[];
   propertyContext?: string;
-  lang?: string;
-  contextRole?: 'general' | 'finance' | 'rag' | string;
+  lang?: 'es' | 'en' | 'pt';
+  contextRole?: 'general' | 'finance' | 'rag';
   agentName?: string;
   agencyName?: string;
+  botTone?: 'friendly' | 'formal' | 'luxury' | 'direct';
+  customInstructions?: string;
+  faqKnowledge?: Array<{ question: string; answer: string }>;
   apiKey?: string;
 }
 
@@ -270,6 +273,9 @@ export async function generateStructuredAriaRealEstateResponse(
     contextRole = 'general',
     agentName = 'Aria',
     agencyName = 'Aria Prop LATAM',
+    botTone = 'friendly',
+    customInstructions = '',
+    faqKnowledge = [],
     apiKey,
   } = options;
 
@@ -287,8 +293,23 @@ export async function generateStructuredAriaRealEstateResponse(
     roleDescription = 'especialista en dossiers técnicos, planos, acabados y memorias descriptivas del catálogo';
   }
 
+  const toneGuides: Record<string, string> = {
+    friendly: 'Adopta un tono cálido, empático, cercano e informal (tuteo cordial).',
+    formal: 'Adopta un tono profesional, ejecutivo, estructurado y respetuoso (trato de usted).',
+    luxury: 'Adopta un tono sumamente elegante, refinado, exclusivo y sofisticado enfocado en propiedades de alta gama.',
+    direct: 'Adopta un tono ultra-rápido, conciso, directo y enfocado en datos técnicos y precios sin rodeos.',
+  };
+  const activeToneGuide = toneGuides[botTone] || toneGuides.friendly;
+
+  const formattedFaqs = faqKnowledge.length > 0
+    ? faqKnowledge.map((f, i) => `FAQ #${i + 1}: Q: "${f.question}" -> A: "${f.answer}"`).join('\n')
+    : 'No hay preguntas frecuentes específicas cargadas.';
+
   const systemPrompt = `
 Eres "${agentName}", ${roleDescription} para "${agencyName}" en América Latina.
+
+TONO Y PERSONALIDAD OBLIGATORIA:
+${activeToneGuide}
 
 IDIOMA OBLIGATORIO DE RESPUESTA: ${targetLangName.toUpperCase()}.
 Debes responder SIEMPRE en ${targetLangName}.
@@ -298,6 +319,12 @@ REGLAS DE ACTUACIÓN COMERCIAL:
 2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Tipo de operación e inmueble (ej. "Alquiler 2 ambientes", "Venta casa"), y (d) Nombre del lead si lo menciona.
 3. Longitud máxima del mensaje ("replyText"): Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS.
 4. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio, ubicación y enlace de ficha.
+
+## REGLAS DE NEGOCIO E INSTRUCCIONES ESPECIALES DE LA INMOBILIARIA:
+${customInstructions ? customInstructions : 'No hay reglas de negocio especiales especificadas.'}
+
+## BASE DE CONOCIMIENTO Y PREGUNTAS FRECUENTES (FAQ):
+${formattedFaqs}
 
 FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
 {
