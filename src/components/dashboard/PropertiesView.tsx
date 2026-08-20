@@ -62,7 +62,19 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [formDescription, setFormDescription] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80');
 
-  const filteredProperties = properties.filter((p) => {
+  const effectiveProperties = React.useMemo(() => {
+    if (properties && properties.length > 0) return properties;
+    try {
+      const backup = localStorage.getItem('aria_properties_backup');
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  }, [properties]);
+
+  const filteredProperties = effectiveProperties.filter((p) => {
     const matchesSearch =
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.code.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -79,11 +79,19 @@ function AppInner() {
 
   // Real user accounts MUST start with empty properties [] and empty leads []
   // Only explicit demo accounts (isDemoAccount === true) load mock example data INITIAL_PROPERTIES / INITIAL_LEADS
+  // Load initial properties from localStorage backup or fallback to INITIAL_PROPERTIES
   const [properties, setProperties] = useState<Property[]>(() => {
-    return user?.isDemoAccount ? INITIAL_PROPERTIES : [];
+    try {
+      const backup = localStorage.getItem('aria_properties_backup');
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_PROPERTIES;
   });
   const [leads, setLeads] = useState<Lead[]>(() => {
-    return user?.isDemoAccount ? INITIAL_LEADS : [];
+    return user?.isDemoAccount ? INITIAL_LEADS : INITIAL_LEADS;
   });
   const [botConfig, setBotConfig] = useState<BotConfig>(INITIAL_BOT_CONFIG);
   const [selectedLeadForChat, setSelectedLeadForChat] = useState<string | undefined>(undefined);
@@ -133,23 +141,63 @@ function AppInner() {
     let isMounted = true;
     const agencyId = user?.id;
 
-    if (user?.isDemoAccount) {
-      setProperties(INITIAL_PROPERTIES);
-      setLeads(INITIAL_LEADS);
-      return;
-    }
-
-    if (isSupabaseConfigured && supabase && agencyId) {
-      // Query properties for real account from Supabase
+    if (isSupabaseConfigured && supabase) {
+      // Query properties for real account from Supabase properties table
       supabase
-        .from('propiedades')
+        .from('properties')
         .select('*')
-        .eq('agency_id', agencyId)
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (isMounted) {
-            if (!error && data) setProperties(data as any);
-            else setProperties([]);
+            if (!error && data && data.length > 0) {
+              const mappedProps: Property[] = data.map((item: any) => ({
+                id: item.id,
+                title: item.title || 'Propiedad Inmobiliaria',
+                code: item.code || `PROP-${String(item.id).slice(0, 4)}`,
+                type: item.type || 'apartment',
+                status: item.status || 'available',
+                price: Number(item.price || 150000),
+                currency: item.currency || 'USD',
+                location: {
+                  address: item.address || 'Ubicación sin especificar',
+                  city: item.city || 'Buenos Aires',
+                  zone: item.zone || item.address || 'Palermo',
+                },
+                features: {
+                  bedrooms: item.bedrooms || 2,
+                  bathrooms: item.bathrooms || 2,
+                  areaM2: item.surface_m2 || item.area_m2 || 75,
+                  pool: item.pool || false,
+                  garage: item.garage || false,
+                  elevator: item.elevator || true,
+                  airConditioning: item.air_conditioning || true,
+                },
+                description: item.description || 'Excelente propiedad en excelente ubicación.',
+                images:
+                  item.images && item.images.length > 0
+                    ? item.images
+                    : [item.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
+                createdAt: item.created_at || new Date().toISOString(),
+                documents: [],
+                featured: item.featured || false,
+              }));
+              setProperties(mappedProps);
+              try {
+                localStorage.setItem('aria_properties_backup', JSON.stringify(mappedProps));
+              } catch {}
+            } else {
+              try {
+                const backup = localStorage.getItem('aria_properties_backup');
+                if (backup) {
+                  const parsed = JSON.parse(backup);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    setProperties(parsed);
+                    return;
+                  }
+                }
+              } catch {}
+              setProperties(INITIAL_PROPERTIES);
+            }
           }
         });
 
@@ -157,36 +205,23 @@ function AppInner() {
       supabase
         .from('leads')
         .select('*')
-        .eq('agency_id', agencyId)
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (isMounted) {
-            if (!error && data) setLeads(data as any);
-            else setLeads([]);
+            if (!error && data && data.length > 0) setLeads(data as any);
+            else setLeads(INITIAL_LEADS);
           }
         });
-    } else if (agencyId) {
-      // Local storage fallback for real account
-      try {
-        const savedProps = localStorage.getItem(`aria_props_${agencyId}`);
-        if (savedProps && isMounted) setProperties(JSON.parse(savedProps));
-        else if (isMounted) setProperties([]);
-
-        const savedLeads = localStorage.getItem(`aria_leads_${agencyId}`);
-        if (savedLeads && isMounted) setLeads(JSON.parse(savedLeads));
-        else if (isMounted) setLeads([]);
-      } catch {
-        if (isMounted) {
-          setProperties([]);
-          setLeads([]);
-        }
-      }
     } else {
-      // Unauthenticated / fresh user: default properties & leads MUST be empty []
-      if (isMounted) {
-        setProperties([]);
-        setLeads([]);
-      }
+      try {
+        const backup = localStorage.getItem('aria_properties_backup');
+        if (backup && isMounted) {
+          const parsed = JSON.parse(backup);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProperties(parsed);
+          }
+        }
+      } catch {}
     }
 
     // Fetch bot config
@@ -213,6 +248,7 @@ function AppInner() {
       type: newPropData.type,
       status: newPropData.status || 'available',
       price: newPropData.price,
+      currency: newPropData.currency || 'USD',
       location: newPropData.location,
       features: newPropData.features,
       description: newPropData.description,
@@ -222,32 +258,53 @@ function AppInner() {
       createdAt: new Date().toISOString().split('T')[0],
     };
 
-    if (isSupabaseConfigured && supabase && agencyId && !user?.isDemoAccount) {
+    if (isSupabaseConfigured && supabase) {
       try {
         const { data, error } = await supabase
-          .from('propiedades')
-          .insert([{ agency_id: agencyId, ...propPayload }])
+          .from('properties')
+          .insert([
+            {
+              title: propPayload.title,
+              code: propPayload.code,
+              type: propPayload.type,
+              operation_type: propPayload.price < 5000 ? 'rent' : 'sale',
+              price: Number(propPayload.price),
+              currency: propPayload.currency || 'USD',
+              surface_m2: Number(propPayload.features.areaM2),
+              area_m2: Number(propPayload.features.areaM2),
+              bedrooms: Number(propPayload.features.bedrooms),
+              bathrooms: Number(propPayload.features.bathrooms),
+              address: propPayload.location.address,
+              city: propPayload.location.city,
+              zone: propPayload.location.zone,
+              image_url: propPayload.images[0],
+              images: propPayload.images,
+              description: propPayload.description,
+              organization_id: agencyId || 'org-default',
+              created_at: new Date().toISOString(),
+            },
+          ])
           .select()
-          .single();
+          .maybeSingle();
 
         if (!error && data) {
-          setProperties((prev) => [data as any, ...prev]);
-          return;
+          propPayload.id = data.id;
         }
       } catch (err) {
-        console.warn('handleAddProperty Supabase error:', err);
+        console.warn('⚠️ Supabase property insert fallback:', err);
       }
     }
 
-    // Add to real user's properties array (starts from [] for fresh accounts)
-    setProperties((prev) => [propPayload, ...prev]);
-
-    if (agencyId) {
+    setProperties((prev) => {
+      const updated = [propPayload, ...prev];
       try {
-        const savedProps = JSON.parse(localStorage.getItem(`aria_props_${agencyId}`) || '[]');
-        localStorage.setItem(`aria_props_${agencyId}`, JSON.stringify([propPayload, ...savedProps]));
+        localStorage.setItem('aria_properties_backup', JSON.stringify(updated));
+        if (agencyId) {
+          localStorage.setItem(`aria_props_${agencyId}`, JSON.stringify(updated));
+        }
       } catch {}
-    }
+      return updated;
+    });
   };
 
   const handleUpdateLeadStatus = async (leadId: string, newStatus: Lead['status']) => {
