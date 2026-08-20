@@ -18,6 +18,7 @@ import {
   ExternalLink,
   MessageSquare
 } from 'lucide-react';
+import { ChatSlideOver } from '../components/chat/ChatSlideOver';
 import { INITIAL_PROPERTIES } from '../data/mockData';
 import { supabase } from '../lib/supabaseClient';
 
@@ -33,6 +34,8 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState(false);
+  const [isAriaChatOpen, setIsAriaChatOpen] = useState(false);
+  const [ariaPrefilledPrompt, setAriaPrefilledPrompt] = useState('');
 
   useEffect(() => {
     async function fetchProperty() {
@@ -149,10 +152,25 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
   }
 
   const propData = property || INITIAL_PROPERTIES[0];
-  const waMessage = encodeURIComponent(
-    `Hola! Quisiera más información sobre la propiedad "${propData.title}" (${propData.location.zone}, ${propData.location.city}) publicada en Ariaprop.`
+
+  // 1. WhatsApp phone calculation with fallback 5491140143729
+  const phone = (propData as any)?.contact_phone || (propData as any)?.agent_phone || (propData as any)?.phone || '5491140143729';
+  const cleanPhone = String(phone).replace(/\D/g, '') || '5491140143729';
+  const waMsg = encodeURIComponent(
+    `¡Hola! Estoy interesado/a en coordinar una visita para la propiedad "${propData.title}" (Ref: ${propData.code || propData.id}). ¿Cuándo tendrían disponibilidad?`
   );
-  const waUrl = `https://wa.me/5492604014372?text=${waMessage}`;
+  const whatsappUrl = `https://wa.me/${cleanPhone}?text=${waMsg}`;
+
+  // 2. Aria Chat prompt generator handler
+  const handleTalkToAria = () => {
+    const promptText = `¡Hola Aria! Quisiera hacerte consultas sobre la propiedad "${propData.title}" (Código: ${propData.code || propData.id}). Ubicación: ${propData.location.address}, ${propData.location.zone}, ${propData.location.city}. Precio: ${propData.currency} $${propData.price.toLocaleString()}. Características: ${propData.features.bedrooms} hab, ${propData.features.bathrooms} baños, ${propData.features.areaM2} m². ¿Me podrías dar más detalles y responder mis dudas?`;
+    
+    if (onOpenPrompt) {
+      onOpenPrompt(promptText);
+    }
+    setAriaPrefilledPrompt(promptText);
+    setIsAriaChatOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
@@ -297,7 +315,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
               </p>
 
               <button
-                onClick={() => onRouteChange('app')}
+                onClick={handleTalkToAria}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
                 <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
@@ -305,7 +323,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
               </button>
 
               <a
-                href={waUrl}
+                href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
@@ -332,6 +350,13 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
       </main>
 
       <Footer onRouteChange={onRouteChange} />
+
+      {/* Slide-over Aria Assistant Drawer */}
+      <ChatSlideOver
+        isOpen={isAriaChatOpen}
+        onClose={() => setIsAriaChatOpen(false)}
+        prefilledPrompt={ariaPrefilledPrompt}
+      />
     </div>
   );
 };
