@@ -139,61 +139,74 @@ function AppInner() {
   // Load account properties and leads dynamically from Supabase or localStorage
   useEffect(() => {
     let isMounted = true;
-    const orgId = (user as any)?.organizationId || user?.id;
 
-    if (isSupabaseConfigured && supabase) {
-      let query = supabase.from('properties').select('*');
-      if (orgId && !user?.isDemoAccount) {
-        query = query.eq('organization_id', orgId);
+    async function loadUserProperties() {
+      if (!isSupabaseConfigured || !supabase) {
+        if (isMounted) setProperties(user?.isDemoAccount ? INITIAL_PROPERTIES : []);
+        return;
       }
 
-      query
-        .order('created_at', { ascending: false })
-        .then(({ data, error }) => {
-          if (isMounted) {
-            if (!error && data && data.length > 0) {
-              const mappedProps: Property[] = data.map((item: any) => ({
-                id: item.id,
-                title: item.title || 'Propiedad Inmobiliaria',
-                code: item.code || `PROP-${String(item.id).slice(0, 4)}`,
-                type: item.type || 'apartment',
-                status: item.status || 'available',
-                price: Number(item.price || 150000),
-                currency: item.currency || 'USD',
-                location: {
-                  address: item.address || 'Ubicación sin especificar',
-                  city: item.city || 'Buenos Aires',
-                  zone: item.zone || item.address || 'Palermo',
-                },
-                features: {
-                  bedrooms: item.bedrooms || 2,
-                  bathrooms: item.bathrooms || 2,
-                  areaM2: item.surface_m2 || item.area_m2 || 75,
-                  pool: item.pool || false,
-                  garage: item.garage || false,
-                  elevator: item.elevator || true,
-                  airConditioning: item.air_conditioning || true,
-                },
-                description: item.description || 'Excelente propiedad en excelente ubicación.',
-                images:
-                  item.images && item.images.length > 0
-                    ? item.images
-                    : [item.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
-                createdAt: item.created_at || new Date().toISOString(),
-                documents: [],
-                featured: item.featured || false,
-              }));
-              setProperties(mappedProps);
-            } else if (user && !user.isDemoAccount) {
-              // Authenticated user with no properties -> Strict empty list []
-              setProperties([]);
-            } else {
-              setProperties(INITIAL_PROPERTIES);
-            }
-          }
-        });
+      let authUserId = user?.id;
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) authUserId = authData.user.id;
+      } catch {}
 
-      // Query leads for real account from Supabase
+      const orgId = (user as any)?.organizationId || authUserId;
+
+      let query = supabase.from('properties').select('*');
+      if (authUserId && !user?.isDemoAccount) {
+        query = query.or(`user_id.eq.${authUserId},organization_id.eq.${orgId || authUserId}`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (isMounted) {
+        if (!error && data && data.length > 0) {
+          const mappedProps: Property[] = data.map((item: any) => ({
+            id: item.id,
+            title: item.title || 'Propiedad Inmobiliaria',
+            code: item.code || `PROP-${String(item.id).slice(0, 4)}`,
+            type: item.type || 'apartment',
+            status: item.status || 'available',
+            price: Number(item.price || 150000),
+            currency: item.currency || 'USD',
+            location: {
+              address: item.address || 'Ubicación sin especificar',
+              city: item.city || 'Buenos Aires',
+              zone: item.zone || item.address || 'Palermo',
+            },
+            features: {
+              bedrooms: item.bedrooms || 2,
+              bathrooms: item.bathrooms || 2,
+              areaM2: item.surface_m2 || item.area_m2 || 75,
+              pool: item.pool || false,
+              garage: item.garage || false,
+              elevator: item.elevator || true,
+              airConditioning: item.air_conditioning || true,
+            },
+            description: item.description || 'Excelente propiedad en excelente ubicación.',
+            images:
+              item.images && item.images.length > 0
+                ? item.images
+                : [item.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
+            createdAt: item.created_at || new Date().toISOString(),
+            documents: [],
+            featured: item.featured || false,
+          }));
+          setProperties(mappedProps);
+        } else if (user && !user.isDemoAccount) {
+          setProperties([]);
+        } else {
+          setProperties(INITIAL_PROPERTIES);
+        }
+      }
+    }
+
+    loadUserProperties();
+
+    // Query leads for real account from Supabase
+    if (isSupabaseConfigured && supabase) {
       supabase
         .from('leads')
         .select('*')
@@ -204,16 +217,10 @@ function AppInner() {
             else setLeads(user?.isDemoAccount ? INITIAL_LEADS : []);
           }
         });
-    } else {
-      if (user?.isDemoAccount) {
-        setProperties(INITIAL_PROPERTIES);
-      } else {
-        setProperties([]);
-      }
     }
 
     // Fetch bot config
-    const botUrl = orgId ? `/api/bot-config?agency_id=${encodeURIComponent(orgId)}` : '/api/bot-config';
+    const botUrl = user?.id ? `/api/bot-config?agency_id=${encodeURIComponent(user.id)}` : '/api/bot-config';
     fetch(botUrl)
       .then((res) => res.json())
       .then((data) => {
@@ -227,7 +234,15 @@ function AppInner() {
   }, [user?.id, user?.isDemoAccount]);
 
   const handleAddProperty = async (newPropData: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => {
-    const orgId = (user as any)?.organizationId || user?.id || 'org-default';
+    let authUserId = user?.id;
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (authData?.user?.id) authUserId = authData.user.id;
+      } catch {}
+    }
+
+    const orgId = (user as any)?.organizationId || authUserId || 'org-default';
 
     const propPayload: Property = {
       id: `prop-${Date.now()}`,
@@ -248,34 +263,37 @@ function AppInner() {
 
     if (isSupabaseConfigured && supabase) {
       try {
+        const newRecord = {
+          user_id: authUserId,
+          organization_id: orgId,
+          title: propPayload.title,
+          code: propPayload.code,
+          type: propPayload.type,
+          operation_type: propPayload.price < 5000 ? 'rent' : 'sale',
+          price: Number(propPayload.price),
+          currency: propPayload.currency || 'USD',
+          surface_m2: Number(propPayload.features.areaM2),
+          area_m2: Number(propPayload.features.areaM2),
+          bedrooms: Number(propPayload.features.bedrooms),
+          bathrooms: Number(propPayload.features.bathrooms),
+          address: propPayload.location.address || 'Ubicación no especificada',
+          city: propPayload.location.city || 'Buenos Aires',
+          zone: propPayload.location.zone,
+          image_url: propPayload.images[0] || '',
+          images: propPayload.images,
+          description: propPayload.description || '',
+          created_at: new Date().toISOString(),
+        };
+
         const { data, error } = await supabase
           .from('properties')
-          .insert([
-            {
-              title: propPayload.title,
-              code: propPayload.code,
-              type: propPayload.type,
-              operation_type: propPayload.price < 5000 ? 'rent' : 'sale',
-              price: Number(propPayload.price),
-              currency: propPayload.currency || 'USD',
-              surface_m2: Number(propPayload.features.areaM2),
-              area_m2: Number(propPayload.features.areaM2),
-              bedrooms: Number(propPayload.features.bedrooms),
-              bathrooms: Number(propPayload.features.bathrooms),
-              address: propPayload.location.address,
-              city: propPayload.location.city,
-              zone: propPayload.location.zone,
-              image_url: propPayload.images[0],
-              images: propPayload.images,
-              description: propPayload.description,
-              organization_id: orgId,
-              created_at: new Date().toISOString(),
-            },
-          ])
+          .insert([newRecord])
           .select()
           .single();
 
-        if (!error && data && data.id) {
+        if (error) {
+          console.error('Error insertando en Supabase:', error);
+        } else if (data && data.id) {
           propPayload.id = data.id;
           if (data.code) propPayload.code = data.code;
         }

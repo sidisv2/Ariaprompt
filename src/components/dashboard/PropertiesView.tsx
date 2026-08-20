@@ -33,7 +33,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
-  const [propertyForPdf, setPropertyForPdf] = useState<Property | null>(null);
+  const [selectedPropertyForModal, setSelectedPropertyForModal] = useState<Property | null>(null);
   const [selectedAdProperty, setSelectedAdProperty] = useState<Property | null>(null);
   const [isSyncingAI, setIsSyncingAI] = useState(false);
 
@@ -285,7 +285,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
                   <span>🪄 Crear Anuncio IA</span>
                 </button>
                 <button
-                  onClick={() => setPropertyForPdf(prop)}
+                  onClick={() => setSelectedPropertyForModal(prop)}
                   className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[10px] border border-emerald-500/40 transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <FileText className="w-3 h-3 text-emerald-400" />
@@ -604,11 +604,11 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
       />
 
       {/* Property PDF Export Modal */}
-      {propertyForPdf && (
+      {selectedPropertyForModal && (
         <PropertyPdfExportModal
-          isOpen={Boolean(propertyForPdf)}
-          onClose={() => setPropertyForPdf(null)}
-          property={propertyForPdf}
+          isOpen={Boolean(selectedPropertyForModal)}
+          onClose={() => setSelectedPropertyForModal(null)}
+          property={selectedPropertyForModal}
         />
       )}
 
