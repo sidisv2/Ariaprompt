@@ -5,6 +5,7 @@ import {
   ExtractedLeadData,
 } from './_lib/openrouterService.js';
 import { notifyAgentLeadQualified, sendHandoverEmailNotification } from './_lib/notificationService.js';
+import { sendTelegramLeadAlert } from '../lib/notifications/telegram.js';
 
 export interface PropertyItem {
   id: string;
@@ -340,9 +341,21 @@ export async function processAriaMessage({
           conversationId,
           supabaseClient: supabase,
         }).catch((err) => console.warn('⚠️ Agent notification trigger warning:', err));
+
+        sendTelegramLeadAlert({
+          orgId: organizationId,
+          phone: userPhone,
+          leadName: extractedData.lead_name,
+          budget: extractedData.budget_max_usd,
+          zone: extractedData.preferred_zone,
+          propertyType: extractedData.property_type,
+          reason: 'qualified',
+          lastMessage: userMessage,
+          supabaseClient: supabase,
+        }).catch((err) => console.warn('⚠️ Telegram qualified alert trigger warning:', err));
       }
 
-      // Trigger immediate email notification if lead transitioned to 'handover' or 'human_handoff'
+      // Trigger immediate email & Telegram notification if lead transitioned to 'handover' or 'human_handoff'
       if ((extractedData.status === 'handover' || extractedData.status === 'human_handoff') && previousStatus !== 'handover') {
         sendHandoverEmailNotification({
           organizationId,
@@ -355,6 +368,18 @@ export async function processAriaMessage({
           conversationId,
           supabaseClient: supabase,
         }).catch((err) => console.warn('⚠️ Handover email notification trigger warning:', err));
+
+        sendTelegramLeadAlert({
+          orgId: organizationId,
+          phone: userPhone,
+          leadName: extractedData.lead_name,
+          budget: extractedData.budget_max_usd,
+          zone: extractedData.preferred_zone,
+          propertyType: extractedData.property_type,
+          reason: 'handover',
+          lastMessage: userMessage,
+          supabaseClient: supabase,
+        }).catch((err) => console.warn('⚠️ Handover Telegram notification trigger warning:', err));
       }
     } catch (updateErr) {
       console.warn('⚠️ wa_conversations metadata update warning:', updateErr);

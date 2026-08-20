@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
 import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
 import { sendHandoverEmailNotification } from '../../lib/notifications/email.js';
+import { sendTelegramLeadAlert } from '../../lib/notifications/telegram.js';
 import { processIncomingVoiceMessage } from '../../lib/whatsapp/audioProcessor.js';
 
 function getBackendSupabaseClient() {
@@ -178,7 +179,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             } catch {}
           }
 
-          // Asynchronously trigger email notification without delaying Meta's 200 OK response
+          // Asynchronously trigger email & Telegram notifications without delaying Meta's 200 OK response
           sendHandoverEmailNotification({
             organizationId,
             userPhone: fromNumber,
@@ -186,6 +187,14 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             conversationId: existingConvId,
             supabaseClient: supabase,
           }).catch((err) => console.warn('⚠️ Handover email trigger warning:', err));
+
+          sendTelegramLeadAlert({
+            orgId: organizationId,
+            phone: fromNumber,
+            lastMessage: textBody,
+            reason: 'handover',
+            supabaseClient: supabase,
+          }).catch((err) => console.warn('⚠️ Handover Telegram trigger warning:', err));
 
           return res.status(200).json({
             status: 'HANDOVER_HUMAN_ACTIVE',

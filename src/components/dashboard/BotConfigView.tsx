@@ -15,7 +15,8 @@ import {
   MessageSquare,
   HelpCircle,
   ShieldAlert,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 
 import { WhatsAppSettings } from './WhatsAppSettings';
@@ -47,6 +48,12 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
     'No aceptamos alquileres temporales de menos de 3 meses. El horario de visitas presenciales es de Lunes a Viernes de 10 a 18 hs.'
   );
   
+  // Telegram Notifications State
+  const [telegramBotToken, setTelegramBotToken] = useState<string>('');
+  const [telegramChatId, setTelegramChatId] = useState<string>('');
+  const [notifyTelegramHandover, setNotifyTelegramHandover] = useState<boolean>(true);
+  const [notifyTelegramQualified, setNotifyTelegramQualified] = useState<boolean>(true);
+
   // FAQ Dynamic List
   const [faqList, setFaqList] = useState<FaqItem[]>([
     { question: '¿Cuáles son las comisiones inmobiliarias?', answer: 'Cobramos un 3% en operaciones de venta y 1 mes de honorarios en alquileres.' },
@@ -74,7 +81,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
         if (profile?.organization_id) {
           const { data: org } = await supabase
             .from('organizations')
-            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, name')
+            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, telegram_bot_token, telegram_chat_id, notify_telegram_handover, notify_telegram_qualified, name')
             .eq('id', profile.organization_id)
             .single();
 
@@ -82,6 +89,10 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
             if (org.bot_name) setAgentName(org.bot_name);
             if (org.name) setAgencyName(org.name);
             if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
+            if (org.telegram_bot_token) setTelegramBotToken(org.telegram_bot_token);
+            if (org.telegram_chat_id) setTelegramChatId(org.telegram_chat_id);
+            if (typeof org.notify_telegram_handover === 'boolean') setNotifyTelegramHandover(org.notify_telegram_handover);
+            if (typeof org.notify_telegram_qualified === 'boolean') setNotifyTelegramQualified(org.notify_telegram_qualified);
             if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
               setBotTone(org.bot_tone);
             }
@@ -166,6 +177,10 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                 custom_prompt_instructions: customInstructions,
                 faq_knowledge: validFaqs,
                 calendar_booking_url: calendarBookingUrl.trim(),
+                telegram_bot_token: telegramBotToken.trim(),
+                telegram_chat_id: telegramChatId.trim(),
+                notify_telegram_handover: notifyTelegramHandover,
+                notify_telegram_qualified: notifyTelegramQualified,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', profile.organization_id);
@@ -351,6 +366,63 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                     />
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Telegram Instant Alerts Settings */}
+            <div className="space-y-3 pt-2 border-t border-white/10">
+              <label className="block text-slate-300 font-semibold flex items-center gap-1.5">
+                <Send className="w-4 h-4 text-emerald-400" />
+                Notificaciones Instantáneas por Telegram
+              </label>
+              <p className="text-[11px] text-slate-400">
+                Recibe alertas instantáneas en tu grupo de Telegram cuando un lead solicite asesor humano o sea cualificado.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-semibold mb-1">Telegram Bot Token (Opcional)</label>
+                  <input
+                    type="password"
+                    value={telegramBotToken}
+                    onChange={(e) => setTelegramBotToken(e.target.value)}
+                    placeholder="Ej: 123456789:ABCdefGHIjkl..."
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-slate-400 font-semibold mb-1">Telegram Chat ID / Group ID</label>
+                  <input
+                    type="text"
+                    value={telegramChatId}
+                    onChange={(e) => setTelegramChatId(e.target.value)}
+                    placeholder="Ej: -100123456789 o @grupo_asesores"
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pt-1">
+                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notifyTelegramHandover}
+                    onChange={(e) => setNotifyTelegramHandover(e.target.checked)}
+                    className="w-4 h-4 rounded bg-slate-950 border-white/10 text-emerald-500 focus:ring-0"
+                  />
+                  <span>Alertar en Solicitud de Asesor (Handover)</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notifyTelegramQualified}
+                    onChange={(e) => setNotifyTelegramQualified(e.target.checked)}
+                    className="w-4 h-4 rounded bg-slate-950 border-white/10 text-emerald-500 focus:ring-0"
+                  />
+                  <span>Alertar en Lead Cualificado</span>
+                </label>
               </div>
             </div>
 
