@@ -28,6 +28,7 @@ import { TerminosPage } from '../pages/TerminosPage';
 import { PrivacidadPage } from '../pages/PrivacidadPage';
 import { ReembolsosPage } from '../pages/ReembolsosPage';
 import { CheckoutSuccessPage } from '../pages/CheckoutSuccessPage';
+import { PropertyDetailPage } from '../../pages/PropertyDetailPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
@@ -199,6 +200,10 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
           </div>
           <EmbedChatWidget botConfig={botConfig} properties={properties} />
         </div>
+      ) : currentRoute === 'property-detail' ? (
+        <main className="flex-1 animate-page-fade">
+          <PropertyDetailPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
+        </main>
       ) : currentRoute === 'pricing' ? (
         <main className="flex-1 animate-page-fade">
           <PricingSection onRouteChange={onRouteChange} />

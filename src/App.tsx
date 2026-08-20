@@ -28,6 +28,7 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('comparar/manual')) return 'comparar-manual';
   if (path.includes('comparar/crm')) return 'comparar-crm';
   if (path.includes('comparar/chatbots')) return 'comparar-chatbots';
+  if (path.includes('properties/') || path.includes('propiedades/')) return 'property-detail';
   if (path.includes('dashboard/properties')) return 'dashboard-properties';
   if (path.includes('dashboard/leads')) return 'dashboard-leads';
   if (path.includes('dashboard/bot-config')) return 'dashboard-bot-config';
@@ -67,6 +68,7 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'dashboard-roles': return '/dashboard/roles';
     case 'dashboard-vault': return '/user/vault';
     case 'embed-preview': return '/embed-preview';
+    case 'property-detail': return window.location.pathname.startsWith('/properties/') ? window.location.pathname : '/properties/detail';
     default: return '/';
   }
 };

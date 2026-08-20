@@ -141,6 +141,7 @@ export type AppRoute =
   | 'dashboard-vault'
   | 'dashboard-integrations'
   | 'embed-preview'
+  | 'property-detail'
   | 'comparar-manual'
   | 'comparar-crm'
   | 'comparar-chatbots';
