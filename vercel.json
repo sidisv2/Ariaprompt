@@ -13,7 +13,7 @@
   "rewrites": [
     {
       "source": "/api/whatsapp-webhook",
-      "destination": "/api/whatsapp/webhook"
+      "destination": "/api/whatsapp-webhook"
     },
     {
       "source": "/api/whatsapp/oauth",
@@ -21,7 +21,7 @@
     },
     {
       "source": "/api/whatsapp/webhook",
-      "destination": "/api/whatsapp/webhook"
+      "destination": "/api/whatsapp-webhook"
     },
     {
       "source": "/api/crm/leads",
@@ -72,7 +72,7 @@
       "destination": "/api/v1/cron/clean-demo-accounts"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
   ]
