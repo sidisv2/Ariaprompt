@@ -32,6 +32,7 @@ import { TerminosPage } from '../pages/TerminosPage';
 import { PrivacidadPage } from '../pages/PrivacidadPage';
 import { ReembolsosPage } from '../pages/ReembolsosPage';
 import { CheckoutSuccessPage } from '../pages/CheckoutSuccessPage';
+import { PublicCatalogPage } from '../../pages/PublicCatalogPage';
 import { ProblemSection } from '../marketing/ProblemSection';
 import { HowItWorksSection } from '../marketing/HowItWorksSection';
 import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
@@ -135,6 +136,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <h2 className="text-lg font-bold text-white">Widget Embebible Mobile</h2>
             </div>
             <EmbedChatWidget botConfig={botConfig} properties={properties} />
+          </div>
+        ) : currentRoute === 'catalog' || currentRoute === 'explorar' ? (
+          <div>
+            <PublicCatalogPage onRouteChange={onRouteChange} />
           </div>
         ) : currentRoute === 'pricing' ? (
           <div>

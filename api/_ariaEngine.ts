@@ -190,11 +190,12 @@ export async function processAriaMessage({
         }
       }
 
-      // 4. Fetch available properties for this organization
+      // 4. Fetch available public properties for this organization
       const { data: dbProps } = await supabase
         .from('properties')
         .select('*')
         .eq('organization_id', organizationId)
+        .or('is_public.eq.true,is_public.is.null')
         .or('status.eq.available,status.eq.published,status.is.null')
         .limit(20);
 

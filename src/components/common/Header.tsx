@@ -163,6 +163,17 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
               )}
             </div>
 
+            {/* Catálogo público */}
+            <button
+              onClick={() => navigateTo('catalog')}
+              className={`hover:text-emerald-400 transition-colors flex items-center gap-1 cursor-pointer ${
+                currentRoute === 'catalog' || currentRoute === 'explorar' ? 'text-emerald-400 font-extrabold' : ''
+              }`}
+            >
+              <Building className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Catálogo</span>
+            </button>
+
             {/* Aria AI Direct Button */}
             <button
               onClick={() => navigateTo('app')}

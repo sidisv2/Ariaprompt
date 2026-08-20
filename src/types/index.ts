@@ -45,7 +45,8 @@ export interface Property {
   title: string;
   code: string;
   type: 'apartment' | 'house' | 'ph' | 'land' | 'commercial' | 'office' | 'warehouse' | 'penthouse' | 'villa' | 'chalet' | string;
-  status: 'available' | 'reserved' | 'sold';
+  status: 'available' | 'reserved' | 'sold' | 'rented' | string;
+  is_public?: boolean;
   price: number;
   currency?: string;
   location: {
@@ -76,6 +77,8 @@ export interface Property {
   featured: boolean;
   createdAt: string;
   source?: PropertySource;
+  contact_phone?: string;
+  agent_phone?: string;
 }
 
 export interface BotConfig {
@@ -142,6 +145,8 @@ export type AppRoute =
   | 'dashboard-integrations'
   | 'embed-preview'
   | 'property-detail'
+  | 'catalog'
+  | 'explorar'
   | 'comparar-manual'
   | 'comparar-crm'
   | 'comparar-chatbots';
