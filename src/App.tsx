@@ -139,13 +139,15 @@ function AppInner() {
   // Load account properties and leads dynamically from Supabase or localStorage
   useEffect(() => {
     let isMounted = true;
-    const agencyId = user?.id;
+    const orgId = (user as any)?.organizationId || user?.id;
 
     if (isSupabaseConfigured && supabase) {
-      // Query properties for real account from Supabase properties table
-      supabase
-        .from('properties')
-        .select('*')
+      let query = supabase.from('properties').select('*');
+      if (orgId && !user?.isDemoAccount) {
+        query = query.eq('organization_id', orgId);
+      }
+
+      query
         .order('created_at', { ascending: false })
         .then(({ data, error }) => {
           if (isMounted) {
@@ -182,20 +184,10 @@ function AppInner() {
                 featured: item.featured || false,
               }));
               setProperties(mappedProps);
-              try {
-                localStorage.setItem('aria_properties_backup', JSON.stringify(mappedProps));
-              } catch {}
+            } else if (user && !user.isDemoAccount) {
+              // Authenticated user with no properties -> Strict empty list []
+              setProperties([]);
             } else {
-              try {
-                const backup = localStorage.getItem('aria_properties_backup');
-                if (backup) {
-                  const parsed = JSON.parse(backup);
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    setProperties(parsed);
-                    return;
-                  }
-                }
-              } catch {}
               setProperties(INITIAL_PROPERTIES);
             }
           }
@@ -209,23 +201,19 @@ function AppInner() {
         .then(({ data, error }) => {
           if (isMounted) {
             if (!error && data && data.length > 0) setLeads(data as any);
-            else setLeads(INITIAL_LEADS);
+            else setLeads(user?.isDemoAccount ? INITIAL_LEADS : []);
           }
         });
     } else {
-      try {
-        const backup = localStorage.getItem('aria_properties_backup');
-        if (backup && isMounted) {
-          const parsed = JSON.parse(backup);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setProperties(parsed);
-          }
-        }
-      } catch {}
+      if (user?.isDemoAccount) {
+        setProperties(INITIAL_PROPERTIES);
+      } else {
+        setProperties([]);
+      }
     }
 
     // Fetch bot config
-    const botUrl = agencyId ? `/api/bot-config?agency_id=${encodeURIComponent(agencyId)}` : '/api/bot-config';
+    const botUrl = orgId ? `/api/bot-config?agency_id=${encodeURIComponent(orgId)}` : '/api/bot-config';
     fetch(botUrl)
       .then((res) => res.json())
       .then((data) => {
@@ -239,7 +227,7 @@ function AppInner() {
   }, [user?.id, user?.isDemoAccount]);
 
   const handleAddProperty = async (newPropData: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => {
-    const agencyId = user?.id;
+    const orgId = (user as any)?.organizationId || user?.id || 'org-default';
 
     const propPayload: Property = {
       id: `prop-${Date.now()}`,
@@ -280,31 +268,23 @@ function AppInner() {
               image_url: propPayload.images[0],
               images: propPayload.images,
               description: propPayload.description,
-              organization_id: agencyId || 'org-default',
+              organization_id: orgId,
               created_at: new Date().toISOString(),
             },
           ])
           .select()
-          .maybeSingle();
+          .single();
 
-        if (!error && data) {
+        if (!error && data && data.id) {
           propPayload.id = data.id;
+          if (data.code) propPayload.code = data.code;
         }
       } catch (err) {
         console.warn('⚠️ Supabase property insert fallback:', err);
       }
     }
 
-    setProperties((prev) => {
-      const updated = [propPayload, ...prev];
-      try {
-        localStorage.setItem('aria_properties_backup', JSON.stringify(updated));
-        if (agencyId) {
-          localStorage.setItem(`aria_props_${agencyId}`, JSON.stringify(updated));
-        }
-      } catch {}
-      return updated;
-    });
+    setProperties((prev) => [propPayload, ...prev]);
   };
 
   const handleUpdateLeadStatus = async (leadId: string, newStatus: Lead['status']) => {

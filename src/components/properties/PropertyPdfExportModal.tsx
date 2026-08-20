@@ -51,75 +51,32 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       ? property.images[0]
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
-  const targetId = property.id || property.code || (property as any)._id || 'PROP-2026';
+  const realId = property.id || property.code || (property as any)._id || 'PROP-2026';
   const realPropertyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/properties/${targetId}`
-    : `https://ariaprop.online/properties/${targetId}`;
+    ? `${window.location.origin}/properties/${realId}`
+    : `https://ariaprop.online/properties/${realId}`;
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realPropertyUrl)}`;
 
   const handlePrintPdf = () => {
     const targetTitle = (title || 'Propiedad').replace(/[^a-zA-Z0-9\s_-]/g, '').trim();
-    const pdfFileName = `${targetTitle}_Ficha_AriaProp`;
+    const oldTitle = document.title;
+    document.title = `${targetTitle}_Ficha_AriaProp`;
 
-    const pdfBundle = exportPropertySheetToPdf({
-      title,
-      price,
-      currency,
-      operationType: property.price && property.price < 5000 ? 'Alquiler' : 'Venta',
-      location: locationStr,
-      address: property.location?.address || locationStr,
-      bedrooms,
-      bathrooms,
-      totalAreaM2: areaM2,
-      description: property.description || 'Excelente propiedad con acabados de alta gama y gran conectividad.',
-      features: ['Luminoso', 'Balcón Corrido', 'Cochera Fija', 'Seguridad 24hs'],
-      images: property.images && property.images.length > 0 ? property.images : [imageUrl],
-      agencyName,
-      agencyPhone,
-    });
+    document.body.classList.add('is-printing-ficha');
 
-    // Create or reuse hidden iframe to print isolated document without background UI
-    let iframe = document.getElementById('aria-pdf-print-iframe') as HTMLIFrameElement | null;
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'aria-pdf-print-iframe';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = '0';
-      iframe.style.visibility = 'hidden';
-      document.body.appendChild(iframe);
-    }
+    const cleanUp = () => {
+      document.body.classList.remove('is-printing-ficha');
+      document.title = oldTitle;
+      window.removeEventListener('afterprint', cleanUp);
+    };
 
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8" />
-            <title>${pdfFileName}</title>
-            <style>
-              @page { size: A4 portrait; margin: 10mm; }
-              body { margin: 0; padding: 0; background-color: #ffffff !important; color: #000000 !important; font-family: system-ui, -apple-system, sans-serif; }
-            </style>
-          </head>
-          <body>
-            ${pdfBundle.html}
-          </body>
-        </html>
-      `);
-      iframeDoc.close();
+    window.addEventListener('afterprint', cleanUp);
 
-      setTimeout(() => {
-        iframe?.contentWindow?.focus();
-        iframe?.contentWindow?.print();
-      }, 300);
-    }
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanUp, 2000);
+    }, 100);
   };
 
   const handleCopyWhatsappText = () => {
@@ -184,7 +141,43 @@ ${property.description || 'Excelente propiedad con acabados de alta gama.'}
         </div>
 
         {/* Printable A4 Dossier Preview Card */}
-        <div className="flex-1 overflow-y-auto bg-slate-950 p-6 rounded-2xl border border-white/10 space-y-6 scrollbar-thin">
+        <div id="ficha-a4-content" className="flex-1 overflow-y-auto bg-slate-950 p-6 rounded-2xl border border-white/10 space-y-6 scrollbar-thin">
+          <style>{`
+            @media print {
+              body.is-printing-ficha * {
+                display: none !important;
+              }
+              body.is-printing-ficha #ficha-a4-content,
+              body.is-printing-ficha #ficha-a4-content * {
+                display: block !important;
+                visibility: visible !important;
+              }
+              body.is-printing-ficha #ficha-a4-content {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                padding: 24px !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+              }
+              body.is-printing-ficha #ficha-a4-content * {
+                color: #0f172a !important;
+                border-color: #cbd5e1 !important;
+                background-color: transparent !important;
+              }
+              body.is-printing-ficha #ficha-a4-content img {
+                display: inline-block !important;
+                max-width: 100% !important;
+              }
+            }
+          `}</style>
           
           {/* Header Dossier Bar */}
           <div className="flex items-center justify-between border-b-2 border-emerald-500 pb-3">
