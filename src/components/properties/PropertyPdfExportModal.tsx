@@ -51,12 +51,12 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       ? property.images[0]
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
-  const realId = property.id || property.code || (property as any)._id || 'PROP-2026';
-  const realUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/properties/${realId}`
-    : `https://ariaprop.online/properties/${realId}`;
+  const propertyId = property.id || (property as any).slug || property.code;
+  const realPropertyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/properties/${propertyId}`
+    : `https://ariaprop.online/properties/${propertyId}`;
 
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realUrl)}`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realPropertyUrl)}`;
 
   const handlePrintPdf = () => {
     const targetTitle = (title || 'Propiedad').replace(/[^a-zA-Z0-9\s_-]/g, '').trim();
@@ -80,6 +80,7 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
   };
 
   const handleCopyWhatsappText = () => {
+    console.log("Copiando ficha para propiedad:", property.title, realPropertyUrl);
     const waText = `🏠 *${title.toUpperCase()}*
 💰 *Precio:* ${currency} $${price.toLocaleString()}
 📍 *Ubicación:* ${locationStr}
@@ -90,7 +91,7 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
 ${property.description || 'Excelente propiedad con acabados de alta gama.'}
 
 📲 *Contacto / Visitas:* ${agencyPhone}
-🌐 *Ver Ficha Online:* ${realUrl}`;
+🌐 *Ver Ficha Online:* ${realPropertyUrl}`;
 
     navigator.clipboard.writeText(waText);
     setCopied(true);
