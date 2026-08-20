@@ -31,7 +31,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isDashboard = currentRoute.startsWith('dashboard');
 
   return (
-    <nav className="block md:hidden fixed bottom-0 left-0 right-0 z-40 w-full max-w-full overflow-hidden bg-slate-950/95 backdrop-blur-2xl border-t border-white/10 px-1 sm:px-2 py-1.5 pb-safe shadow-2xl">
+    <nav className="block md:hidden fixed bottom-0 left-0 right-0 z-40 w-full max-w-full overflow-hidden bg-[#0b141a]/95 backdrop-blur-2xl border-t border-emerald-500/20 px-1 sm:px-2 py-1.5 pb-safe shadow-2xl">
       <div className="flex items-center justify-around max-w-md mx-auto">
         
         {/* Tab 1: Inicio */}
