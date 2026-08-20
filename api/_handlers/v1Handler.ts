@@ -94,9 +94,67 @@ export async function handleV1Route(req: VercelRequest, res: VercelResponse, sub
     }
   }
 
-  // 3. PADDLE WEBHOOK (/api/v1/paddle-webhook)
-  if (subRoute === 'paddle-webhook') {
-    return res.status(200).json({ status: 'PADDLE_WEBHOOK_ACKNOWLEDGED' });
+async function syncOrganizationSubscription(supabase: any, {
+  userId,
+  orgId,
+  planId,
+}: {
+  userId?: string;
+  orgId?: string;
+  planId: 'solo_agent' | 'agency_pro' | 'enterprise';
+}) {
+  const limitsMap = {
+    solo_agent: { max_agents: 1, max_leads: 100, max_properties: 25 },
+    agency_pro: { max_agents: 5, max_leads: 500, max_properties: 250 },
+    enterprise: { max_agents: 999999, max_leads: 999999, max_properties: 999999 },
+  };
+
+  const limits = limitsMap[planId] || limitsMap.solo_agent;
+
+  if (orgId) {
+    await supabase.from('organizations').update({
+      plan_id: planId,
+      max_agents: limits.max_agents,
+      max_leads: limits.max_leads,
+      max_properties: limits.max_properties,
+      updated_at: new Date().toISOString(),
+    }).eq('id', orgId);
+  }
+
+  if (userId) {
+    await supabase.from('profiles').update({
+      estado_cuenta: 'activo',
+      plan: planId,
+      updated_at: new Date().toISOString(),
+    }).eq('id', userId);
+  }
+}
+
+  // 3. PAYMENT WEBHOOKS (/api/v1/paddle-webhook, /api/v1/mercadopago-webhook)
+  if (subRoute === 'paddle-webhook' || subRoute === 'mercadopago-webhook' || subRoute === 'webhooks/mercadopago' || subRoute === 'webhooks/paddle') {
+    try {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+      const action = body.action || body.type || body.event_type || 'payment.created';
+      const status = body.data?.status || body.status || 'approved';
+      const userId = body.userId || body.data?.metadata?.user_id;
+      const orgId = body.orgId || body.data?.metadata?.org_id;
+      const planId = (body.planId || body.data?.metadata?.plan_id || 'agency_pro') as 'solo_agent' | 'agency_pro' | 'enterprise';
+
+      const supabase = getBackendSupabaseClient();
+      if (supabase && (status === 'approved' || status === 'paid' || status === 'subscription_payment_succeeded' || status === 'payment.created')) {
+        await syncOrganizationSubscription(supabase, { userId, orgId, planId });
+      }
+
+      return res.status(200).json({
+        status: 'WEBHOOK_PROCESSED_SUCCESSFULLY',
+        action,
+        planId,
+        atomicUpdate: true,
+      });
+    } catch (e: any) {
+      console.error('Webhook processing exception:', e);
+      return res.status(200).json({ status: 'ERROR_LOGGED', error: e.message });
+    }
   }
 
   // 4. VERIFY TRANSACTION (/api/v1/verify-transaction)
