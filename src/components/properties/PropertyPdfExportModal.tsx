@@ -51,58 +51,75 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       ? property.images[0]
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
-  const realPropId = property.id || property.code;
-  const propertyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/properties/${realPropId}`
-    : `https://ariaprop.online/properties/${realPropId}`;
+  const targetId = property.id || property.code || (property as any)._id || 'PROP-2026';
+  const realPropertyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/properties/${targetId}`
+    : `https://ariaprop.online/properties/${targetId}`;
 
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(propertyUrl)}`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realPropertyUrl)}`;
 
   const handlePrintPdf = () => {
-    const oldTitle = document.title;
-    const cleanTitle = (title || 'Propiedad').replace(/[^a-zA-Z0-9\s_-]/g, '').trim();
-    document.title = `${cleanTitle}_Ficha_AriaProp`;
+    const targetTitle = (title || 'Propiedad').replace(/[^a-zA-Z0-9\s_-]/g, '').trim();
+    const pdfFileName = `${targetTitle}_Ficha_AriaProp`;
 
-    let opened = false;
-    try {
-      const pdfBundle = exportPropertySheetToPdf({
-        title,
-        price,
-        currency,
-        operationType: property.price && property.price < 5000 ? 'Alquiler' : 'Venta',
-        location: locationStr,
-        address: property.location?.address || locationStr,
-        bedrooms,
-        bathrooms,
-        totalAreaM2: areaM2,
-        description: property.description || 'Excelente propiedad con acabados de alta gama y gran conectividad.',
-        features: ['Luminoso', 'Balcón Corrido', 'Cochera Fija', 'Seguridad 24hs'],
-        images: property.images && property.images.length > 0 ? property.images : [imageUrl],
-        agencyName,
-        agencyPhone,
-      });
+    const pdfBundle = exportPropertySheetToPdf({
+      title,
+      price,
+      currency,
+      operationType: property.price && property.price < 5000 ? 'Alquiler' : 'Venta',
+      location: locationStr,
+      address: property.location?.address || locationStr,
+      bedrooms,
+      bathrooms,
+      totalAreaM2: areaM2,
+      description: property.description || 'Excelente propiedad con acabados de alta gama y gran conectividad.',
+      features: ['Luminoso', 'Balcón Corrido', 'Cochera Fija', 'Seguridad 24hs'],
+      images: property.images && property.images.length > 0 ? property.images : [imageUrl],
+      agencyName,
+      agencyPhone,
+    });
 
-      const printWin = window.open('', '_blank');
-      if (printWin) {
-        printWin.document.write(pdfBundle.html);
-        printWin.document.close();
-        opened = true;
-        setTimeout(() => {
-          printWin.focus();
-          printWin.print();
-        }, 250);
-      }
-    } catch (e) {
-      console.warn('⚠️ Window popup for PDF print blocked, triggering in-page print fallback:', e);
+    // Create or reuse hidden iframe to print isolated document without background UI
+    let iframe = document.getElementById('aria-pdf-print-iframe') as HTMLIFrameElement | null;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'aria-pdf-print-iframe';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
     }
 
-    if (!opened) {
-      window.print();
-    }
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>${pdfFileName}</title>
+            <style>
+              @page { size: A4 portrait; margin: 10mm; }
+              body { margin: 0; padding: 0; background-color: #ffffff !important; color: #000000 !important; font-family: system-ui, -apple-system, sans-serif; }
+            </style>
+          </head>
+          <body>
+            ${pdfBundle.html}
+          </body>
+        </html>
+      `);
+      iframeDoc.close();
 
-    setTimeout(() => {
-      document.title = oldTitle;
-    }, 3000);
+      setTimeout(() => {
+        iframe?.contentWindow?.focus();
+        iframe?.contentWindow?.print();
+      }, 300);
+    }
   };
 
   const handleCopyWhatsappText = () => {
@@ -116,7 +133,7 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
 ${property.description || 'Excelente propiedad con acabados de alta gama.'}
 
 📲 *Contacto / Visitas:* ${agencyPhone}
-🌐 *Ver Ficha Online:* ${propertyUrl}`;
+🌐 *Ver Ficha Online:* ${realPropertyUrl}`;
 
     navigator.clipboard.writeText(waText);
     setCopied(true);
