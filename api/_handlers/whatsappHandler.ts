@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
 import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
 import { sendHandoverEmailNotification } from '../../lib/notifications/email.js';
+import { processIncomingVoiceMessage } from '../../lib/whatsapp/audioProcessor.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -88,17 +89,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const wamid = incomingMsg.id;
         const phoneNumberId = metadata?.phone_number_id;
 
-        let textBody = '';
-        if (msgType === 'text' && incomingMsg.text?.body) {
-          textBody = incomingMsg.text.body;
-        } else if (msgType === 'button' && incomingMsg.button?.text) {
-          textBody = incomingMsg.button.text;
-        } else if (incomingMsg.interactive?.button_reply?.title) {
-          textBody = incomingMsg.interactive.button_reply.title;
-        } else {
-          textBody = 'Hola';
-        }
-
         let organizationId = '00000000-0000-0000-0000-000000000000';
         let tenantAccessToken: string | undefined = undefined;
 
@@ -115,6 +105,25 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               tenantAccessToken = orgData.wa_access_token;
             }
           }
+        }
+
+        let textBody = '';
+        let isVoiceNote = false;
+        let audioMediaId = incomingMsg.audio?.id || incomingMsg.voice?.id;
+
+        if ((msgType === 'audio' || msgType === 'voice') && audioMediaId) {
+          isVoiceNote = true;
+          const tokenToUse = tenantAccessToken || process.env.WHATSAPP_TOKEN || process.env.META_ACCESS_TOKEN || '';
+          const transcribedText = await processIncomingVoiceMessage(audioMediaId, tokenToUse);
+          textBody = `🎙️ [Nota de voz]: ${transcribedText}`;
+        } else if (msgType === 'text' && incomingMsg.text?.body) {
+          textBody = incomingMsg.text.body;
+        } else if (msgType === 'button' && incomingMsg.button?.text) {
+          textBody = incomingMsg.button.text;
+        } else if (incomingMsg.interactive?.button_reply?.title) {
+          textBody = incomingMsg.interactive.button_reply.title;
+        } else {
+          textBody = 'Hola';
         }
 
         let conversationStatus = 'active';

@@ -21,7 +21,8 @@ import {
   Send,
   Building,
   Check,
-  Bot
+  Bot,
+  Mic
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { exportPropertySheetToPdf, generatePropertySheetDataUri } from '../../../lib/pdf/property-sheet';
@@ -47,6 +48,8 @@ export interface WaMessageItem {
   organization_id: string;
   sender_type: 'user' | 'assistant' | 'system';
   message_text: string;
+  media_type?: string;
+  transcription?: string;
   created_at: string;
 }
 
@@ -685,6 +688,8 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                   ) : (
                     messages.map((msg) => {
                       const isUser = msg.sender_type === 'user';
+                      const isAudio = msg.media_type === 'audio' || msg.message_text.includes('🎙️') || !!msg.transcription;
+
                       return (
                         <div
                           key={msg.id}
@@ -697,7 +702,13 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                                 : 'bg-slate-900 text-slate-200 border border-white/10 rounded-tl-none'
                             }`}
                           >
-                            {msg.message_text}
+                            {isAudio && (
+                              <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider mb-1 text-slate-900">
+                                <Mic className="w-3.5 h-3.5 fill-current" />
+                                <span>Nota de Voz Transcripta</span>
+                              </div>
+                            )}
+                            <p>{msg.transcription || msg.message_text}</p>
                           </div>
                           <span className="text-[9px] text-slate-500 mt-1 font-mono px-1">
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
