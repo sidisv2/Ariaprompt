@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { exportPropertySheetToPdf, generatePropertySheetDataUri } from '../../../lib/pdf/property-sheet';
+import { LiveInboxView } from '../chat/LiveInboxView';
 
 export interface CrmLead {
   id: string;
@@ -65,6 +66,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   selectedLeadForChat,
   onClearSelectedLead,
 }) => {
+  const [viewMode, setViewMode] = useState<'live_inbox' | 'crm'>('live_inbox');
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
@@ -422,17 +424,48 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            fetchLeads();
-            fetchMetrics();
-          }}
-          className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs border border-white/10 transition-all flex items-center gap-2 cursor-pointer"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>Actualizar</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Mode Switcher */}
+          <div className="p-1 rounded-2xl bg-slate-900 border border-white/10 flex items-center gap-1 text-xs font-bold">
+            <button
+              onClick={() => setViewMode('live_inbox')}
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewMode === 'live_inbox'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              💬 Live Inbox Takeover
+            </button>
+            <button
+              onClick={() => setViewMode('crm')}
+              className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                viewMode === 'crm'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              📊 Vista CRM Tabular
+            </button>
+          </div>
+
+          <button
+            onClick={() => {
+              fetchLeads();
+              fetchMetrics();
+            }}
+            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs border border-white/10 transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
+            <span>Actualizar</span>
+          </button>
+        </div>
       </div>
+
+      {viewMode === 'live_inbox' ? (
+        <LiveInboxView initialLeadId={selectedLeadForChat} />
+      ) : (
+        <>
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -779,6 +812,8 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
         </div>
 
       </div>
+        </>
+      )}
 
     </div>
   );

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { WhatsAppSettings } from './WhatsAppSettings';
+import { AgentWizardModal, AgentData } from './AgentWizardModal';
 import { supabase } from '../../lib/supabaseClient';
 
 export interface FaqItem {
@@ -33,6 +34,7 @@ interface BotConfigViewProps {
 }
 
 export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdateBotConfig }) => {
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [agentName, setAgentName] = useState(botConfig.agentName || 'Aria');
   const [agencyName, setAgencyName] = useState(botConfig.agencyName || 'Inmobiliaria Palermo');
@@ -216,9 +218,20 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
           </p>
         </div>
 
-        <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
-          <Zap className="w-4 h-4" />
-          <span>Aria AI Engine 2.5 Active</span>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsWizardOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 hover:scale-105 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
+            <span>🧙‍♂️ Wizard Configurar Agente</span>
+          </button>
+
+          <div className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+            <Zap className="w-4 h-4" />
+            <span>Aria AI Engine 2.5 Active</span>
+          </div>
         </div>
       </div>
 
@@ -537,6 +550,27 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
       <div className="pt-6 border-t border-white/10">
         <WhatsAppSettings />
       </div>
+
+      {/* Agent Setup Wizard Modal */}
+      <AgentWizardModal
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onSaveAgent={(agent: AgentData) => {
+          setAgentName(agent.name);
+          setAgencyName(agent.agencyName);
+          setWelcomeMsg(agent.welcomeMessage);
+          setWhatsapp(agent.whatsappNumber);
+          setCalendarBookingUrl(agent.calendarBookingUrl);
+          setAlertEmail(agent.alertEmail);
+          setBotTone(agent.tone);
+          onUpdateBotConfig({
+            agentName: agent.name,
+            agencyName: agent.agencyName,
+            welcomeMessage: agent.welcomeMessage,
+            whatsappNumber: agent.whatsappNumber,
+          });
+        }}
+      />
 
     </div>
   );
