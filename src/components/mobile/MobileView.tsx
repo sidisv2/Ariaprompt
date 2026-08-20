@@ -5,6 +5,7 @@ import { MobileBottomNav } from './MobileBottomNav';
 import { MobileHeroSection } from './MobileHeroSection';
 import { MobilePricingSection } from './MobilePricingSection';
 import { MobileAuthBottomSheet } from './MobileAuthBottomSheet';
+import { MobileDevNotice } from './MobileDevNotice';
 import { TechStackBanner } from '../marketing/TechStackBanner';
 import { RealUseCaseNarrative } from '../marketing/RealUseCaseNarrative';
 import { ComparisonSection } from '../marketing/ComparisonSection';
@@ -70,6 +71,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
       <MobileHeader currentRoute={currentRoute} onRouteChange={onRouteChange} />
+      <MobileDevNotice />
 
       <main className="flex-1 pb-20">
         {currentRoute === 'dashboard-metrics' ? (
