@@ -11,7 +11,11 @@ interface PricingSwitcherProps {
 
 export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
-  const { openAuthModal, requireAuthForPayment } = useAuth();
+  const { user, openAuthModal, requireAuthForPayment } = useAuth();
+
+  const isOwner = Boolean(
+    user && (user.isOwner || user.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com')
+  );
 
   const hasDiscount5 = Boolean(localStorage.getItem('aria_discount_5') === 'true');
 
@@ -27,6 +31,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
         `Hasta ${PLAN_LIMITS.solo_agent.maxLeadsPerMonth} Leads Cualificados / mes`,
         'Sincronización con Google Calendar',
         `Catálogo de hasta ${PLAN_LIMITS.solo_agent.maxProperties} Inmuebles`,
+        'Bóveda Privada de Documentos PDF',
         'Soporte por Email & Chat',
       ],
       popular: false,
@@ -41,7 +46,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       monthlyPrice: PLAN_LIMITS.agency_pro.monthlyPriceUsd,
       annualPrice: PLAN_LIMITS.agency_pro.annualPriceUsd,
       features: [
-        '5 Agentes de IA 24/7 (WhatsApp & Web)',
+        '5 Agentes de IA 24/7 (WhatsApp Meta + Web)',
         `Hasta ${PLAN_LIMITS.agency_pro.maxLeadsPerMonth} Leads Cualificados / mes`,
         'Integración Tokko Broker & EasyBroker',
         `Catálogo de hasta ${PLAN_LIMITS.agency_pro.maxProperties} Inmuebles`,
@@ -49,32 +54,36 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
         'Soporte Prioritario VIP 24/7',
       ],
       popular: true,
-      badge: 'Recomendado — Plan Más Vendido',
+      badge: 'RECOMENDADO — PLAN MÁS VENDIDO',
       buttonText: 'Probar Plan Pro Gratis',
       color: 'border-emerald-500/50 bg-slate-900/90 shadow-2xl shadow-emerald-500/10',
     },
     {
       id: 'custom',
-      name: `${PLAN_LIMITS.enterprise.name} / Desarrolladores`,
+      name: 'Desarrolladores / Enterprise',
       tagline: PLAN_LIMITS.enterprise.description,
       isCustom: true,
       monthlyPrice: 0,
       annualPrice: 0,
       features: [
-        'Agentes & Sucursales Ilimitadas',
-        'Infraestructura RAG Dedicada',
+        'Agentes & Sucursales Ilimitadas (999,999)',
+        'Infraestructura RAG Dedicada (Google Gemini 2.5)',
         'Sincronización Multi-CRM & Webhooks',
-        'Acceso API para Apps Propias',
+        'Acceso API para Apps Propias & CRM Local',
         'Gerente de Cuenta Dedicado & SLA 99.9%',
       ],
       popular: false,
-      badge: 'Solución a Medida',
-      buttonText: 'Contactar Ventas',
-      color: 'border-cyan-500/30 bg-slate-900/60',
+      badge: isOwner ? '👑 Tu Plan Actual (Owner / Enterprise)' : 'Solución a Medida',
+      buttonText: isOwner ? '✓ Acceso Total' : 'Contactar Ventas',
+      color: isOwner ? 'border-amber-400/60 bg-slate-900/90 shadow-2xl shadow-amber-500/10' : 'border-cyan-500/30 bg-slate-900/60',
     },
   ];
 
   const handleSelectPlan = (planId: string) => {
+    if (isOwner) {
+      if (onRouteChange) onRouteChange('app');
+      return;
+    }
     localStorage.setItem('aria_selected_billing_cycle', billingCycle);
     const passed = requireAuthForPayment({
       planId,

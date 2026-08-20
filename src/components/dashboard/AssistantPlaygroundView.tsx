@@ -501,6 +501,30 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
 
         {/* RIGHT COLUMN: Live RAG Inspector & Telemetry (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
+
+          {/* Non-blocking Quota Notice Banner (if paid solo/pro plan) */}
+          {!isUnlimitedUser && user?.plan && user.plan !== 'desarrolladores' && (
+            <div className="p-4 rounded-3xl bg-slate-900/90 border border-amber-500/30 text-amber-300 text-xs space-y-2 shadow-xl backdrop-blur-xl">
+              <div className="flex items-center justify-between font-bold">
+                <span className="flex items-center gap-1.5 text-amber-300">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  Cuota Mensual del Plan ({user.plan === 'solo' ? 'Solo Agent' : 'Agency Pro'})
+                </span>
+                <span className="text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-400/30 font-bold uppercase">
+                  Activo
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-snug">
+                Tu plan contempla hasta {user.plan === 'solo' ? '100 leads y 20 inmuebles' : '500 leads y 100 inmuebles'} por mes. Para cuota ilimitada sin restricciones, pasa al plan Enterprise.
+              </p>
+              <button
+                onClick={() => onRouteChange?.('dashboard-checkout')}
+                className="mt-1 text-[11px] text-amber-400 font-extrabold hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <span>Ver opciones de upgrade de plan ➔</span>
+              </button>
+            </div>
+          )}
           
           {/* Card 1: Engine Telemetry Status */}
           <div className="p-5 rounded-3xl bg-slate-900/90 border border-white/10 shadow-2xl space-y-4 backdrop-blur-xl">
