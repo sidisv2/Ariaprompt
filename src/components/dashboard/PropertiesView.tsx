@@ -18,6 +18,8 @@ import {
   Sparkles
 } from 'lucide-react';
 
+import { PropertyImporterModal, ImportedPropertyItem } from '../properties/PropertyImporterModal';
+
 interface PropertiesViewProps {
   properties: Property[];
   onAddProperty: (newProp: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => void;
@@ -28,6 +30,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [isSyncingAI, setIsSyncingAI] = useState(false);
 
   const handleSyncAI = () => {
@@ -119,6 +122,14 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
           >
             <Sparkles className={`w-4 h-4 text-emerald-400 ${isSyncingAI ? 'animate-spin' : ''}`} />
             <span>{isSyncingAI ? t('properties.syncing') : t('properties.syncAI')}</span>
+          </button>
+
+          <button
+            onClick={() => setIsImporterOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 font-bold text-xs border border-emerald-500/40 transition-all flex items-center gap-2 cursor-pointer shadow-md"
+          >
+            <Upload className="w-4 h-4 text-emerald-400" />
+            <span>📥 Importar Propiedades (CSV / URL)</span>
           </button>
 
           <button
@@ -473,6 +484,42 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
           </div>
         </div>
       )}
+
+      {/* Property Importer Modal */}
+      <PropertyImporterModal
+        isOpen={isImporterOpen}
+        onClose={() => setIsImporterOpen(false)}
+        existingPropertiesCount={properties.length}
+        onImportComplete={(importedItems) => {
+          importedItems.forEach((item) => {
+            onAddProperty({
+              title: item.title,
+              code: 'PROP-' + Math.floor(1000 + Math.random() * 9000),
+              type: 'apartment',
+              status: 'available',
+              price: item.price,
+              location: {
+                address: item.address_neighborhood,
+                city: 'CABA',
+                zone: item.address_neighborhood,
+              },
+              features: {
+                bedrooms: item.rooms,
+                bathrooms: 1,
+                areaM2: item.surface_m2,
+                pool: false,
+                garage: false,
+                elevator: true,
+                airConditioning: true,
+              },
+              description: item.description,
+              images: [
+                'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+              ],
+            });
+          });
+        }}
+      />
 
     </div>
   );
