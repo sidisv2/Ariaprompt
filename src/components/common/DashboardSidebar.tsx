@@ -35,10 +35,11 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const { t } = useLanguage();
   const { user, getPlanBadgeLabel } = useAuth();
 
-  const planTier = user?.plan ?? 'normal';
+  const isOwner = user?.isOwner || user?.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com';
+  const planTier = isOwner ? 'desarrolladores' : (user?.plan ?? 'normal');
   const planLimits = getPlanLimits(planTier);
-  const isFreePlan = planTier === 'normal';
-  const planLabel = getPlanBadgeLabel();
+  const isFreePlan = isOwner ? false : planTier === 'normal';
+  const planLabel = isOwner ? '👑 OWNER' : getPlanBadgeLabel();
 
   // Check if CRM is connected (localStorage heuristic)
   const hasConnectedCrm = React.useMemo(() => {
@@ -59,7 +60,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       badge: hasConnectedCrm ? 'Conectado' : '★ Recomendado',
       highlight: !hasConnectedCrm,
       /** CRM sync is gated behind 'pro' or higher */
-      locked: !planLimits.crmSyncEnabled,
+      locked: isOwner ? false : !planLimits.crmSyncEnabled,
     },
     {
       id: 'dashboard-metrics' as AppRoute,
@@ -109,7 +110,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       icon: ShieldCheck,
       badge: 'Privado PDF',
       /** PDF Vault requires solo or higher */
-      locked: !planLimits.pdfVaultEnabled,
+      locked: isOwner ? false : !planLimits.pdfVaultEnabled,
     },
     {
       id: 'dashboard-checkout' as AppRoute,
@@ -141,7 +142,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             AP
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate">Aria Prop LATAM</p>
+            <p className="text-xs font-semibold text-white truncate">
+              {isOwner ? 'Agencia Enterprise LATAM (Ilimitado)' : 'Aria Prop LATAM'}
+            </p>
             <p className="text-[10px] text-slate-400 flex items-center gap-1">
               <Globe2 className="w-3 h-3 text-emerald-400 inline" />
               {t('sidebar.activeAgency')}
@@ -149,6 +152,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </div>
           {/* Plan chip next to agency name */}
           <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full ${
+            isOwner ? 'bg-amber-400 text-slate-950 font-extrabold shadow-sm' :
             planTier === 'pro' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
             planTier === 'solo' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
             planTier === 'desarrolladores' ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' :
@@ -244,7 +248,21 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
       {/* Footer — Plan Status + Upgrade CTA (if normal) or Quota Bar */}
       <div className="bg-white/5 p-3 rounded-xl border border-white/10 space-y-2">
-        {isFreePlan ? (
+        {isOwner ? (
+          <>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] uppercase tracking-widest text-amber-400 font-extrabold flex items-center gap-1">
+                👑 SuperAdmin Owner
+              </span>
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#fbbf24]"></div>
+            </div>
+            <p className="text-xs text-slate-200 font-semibold">Empresa LATAM (Ilimitado)</p>
+            <p className="text-[10px] text-slate-400">Leads: ∞ · Inmuebles: ∞ · RAG IA 2.5</p>
+            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-300 h-full rounded-full w-full" />
+            </div>
+          </>
+        ) : isFreePlan ? (
           /* Free plan: show upgrade prompt */
           <>
             <div className="flex justify-between items-center">

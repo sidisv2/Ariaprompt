@@ -100,7 +100,7 @@ export function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefine
   if (v === 'normal' || v === 'gratis') return 'normal';
   if (v === 'solo' || v === 'solo_agent') return 'solo';
   if (v === 'pro' || v === 'pro_basico' || v === 'agency_pro' || v === 'plan_activo') return 'pro';
-  if (v === 'desarrolladores' || v === 'enterprise') return 'desarrolladores';
+  if (v === 'desarrolladores' || v === 'enterprise' || v === 'owner' || v === 'superadmin' || v === 'agency_unlimited') return 'desarrolladores';
   // Trial → show as normal (limited) until confirmed paid
   if (v.includes('prueba')) return 'normal';
   return 'normal';

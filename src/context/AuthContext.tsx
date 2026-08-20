@@ -16,6 +16,9 @@ export interface AppUser {
   plan: PlanTier;
   /** Explicit demo account flag */
   isDemoAccount?: boolean;
+  isOwner?: boolean;
+  isAdmin?: boolean;
+  canAccessAllFeatures?: boolean;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -179,17 +182,22 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
 
   const mapSupabaseUserToAppUser = async (sbUser: SupabaseUser) => {
     const meta = sbUser.user_metadata as Record<string, string | undefined>;
-    const nombre = meta?.nombre ?? meta?.full_name ?? meta?.name ?? sbUser.email?.split('@')[0] ?? 'Usuario';
+    const rawEmail = (sbUser.email ?? '').toLowerCase().trim();
+    const isOwnerUser = rawEmail === 'valentinlautaromorales@gmail.com';
+
+    const nombre = isOwnerUser ? 'Valentin' : (meta?.nombre ?? meta?.full_name ?? meta?.name ?? sbUser.email?.split('@')[0] ?? 'Usuario');
     const avatarUrl =
       meta?.avatar_url ??
       meta?.picture ??
       `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre)}&background=10b981&color=fff`;
 
     // Fetch real plan and is_demo_account flag from public.profiles
-    let plan: PlanTier = 'normal';
+    let plan: PlanTier = isOwnerUser ? 'desarrolladores' : 'normal';
     let isDemoAccount = Boolean(meta?.is_demo_account);
 
-    if (isSupabaseConfigured) {
+    if (isOwnerUser) {
+      plan = 'desarrolladores';
+    } else if (isSupabaseConfigured) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
@@ -226,9 +234,12 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       nombre,
       avatarUrl,
       createdAt: sbUser.created_at ?? new Date().toISOString(),
-      role: 'user',
+      role: isOwnerUser ? 'admin' : 'user',
       plan,
       isDemoAccount,
+      isOwner: isOwnerUser,
+      isAdmin: isOwnerUser,
+      canAccessAllFeatures: isOwnerUser,
     };
 
     setUser(appUser);
@@ -569,10 +580,13 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
   /** Maps PlanTier to a short human-readable badge label. */
   const getPlanBadgeLabel = (): string => {
     if (!user) return '';
+    if (user.isOwner || user.email.toLowerCase().trim() === 'valentinlautaromorales@gmail.com') {
+      return '👑 OWNER';
+    }
     switch (user.plan) {
       case 'pro':            return 'Pro';
       case 'solo':           return 'Solo';
-      case 'desarrolladores': return 'Dev';
+      case 'desarrolladores': return 'Enterprise';
       case 'normal':
       default:               return 'Gratis';
     }

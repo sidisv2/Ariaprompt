@@ -63,11 +63,16 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
               {/* Plan badge — reads real PlanTier from AuthContext, never hardcoded */}
               {(() => {
                 if (!user) return <span className="px-1.5 py-0.2 rounded-full bg-slate-600 text-slate-200 text-[9px] font-black uppercase">{t('nav.guest')}</span>;
+                const isOwner = user.isOwner || user.email.toLowerCase().trim() === 'valentinlautaromorales@gmail.com';
+                if (isOwner) {
+                  return <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-300 text-slate-950 text-[10px] font-black tracking-tight uppercase shadow-md flex items-center gap-1">👑 OWNER</span>;
+                }
                 const label = getPlanBadgeLabel();
                 const badgeCls =
                   label === 'Pro'  ? 'bg-emerald-400 text-slate-950' :
                   label === 'Solo' ? 'bg-blue-400 text-slate-950' :
-                  label === 'Dev'  ? 'bg-violet-400 text-white' :
+                  label.includes('OWNER') ? 'bg-amber-400 text-slate-950' :
+                  label === 'Enterprise' || label === 'Dev' ? 'bg-violet-400 text-white' :
                                      'bg-slate-600 text-slate-100'; // Gratis / normal
                 return <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase ${badgeCls}`}>{label}</span>;
               })()}
