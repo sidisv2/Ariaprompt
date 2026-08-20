@@ -52,40 +52,63 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
         return;
       }
 
-      // 2. Search in Supabase DB if ID provided
+      // 2. Search in Supabase DB if ID/Code provided
       if (propId && supabase) {
         try {
-          const { data } = await supabase
+          let dbProp = null;
+          const { data: byId } = await supabase
             .from('properties')
             .select('*')
             .eq('id', propId)
-            .single();
+            .maybeSingle();
 
-          if (data) {
+          if (byId) {
+            dbProp = byId;
+          } else {
+            const { data: byCode } = await supabase
+              .from('properties')
+              .select('*')
+              .ilike('code', propId)
+              .maybeSingle();
+            if (byCode) dbProp = byCode;
+          }
+
+          if (dbProp) {
+            const propImages =
+              Array.isArray(dbProp.images) && dbProp.images.length > 0
+                ? dbProp.images
+                : [
+                    dbProp.image_url ||
+                      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+                  ];
+
             setProperty({
-              id: data.id,
-              title: data.title || 'Propiedad Inmobiliaria',
-              code: data.code || `PROP-${data.id.slice(0, 4)}`,
-              price: data.price || 150000,
-              type: data.type || 'departamento',
-              status: data.status || 'available',
-              featured: data.featured || false,
+              id: dbProp.id,
+              title: dbProp.title || 'Propiedad Inmobiliaria',
+              code: dbProp.code || `PROP-${dbProp.id.slice(0, 4)}`,
+              price: dbProp.price || 150000,
+              currency: dbProp.currency || 'USD',
+              type: dbProp.type || 'departamento',
+              status: dbProp.status || 'available',
+              featured: dbProp.featured || false,
               location: {
-                city: data.city || 'Mendoza',
-                zone: data.zone || 'Centro',
-                address: data.address || 'Av. España 1450',
+                city: dbProp.city || 'Buenos Aires',
+                zone: dbProp.zone || 'Palermo',
+                address: dbProp.address || 'Av. Santa Fe 2450',
               },
               features: {
-                bedrooms: data.bedrooms || 2,
-                bathrooms: data.bathrooms || 2,
-                areaM2: data.area_m2 || 75,
-                pool: data.pool || false,
-                garage: data.garage || false,
-                elevator: data.elevator || false,
-                airConditioning: data.air_conditioning || true,
+                bedrooms: dbProp.bedrooms || 2,
+                bathrooms: dbProp.bathrooms || 2,
+                areaM2: dbProp.area_m2 || 75,
+                pool: dbProp.pool || false,
+                garage: dbProp.garage || false,
+                elevator: dbProp.elevator || false,
+                airConditioning: dbProp.air_conditioning || true,
               },
-              images: [data.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
-              description: data.description || 'Excelente propiedad en excelente ubicación con acabados de primera calidad.',
+              images: propImages,
+              description:
+                dbProp.description ||
+                'Excelente propiedad en zona estratégica con terminaciones de primera calidad.',
               createdAt: new Date().toISOString(),
               documents: [],
             });
@@ -116,7 +139,6 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between">
-        <Header currentRoute="marketing" onRouteChange={onRouteChange} />
         <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4">
           <div className="w-10 h-10 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-400 font-mono">Cargando dossier de la propiedad...</p>
@@ -134,8 +156,6 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
-      <Header currentRoute="marketing" onRouteChange={onRouteChange} />
-
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
         {/* Navigation Toolbar */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -202,7 +222,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
                 <div className="text-left sm:text-right bg-slate-900/80 p-4 rounded-2xl border border-emerald-500/30 shrink-0">
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Precio de Lista</p>
                   <p className="text-3xl font-black text-emerald-400 font-mono">
-                    ${propData.price.toLocaleString('en-US')} USD
+                    {propData.currency || 'USD'} ${propData.price.toLocaleString('en-US')}
                   </p>
                 </div>
               </div>

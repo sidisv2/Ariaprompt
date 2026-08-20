@@ -51,20 +51,26 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       ? property.images[0]
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
+  const propertyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/properties/${property.id || property.code || 'PROP-2026'}`
+    : `https://ariaprop.online/properties/${property.id || property.code || 'PROP-2026'}`;
+
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(propertyUrl)}`;
+
   const handlePrintPdf = () => {
     const pdfBundle = exportPropertySheetToPdf({
       title,
       price,
       currency,
-      operationType: 'Venta',
+      operationType: property.price && property.price < 5000 ? 'Alquiler' : 'Venta',
       location: locationStr,
       address: property.location?.address || locationStr,
       bedrooms,
       bathrooms,
       totalAreaM2: areaM2,
-      description: property.description,
+      description: property.description || 'Excelente propiedad con acabados de alta gama y gran conectividad.',
       features: ['Luminoso', 'Balcón Corrido', 'Cochera Fija', 'Seguridad 24hs'],
-      images: property.images || [imageUrl],
+      images: property.images && property.images.length > 0 ? property.images : [imageUrl],
       agencyName,
       agencyPhone,
     });
@@ -91,7 +97,7 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
 ${property.description || 'Excelente propiedad con acabados de alta gama.'}
 
 📲 *Contacto / Visitas:* ${agencyPhone}
-🌐 *Ver Ficha Online:* https://ariaprop.online/properties/${property.code || property.id}`;
+🌐 *Ver Ficha Online:* ${propertyUrl}`;
 
     navigator.clipboard.writeText(waText);
     setCopied(true);
@@ -246,7 +252,11 @@ ${property.description || 'Excelente propiedad con acabados de alta gama.'}
 
             {/* Dynamic QR Code Badge */}
             <div className="p-2 rounded-xl bg-white text-slate-950 flex items-center gap-2 shadow-md">
-              <QrCode className="w-10 h-10 text-slate-950" />
+              <img
+                src={qrImageUrl}
+                alt="QR Ficha Online"
+                className="w-10 h-10 object-contain rounded"
+              />
               <div className="text-[9px] font-black text-slate-900 leading-tight">
                 Escaneá para ver<br />Ficha Online 📲
               </div>

@@ -49,9 +49,10 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [formTitle, setFormTitle] = useState('');
   const [formCode, setFormCode] = useState('');
   const [formType, setFormType] = useState<Property['type']>('chalet');
-  const [formPrice, setFormPrice] = useState<number>(1850000);
-  const [formCity, setFormCity] = useState('Madrid');
-  const [formZone, setFormZone] = useState('Puerta de Hierro');
+  const [formPrice, setFormPrice] = useState<number>(185000);
+  const [formCurrency, setFormCurrency] = useState<'USD' | 'ARS' | 'EUR'>('USD');
+  const [formCity, setFormCity] = useState('Buenos Aires');
+  const [formZone, setFormZone] = useState('Palermo');
   const [formAddress, setFormAddress] = useState('Calle Real 14');
   const [formBedrooms, setFormBedrooms] = useState<number>(4);
   const [formBathrooms, setFormBathrooms] = useState<number>(4);
@@ -80,6 +81,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
       type: formType,
       status: 'available',
       price: Number(formPrice),
+      currency: formCurrency,
       location: {
         address: formAddress,
         city: formCity,
@@ -220,7 +222,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
                   {prop.code}
                 </div>
                 <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                  ${prop.price.toLocaleString('en-US')} USD {prop.price < 5000 ? t('properties.perMonth') : ''}
+                  ${prop.price.toLocaleString('en-US')} {prop.currency || 'USD'} {prop.price < 5000 ? t('properties.perMonth') : ''}
                 </div>
               </div>
 
@@ -387,14 +389,26 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
               {wizardStep === 2 && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Precio (€)</label>
-                    <input
-                      type="number"
-                      required
-                      value={formPrice}
-                      onChange={(e) => setFormPrice(Number(e.target.value))}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
-                    />
+                    <label className="block text-slate-300 font-semibold mb-1">Precio & Moneda</label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={formCurrency}
+                        onChange={(e) => setFormCurrency(e.target.value as any)}
+                        className="bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-emerald-400 font-extrabold text-xs"
+                      >
+                        <option value="USD">USD ($)</option>
+                        <option value="ARS">ARS ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                      </select>
+                      <input
+                        type="number"
+                        required
+                        value={formPrice}
+                        onChange={(e) => setFormPrice(Number(e.target.value))}
+                        placeholder="Ej. 180000"
+                        className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
