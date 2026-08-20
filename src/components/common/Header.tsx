@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full px-4 sm:px-6 lg:px-8 pt-3 pb-1 bg-transparent">
+    <header className="sticky top-[var(--beta-banner-height,0px)] z-40 w-full px-4 sm:px-6 lg:px-8 pt-3 pb-1 bg-transparent transition-all">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between h-14 px-6 rounded-full bg-slate-900/90 border border-emerald-500/30 shadow-2xl backdrop-blur-xl text-white">
           

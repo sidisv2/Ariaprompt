@@ -12,10 +12,19 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRouteChange }) => {
-  const { user, openAuthModal, requireAuthForPayment, signInAsDemoUser } = useAuth();
+  const { user, loading, openAuthModal, requireAuthForPayment, signInAsDemoUser } = useAuth();
   const { t } = useLanguage();
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
+
+  const isUserLoggedInOrLoading = Boolean(
+    loading ||
+      user ||
+      (user &&
+        (user.isOwner ||
+          user.isAdmin ||
+          user.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com'))
+  );
 
   const handleStartFreeTrial = () => {
     const passed = requireAuthForPayment({
@@ -38,46 +47,44 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
         setDemoError(res.error || 'Hubo un error al iniciar la demostración en vivo. Intenta de nuevo.');
       }
     } catch (err: any) {
-      setDemoError(err?.message || 'Error al conectar con la demostración en vivo.');
+      setDemoError(err?.message || 'Error inesperado al conectar.');
     } finally {
       setDemoLoading(false);
     }
   };
 
   return (
-    <section className="relative pt-24 sm:pt-28 lg:pt-32 pb-20 overflow-hidden bg-slate-950 text-white border-b border-white/10">
-      
-      {/* Background Grid Pattern */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-indigo-500/10 blur-3xl rounded-full pointer-events-none" />
+    <section className="relative overflow-hidden pt-6 pb-16 lg:pt-10 lg:pb-24 bg-slate-950">
+      {/* Background radial gradient glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-10">
         
-        {/* Centered Hero Header */}
+        {/* Main Hero Header */}
         <div className="text-center max-w-4xl mx-auto space-y-6">
           
-          {/* Top Shiny Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs sm:text-sm font-extrabold shadow-lg shadow-emerald-500/10">
-            <Sparkles className="w-4 h-4 fill-emerald-400 text-emerald-400" />
+          {/* Top Pill Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 font-bold tracking-wide uppercase shadow-lg shadow-emerald-500/10">
+            <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
             <span>{t('hero.badge')}</span>
           </div>
 
-          {/* Main Headline */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] tracking-tight">
+          {/* Main Title */}
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
             {t('hero.title1')}{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400">
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
               {t('hero.title2')}
-            </span>.
+            </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-slate-300 text-base sm:text-xl max-w-2xl mx-auto leading-relaxed">
             {t('hero.subtitle')}
           </p>
 
           {/* High-Impact CTA Group */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-            {user ? (
+            {isUserLoggedInOrLoading ? (
               <button
                 onClick={() => onRouteChange('dashboard-metrics')}
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
@@ -95,14 +102,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
               </button>
             )}
 
-            <button
-              onClick={handleDirectDemoAccess}
-              disabled={demoLoading}
-              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 font-extrabold text-sm border border-slate-200 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105 disabled:opacity-50"
-            >
-              {demoLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Zap className="w-4 h-4 text-indigo-600" />}
-              <span>{demoLoading ? 'Iniciando Demostración...' : t('hero.ctaSecondary')}</span>
-            </button>
+            {!isUserLoggedInOrLoading && (
+              <button
+                onClick={handleDirectDemoAccess}
+                disabled={demoLoading}
+                className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-900 font-extrabold text-sm border border-slate-200 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105 disabled:opacity-50"
+              >
+                {demoLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Zap className="w-4 h-4 text-indigo-600" />}
+                <span>{demoLoading ? 'Iniciando Demostración...' : t('hero.ctaSecondary')}</span>
+              </button>
+            )}
           </div>
 
           {/* Visible Error Feedback if Direct Demo Access Fails */}
@@ -112,22 +121,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
             </div>
           )}
 
-          {/* Trust Bullet Strip */}
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-semibold">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>{t('hero.trust1')}</span>
+          {/* Trust Bullet Strip (Only rendered for non-logged-in visitors) */}
+          {!isUserLoggedInOrLoading && (
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-semibold">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Sin tarjeta de crédito requerida</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Respuesta en tiempo real</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Configuración en 3 minutos</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>{t('hero.trust2')}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>{t('hero.trust3')}</span>
-            </div>
-          </div>
-
+          )}     
         </div>
 
         {/* Interactive Prompt Box Assistant Widget */}

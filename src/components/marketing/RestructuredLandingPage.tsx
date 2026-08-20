@@ -34,9 +34,18 @@ interface RestructuredLandingPageProps {
 export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = ({
   onRouteChange,
 }) => {
-  const { user, openAuthModal } = useAuth();
+  const { user, loading, openAuthModal } = useAuth();
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+
+  const isUserLoggedInOrLoading = Boolean(
+    loading ||
+      user ||
+      (user &&
+        (user.isOwner ||
+          user.isAdmin ||
+          user.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com'))
+  );
 
   const isAnnual = billingCycle === 'annual';
 
@@ -91,13 +100,23 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <button
-              onClick={() => handleStartTrial('pro', 'dashboard-checkout')}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
-            >
-              <span>Probar Gratis (7 Días)</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {isUserLoggedInOrLoading ? (
+              <button
+                onClick={() => onRouteChange('dashboard-metrics')}
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <Sparkles className="w-5 h-5 fill-slate-950 text-slate-950" />
+                <span>Ir a Mi Panel / Dashboard ➔</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onRouteChange('app')}
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <Sparkles className="w-5 h-5 fill-slate-950 text-slate-950" />
+                <span>Probar Gratis (3 Consultas) ➔</span>
+              </button>
+            )}
 
             <button
               onClick={scrollToHowItWorks}
@@ -108,20 +127,22 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
           </div>
 
           {/* Trust Guarantees */}
-          <div className="flex flex-wrap items-center justify-center gap-6 pt-6 text-xs text-slate-400 font-medium">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Sin tarjeta de crédito requerida</span>
+          {!isUserLoggedInOrLoading && (
+            <div className="flex flex-wrap items-center justify-center gap-6 pt-6 text-xs text-slate-400 font-medium">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Sin tarjeta de crédito requerida</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Configuración rápida, sin necesidad de código</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>Conexión nativa Tokko Broker & EasyBroker</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Configuración rápida, sin necesidad de código</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Conexión nativa Tokko Broker & EasyBroker</span>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 

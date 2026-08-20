@@ -62,27 +62,19 @@ export const WhatsAppFloatingButton: React.FC = () => (
 /* ─── Beta Banner ───────────────────────────────────────────────────── */
 export const BetaBanner: React.FC = () => {
   const { t } = useLanguage();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
   const bannerRef = React.useRef<HTMLDivElement>(null);
-
-  // Only show if NOT dismissed this session
-  useEffect(() => {
-    const dismissed = sessionStorage.getItem(SESSION_KEY);
-    if (!dismissed) setVisible(true);
-  }, []);
 
   // Sync body class + CSS variable for sticky header offset
   useEffect(() => {
     if (visible) {
       document.body.classList.add('beta-banner-visible');
-      // Measure real height after render and update CSS variable
       const updateHeight = () => {
         if (bannerRef.current) {
           const h = bannerRef.current.offsetHeight;
           document.documentElement.style.setProperty('--beta-banner-height', `${h}px`);
         }
       };
-      // Run once after paint, then on resize
       requestAnimationFrame(updateHeight);
       window.addEventListener('resize', updateHeight);
       return () => {
@@ -99,9 +91,7 @@ export const BetaBanner: React.FC = () => {
     setVisible(false);
   };
 
-  const { user } = useAuth();
-
-  if (!visible || user) return null;
+  if (!visible) return null;
 
   return (
     <div

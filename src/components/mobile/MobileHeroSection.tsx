@@ -13,16 +13,28 @@ interface MobileHeroSectionProps {
 }
 
 export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProperties, onRouteChange }) => {
-  const { requireAuthForPayment, signInAsDemoUser } = useAuth();
+  const { user, loading, openAuthModal, requireAuthForPayment, signInAsDemoUser } = useAuth();
   const { t } = useLanguage();
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoError, setDemoError] = useState<string | null>(null);
 
+  const isUserLoggedInOrLoading = Boolean(
+    loading ||
+      user ||
+      (user &&
+        (user.isOwner ||
+          user.isAdmin ||
+          user.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com'))
+  );
+
   const handleStartTrial = () => {
-    requireAuthForPayment({
-      planId: 'profesional',
+    const passed = requireAuthForPayment({
+      planId: 'pro',
       targetRoute: 'dashboard-checkout',
     });
+    if (!passed) {
+      openAuthModal('signup', 'pro', 'dashboard-checkout');
+    }
   };
 
   const handleDirectDemoAccess = async () => {
@@ -33,35 +45,32 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
       if (res.success) {
         onRouteChange('dashboard-metrics');
       } else {
-        setDemoError(res.error || 'Hubo un error al iniciar la demo en vivo. Intenta de nuevo.');
+        setDemoError(res.error || 'Error al iniciar la demo.');
       }
     } catch (err: any) {
-      setDemoError(err?.message || 'Error al conectar con la demo.');
+      setDemoError(err?.message || 'Error al conectar.');
     } finally {
       setDemoLoading(false);
     }
   };
 
   return (
-    <section className="pt-4 pb-8 px-4 space-y-6 max-w-full overflow-hidden">
-      
-      {/* Badge */}
-      <div className="flex justify-center">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-md shadow-emerald-500/10 max-w-full truncate">
-          <Sparkles className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{t('hero.badge')}</span>
-        </div>
+    <div className="space-y-6 text-center pt-2">
+      {/* Top Badge */}
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider shadow-sm">
+        <Sparkles className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" />
+        <span>{t('hero.badge')}</span>
       </div>
 
-      {/* Main Headline with High-Contrast Gradient */}
-      <div className="text-center space-y-3">
-        <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
+      {/* Headline */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-black text-white leading-tight tracking-tight">
           {t('hero.title1')}{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-teal-300 to-emerald-400 opacity-100">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400">
             {t('hero.title2')}
           </span>.
         </h1>
-        <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
+        <p className="text-xs text-slate-300 leading-relaxed px-2">
           {t('hero.subtitle')}
         </p>
       </div>
@@ -73,23 +82,34 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
 
       {/* Action Buttons */}
       <div className="space-y-2.5 pt-1">
-        <button
-          onClick={handleStartTrial}
-          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-          <span>{t('hero.ctaPrimary')}</span>
-          <ArrowRight className="w-4 h-4 text-slate-950" />
-        </button>
+        {isUserLoggedInOrLoading ? (
+          <button
+            onClick={() => onRouteChange('dashboard-metrics')}
+            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
+            <span>Ir a Mi Panel / Dashboard ➔</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => onRouteChange('app')}
+            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 active:scale-98 transition-transform flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
+            <span>Probar Gratis (3 Consultas) ➔</span>
+          </button>
+        )}
 
-        <button
-          onClick={handleDirectDemoAccess}
-          disabled={demoLoading}
-          className="w-full py-3 px-4 rounded-xl bg-white text-slate-900 font-extrabold text-xs border border-slate-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-        >
-          {demoLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Zap className="w-4 h-4 text-indigo-600" />}
-          <span>{demoLoading ? 'Iniciando Demostración...' : t('hero.ctaSecondary')}</span>
-        </button>
+        {!isUserLoggedInOrLoading && (
+          <button
+            onClick={handleDirectDemoAccess}
+            disabled={demoLoading}
+            className="w-full py-3 px-4 rounded-xl bg-white text-slate-900 font-extrabold text-xs border border-slate-200 shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            {demoLoading ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Zap className="w-4 h-4 text-indigo-600" />}
+            <span>{demoLoading ? 'Iniciando Demostración...' : t('hero.ctaSecondary')}</span>
+          </button>
+        )}
 
         {demoError && (
           <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold animate-fadeIn text-center">
@@ -157,6 +177,6 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
         </div>
       </div>
 
-    </section>
+    </div>
   );
 };
