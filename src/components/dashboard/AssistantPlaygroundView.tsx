@@ -172,55 +172,96 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
     const startTime = performance.now();
 
     try {
-      // Build catalog context from DB properties or defaults
-      let catalogText = '';
-      if (dbProperties.length > 0) {
-        catalogText = dbProperties
-          .map(
-            (p) =>
-              `- [ID: ${p.id}] "${p.title || 'Propiedad'}" (${(p.type || 'Depto').toUpperCase()} - ${p.operation || 'ALQUILER'}) en ${p.zone || 'Palermo'}. Precio: $${p.price || 800} USD. ${p.bedrooms || 2} hab. Ficha: https://ariaprop.online/properties/${p.id}`
-          )
-          .join('\n');
-      } else {
-        catalogText = `
+      let replyText = '';
+      let extractedData: ExtractedLeadData = {
+        budget_max_usd: null,
+        preferred_zone: null,
+        property_type: null,
+        operation_type: null,
+        lead_name: null,
+        status: 'active',
+      };
+      let matches: MatchedProperty[] = [];
+
+      try {
+        // 1. Attempt API server request to /api/chat
+        const apiRes = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: query,
+            history: messages.map((m) => ({ sender: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+            agentName: botConfig?.agentName || 'Aria',
+            agencyName: botConfig?.agencyName || 'Aria Prop',
+          }),
+        });
+
+        if (apiRes.ok) {
+          const data = await apiRes.json();
+          if (data.replyText) {
+            replyText = data.replyText;
+            if (data.extractedData) extractedData = data.extractedData;
+            if (data.matchedProperties) matches = data.matchedProperties;
+            if (data.latencyMs) setLatencyMs(data.latencyMs);
+          }
+        }
+      } catch (apiErr) {
+        console.warn('⚠️ Server /api/chat fetch failed, attempting client-side engine:', apiErr);
+      }
+
+      // 2. Client-side fallback if server didn't provide replyText
+      if (!replyText) {
+        let catalogText = '';
+        if (dbProperties.length > 0) {
+          catalogText = dbProperties
+            .map(
+              (p) =>
+                `- [ID: ${p.id}] "${p.title || 'Propiedad'}" (${(p.type || 'Depto').toUpperCase()} - ${p.operation || 'ALQUILER'}) en ${p.zone || 'Palermo'}. Precio: $${p.price || 800} USD. ${p.bedrooms || 2} hab. Ficha: https://ariaprop.online/properties/${p.id}`
+            )
+            .join('\n');
+        } else {
+          catalogText = `
 - [ID: p-1] "Departamento 2 Ambientes c/ Balcón" (ALQUILER) en Palermo Soho. Precio: $800 USD. 1 hab, 52 m². Ficha: https://ariaprop.online/properties/p-1
 - [ID: p-2] "Casa Moderna 4 Ambientes c/ Piscina" (VENTA) en Barrio Castores, Nordelta. Precio: $350,000 USD. 3 hab, 280 m². Ficha: https://ariaprop.online/properties/p-2
 - [ID: p-3] "Penthouse de Lujo c/ Terraza Privada" (VENTA) en Puerto Madero. Precio: $520,000 USD. 3 hab, 195 m². Ficha: https://ariaprop.online/properties/p-3
-        `.trim();
+          `.trim();
+        }
+
+        const response = await generateStructuredAriaRealEstateResponse({
+          message: query,
+          history: messages.map((m) => ({ sender: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
+          propertyContext: catalogText,
+          agentName: botConfig?.agentName || 'Aria',
+          agencyName: botConfig?.agencyName || 'Aria Prop',
+        });
+
+        replyText = response.replyText;
+        if (response.extractedData) extractedData = response.extractedData;
       }
 
-      const response = await generateStructuredAriaRealEstateResponse({
-        message: query,
-        history: messages.map((m) => ({ sender: m.sender === 'user' ? 'user' : 'assistant', content: m.text })),
-        propertyContext: catalogText,
-        agentName: botConfig?.agentName || 'Aria',
-        agencyName: botConfig?.agencyName || 'Aria Prop',
-      });
-
       const elapsed = Math.round(performance.now() - startTime);
-      setLatencyMs(elapsed);
+      setLatencyMs((prev) => (prev > 0 ? prev : elapsed));
 
-      if (response.extractedData) {
+      if (extractedData) {
         setExtractedEntities((prev) => ({
-          budget_max_usd: response.extractedData.budget_max_usd ?? prev.budget_max_usd,
-          preferred_zone: response.extractedData.preferred_zone ?? prev.preferred_zone,
-          property_type: response.extractedData.property_type ?? prev.property_type,
-          operation_type: response.extractedData.operation_type ?? prev.operation_type,
-          lead_name: response.extractedData.lead_name ?? prev.lead_name,
-          status: response.extractedData.status ?? prev.status,
+          budget_max_usd: extractedData.budget_max_usd ?? prev.budget_max_usd,
+          preferred_zone: extractedData.preferred_zone ?? prev.preferred_zone,
+          property_type: extractedData.property_type ?? prev.property_type,
+          operation_type: extractedData.operation_type ?? prev.operation_type,
+          lead_name: extractedData.lead_name ?? prev.lead_name,
+          status: extractedData.status ?? prev.status,
         }));
       }
 
-      // Extract property matches heuristics
-      if (dbProperties.length > 0) {
-        const lowerRes = response.replyText.toLowerCase();
-        const matches = dbProperties.filter((p) =>
-          lowerRes.includes(p.title?.toLowerCase() || '') ||
-          lowerRes.includes(p.zone?.toLowerCase() || '') ||
-          lowerRes.includes(p.id)
+      if (matches.length > 0) {
+        setMatchedProperties(matches);
+      } else if (dbProperties.length > 0) {
+        const lowerRes = replyText.toLowerCase();
+        const found = dbProperties.filter(
+          (p) => lowerRes.includes(p.title?.toLowerCase() || '') || lowerRes.includes(p.zone?.toLowerCase() || '') || lowerRes.includes(p.id)
         );
         setMatchedProperties(
-          matches.map((m) => ({
+          (found.length > 0 ? found : dbProperties.slice(0, 2)).map((m) => ({
             id: m.id,
             title: m.title || 'Propiedad destacada',
             price: m.price || 0,
@@ -231,40 +272,18 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
             areaM2: m.area_m2 || 60,
           }))
         );
-      } else {
-        setMatchedProperties([
-          {
-            id: 'p-1',
-            title: 'Departamento 2 Ambientes c/ Balcón',
-            price: 800,
-            type: 'Alquiler',
-            zone: 'Palermo Soho, CABA',
-            url: 'https://ariaprop.online/properties/p-1',
-            bedrooms: 1,
-            areaM2: 52,
-          },
-        ]);
       }
 
       const botReplyObj: ChatMessage = {
         id: `msg-${Date.now()}`,
         sender: 'bot',
-        text: response.replyText,
+        text: replyText,
         timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
       };
 
       setMessages((prev) => [...prev, botReplyObj]);
     } catch (err) {
       console.error('❌ Playground simulation error:', err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `msg-${Date.now()}`,
-          sender: 'bot',
-          text: `Entendido. He registrado tu consulta sobre "${query}". ¿Te gustaría que coordine una visita presencial con uno de nuestros asesores comerciales?`,
-          timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
     } finally {
       setIsTyping(false);
     }
@@ -412,7 +431,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
               <div className="hidden sm:flex items-center gap-3">
                 <div className="px-3 py-1 rounded-full bg-slate-900 border border-white/10 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
                   <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Gemini 2.5 Flash / Aria RAG</span>
+                  <span>✦ Ariaprop IA · Motor RAG Inmobiliario</span>
                 </div>
                 <button
                   onClick={handleResetChat}
@@ -457,7 +476,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></span>
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                  <span className="text-xs text-slate-300 font-bold ml-1">Aria está redactando la respuesta...</span>
+                  <span className="text-xs text-slate-300 font-bold ml-1">Ariaprop IA está escribiendo...</span>
                 </div>
               )}
 
@@ -575,7 +594,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/5 space-y-1">
                 <p className="text-[10px] text-slate-400 font-medium">Modelo Principal</p>
-                <p className="font-mono text-emerald-300 font-bold">Gemini 2.5 Flash</p>
+                <p className="font-mono text-emerald-300 font-bold">Ariaprop IA (Motor RAG)</p>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/5 space-y-1">

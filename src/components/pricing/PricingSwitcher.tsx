@@ -67,7 +67,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
       annualPrice: 0,
       features: [
         'Agentes & Sucursales Ilimitadas (999,999)',
-        'Infraestructura RAG Dedicada (Google Gemini 2.5)',
+        'Infraestructura RAG Dedicada (Ariaprop Motor IA)',
         'Sincronización Multi-CRM & Webhooks',
         'Acceso API para Apps Propias & CRM Local',
         'Gerente de Cuenta Dedicado & SLA 99.9%',

@@ -140,81 +140,14 @@ async function startServer() {
     res.json({ success: true, data: botConfig });
   });
 
-  // Streaming AI Chat Endpoint (RAG Injection with Gemini)
+  // AI Chat Endpoint (/api/chat)
   app.post('/api/chat', async (req, res) => {
-    const { message, history = [], context = 'general', apiKey, lang = 'es' } = req.body;
-
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-
-    const langNames: Record<string, string> = {
-      es: 'Español',
-      en: 'English',
-      pt: 'Português',
-    };
-    const targetLangName = langNames[lang] || 'Español';
-
-    const trimmedMsg = message.trim().toLowerCase();
-
-    // Prepare RAG Context from active properties
-    const propertyCatalogContext = properties
-      .map(
-        (p) =>
-          `- [ID: ${p.id}] ${p.title} (${p.type.toUpperCase()}) en ${p.location.zone}, ${p.location.city}. Precio: $${p.price.toLocaleString('en-US')} USD. ${p.features.bedrooms} hab, ${p.features.bathrooms} baños, ${p.features.areaM2} m². Terraza: ${p.features.terraceM2 || 0}m², Piscina: ${p.features.pool ? 'Sí' : 'No'}, Garaje: ${p.features.garage ? 'Sí' : 'No'}. Código: ${p.code}. Descripción: ${p.description}`
-      )
-      .join('\n');
-
-    let contextSpecificRole = 'Asistente comercial de bienes raíces 24/7';
-    if (context === 'finance') {
-      contextSpecificRole = 'Evaluador de Rentabilidad e Inversión Inmobiliaria. Tu enfoque principal es calcular el ROI estimado, tasa de retorno anual (Cap Rate), proyección de flujo de caja y apreciación de capital para compradores e inversionistas.';
-    } else if (context === 'rag') {
-      contextSpecificRole = 'Especialista en Búsqueda RAG de Dossiers y Memorias Técnicas. Tu objetivo es responder preguntas con alta precisión sobre planos, calidades de construcción, acabados y metrajes a partir de los documentos técnicos del catálogo.';
-    }
-
-    const systemPrompt = `
-Eres "${botConfig.agentName}", ${contextSpecificRole} para la agencia "${botConfig.agencyName}" en Latinoamérica.
-
-IDIOMA PREDETERMINADO DE RESPUESTA: ${targetLangName.toUpperCase()}.
-Debes responder SIEMPRE en este idioma (${targetLangName}) desde el primer saludo y en todas tus explicaciones.
-Excepción: Si el usuario escribe su mensaje en un idioma distinto (ej: si escribe en inglés o portugués), prioriza responder en el idioma utilizado por el usuario en su mensaje.
-
-REGLAS DE ACTUACIÓN:
-1. Responde de forma altamente profesional, elocuente y sofisticada en ${targetLangName}.
-2. Utiliza la siguiente lista de propiedades en catálogo como fuente de verdad para recomendar inmuebles cuando coincidan con los criterios del cliente:
-${propertyCatalogContext}
-
-3. Estructura tus respuestas en secciones claras usando Markdown con emojis descriptivos:
-   - 🏛️ **Análisis Ejecutivo de la Propiedad** (Ubicación premium, distribución de m², acabados y amenidades principales).
-   - 💰 **Evaluación Financiera & Proyección de Rentabilidad** (Precio de adquisición en USD, estimación de canon de arrendamiento mensual, ROI Bruto % y plusvalía estimada a 5 años).
-   - 📄 **Dossier Técnico & Planos** (Detalles sobre memorias de calidades, eficiencia energética y planos de planta).
-   - 📅 **Coordinación de Visita Virtual o Presencial** (Invitación directa a agendar cita por WhatsApp).
-4. SÉ ALTAMENTE DESCRIPTIVO Y COMPLETO. Proporciona argumentos sólidos de inversión, comparativas de mercado y consejos de valor en ${targetLangName}. Evita respuestas escuetas.
-`;
-
     try {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-
-      const responseText = await generateOpenRouterRealEstateResponse({
-        message: trimmedMsg,
-        history,
-        propertyContext: propertyCatalogContext,
-        lang,
-        contextRole: context,
-        agentName: botConfig.agentName,
-        agencyName: botConfig.agencyName,
-        apiKey,
-      });
-
-      res.write(`data: ${JSON.stringify({ text: responseText })}\n\n`);
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
+      const { handleChatRoute } = await import('./api/_handlers/chatHandler.js');
+      return handleChatRoute(req as any, res as any);
     } catch (err: any) {
-      console.error('❌ OpenRouter Express Chat Error:', err?.message || err);
-      res.write(`data: ${JSON.stringify({ error: 'Error calling OpenRouter API', details: err?.message || 'LLM error' })}\n\n`);
-      res.end();
+      console.error('❌ Express /api/chat error:', err);
+      res.status(500).json({ error: 'Error calling AI Chat handler', details: err?.message });
     }
   });
 

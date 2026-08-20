@@ -166,7 +166,7 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 pt-2 border-t border-white/5">
             <p>© {new Date().getFullYear()} Aria Prop AI. {t('footer.rights')}</p>
             <div className="flex items-center gap-4">
-              <span>Powered by Gemini 2.5 Flash & Next.js Engine</span>
+              <span>Powered by Ariaprop Enterprise AI Engine</span>
               <span>•</span>
               <span className="text-emerald-400 font-bold">Respuesta en Segundos</span>
             </div>
