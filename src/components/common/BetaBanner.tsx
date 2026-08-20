@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, MessageCircle, Heart, FlaskConical } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 
 const SESSION_KEY = 'aria_beta_banner_dismissed';
 
@@ -98,7 +99,9 @@ export const BetaBanner: React.FC = () => {
     setVisible(false);
   };
 
-  if (!visible) return null;
+  const { user } = useAuth();
+
+  if (!visible || user) return null;
 
   return (
     <div

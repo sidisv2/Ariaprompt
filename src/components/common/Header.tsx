@@ -18,7 +18,11 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
 
   const navigateTo = (route: AppRoute) => {
     setActiveDropdown(null);
-    onRouteChange?.(route);
+    let target = route;
+    if (user && (route === 'aria-ai' || route === 'app')) {
+      target = 'dashboard-assistant';
+    }
+    onRouteChange?.(target);
   };
 
   return (

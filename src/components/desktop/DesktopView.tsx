@@ -73,18 +73,20 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
   onUpdateBotConfig,
   onOpenPrompt,
 }) => {
-  const { authModalOpen, modalTab, closeAuthModal } = useAuth();
+  const { user, authModalOpen, modalTab, closeAuthModal } = useAuth();
   const [showDiscountModal, setShowDiscountModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       
-      {/* 5% Discount Top Announcement Bar */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 py-1.5 px-4 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-inner animate-discount-pulse" onClick={() => setShowDiscountModal(true)}>
-        <Tag className="w-3.5 h-3.5 fill-current" />
-        <span>¡Oferta de Bienvenida! Reclama tu <strong>5% de Descuento Adicional</strong> con el código <u>OFERTA5</u></span>
-        <Sparkles className="w-3.5 h-3.5" />
-      </div>
+      {/* 5% Discount Top Announcement Bar (Only for non-logged-in visitors) */}
+      {!user && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 py-1.5 px-4 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-inner animate-discount-pulse" onClick={() => setShowDiscountModal(true)}>
+          <Tag className="w-3.5 h-3.5 fill-current" />
+          <span>¡Oferta de Bienvenida! Reclama tu <strong>5% de Descuento Adicional</strong> con el código <u>OFERTA5</u></span>
+          <Sparkles className="w-3.5 h-3.5" />
+        </div>
+      )}
 
       {/* PC Top Navbar */}
       <Header
