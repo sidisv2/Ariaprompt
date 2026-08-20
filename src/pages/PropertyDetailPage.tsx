@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppRoute, Property } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { Header } from '../components/common/Header';
 import { Footer } from '../components/marketing/Footer';
 import {
@@ -31,6 +32,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
   onRouteChange,
   onOpenPrompt,
 }) => {
+  const { t } = useLanguage();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState(false);
@@ -319,7 +321,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
                 <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-                <span>Hablar con Aria sobre este Inmueble ➔</span>
+                <span>{t('talk_to_aria_property')} ➔</span>
               </button>
 
               <a
@@ -329,7 +331,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
                 className="w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs shadow-lg shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
                 <MessageSquare className="w-4 h-4 fill-current" />
-                <span>Coordinar Visita por WhatsApp</span>
+                <span>{t('book_visit_whatsapp')}</span>
               </a>
             </div>
 

@@ -25,6 +25,7 @@ import {
   Mic
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { useLanguage } from '../../context/LanguageContext';
 import { exportPropertySheetToPdf, generatePropertySheetDataUri } from '../../../lib/pdf/property-sheet';
 import { LiveInboxView } from '../chat/LiveInboxView';
 import { LeadScoringBadge, computeLeadScore } from '../chat/LeadScoringBadge';
@@ -68,6 +69,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   onClearSelectedLead,
 }) => {
   const [viewMode, setViewMode] = useState<'live_inbox' | 'crm'>('live_inbox');
+  const { t } = useLanguage();
   const [leads, setLeads] = useState<CrmLead[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
@@ -562,9 +564,9 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
                   <MessageSquare className="w-6 h-6" />
                 </div>
-                <h3 className="font-extrabold text-white text-sm">Sin prospectos aún</h3>
+                <h3 className="font-extrabold text-white text-sm">{t('leads_empty_title')}</h3>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Los clientes que interactúen por WhatsApp, Instagram o el chat web de tus propiedades aparecerán aquí en tiempo real calificados por Aria.
+                  {t('leads_empty_subtitle')}
                 </p>
               </div>
             ) : (
@@ -825,9 +827,9 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 <MessageSquare className="w-8 h-8" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="font-black text-white text-lg">Sin prospectos aún</h3>
+                <h3 className="font-black text-white text-lg">{t('leads_empty_title')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Los clientes que interactúen por WhatsApp, Instagram o el chat web de tus propiedades aparecerán aquí en tiempo real calificados por Aria.
+                  {t('leads_empty_subtitle')}
                 </p>
               </div>
             </div>

@@ -298,7 +298,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                       ? 'bg-amber-500 text-slate-950'
                       : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                   }`}>
-                    {prop.status === 'sold' ? '🔴 Vendido' : prop.status === 'rented' ? '🔵 Alquilado' : prop.status === 'reserved' ? '🟡 Reservado' : '🟢 Disponible'}
+                    {prop.status === 'sold' ? `🔴 ${t('status_sold')}` : prop.status === 'rented' ? `🔵 ${t('status_rented')}` : prop.status === 'reserved' ? `🟡 ${t('status_reserved')}` : `🟢 ${t('status_available')}`}
                   </span>
                 </div>
                 <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-[0_0_15px_rgba(16,185,129,0.3)]">
@@ -348,7 +348,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                   title="Alternar Visibilidad Pública"
                 >
                   {prop.is_public ?? true ? <Eye className="w-3 h-3 text-emerald-400" /> : <EyeOff className="w-3 h-3 text-slate-400" />}
-                  <span>{prop.is_public ?? true ? '🟢 Público' : '⚪ Privado'}</span>
+                  <span>{prop.is_public ?? true ? `🟢 ${t('visibility_public')}` : `⚪ ${t('visibility_private')}`}</span>
                 </button>
 
                 {/* Status Selector */}
@@ -357,10 +357,10 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                   onChange={(e) => handleChangeStatus(prop, e.target.value)}
                   className="px-2 py-1 rounded-lg bg-slate-950 border border-white/10 text-white text-[10px] font-semibold focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
-                  <option value="available">🟢 Disponible</option>
-                  <option value="reserved">🟡 Reservado</option>
-                  <option value="rented">🔵 Alquilado</option>
-                  <option value="sold">🔴 Vendido</option>
+                  <option value="available">🟢 {t('status_available')}</option>
+                  <option value="reserved">🟡 {t('status_reserved')}</option>
+                  <option value="rented">🔵 {t('status_rented')}</option>
+                  <option value="sold">🔴 {t('status_sold')}</option>
                 </select>
 
                 {/* Delete Trash Button */}
@@ -754,7 +754,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              ¿Seguro que deseas eliminar la propiedad <span className="font-bold text-white">"{propertyToDelete.title}"</span> ({propertyToDelete.code})? Se removerá permanentemente de Supabase y del catálogo público.
+              {t('delete_property_confirm')} (<span className="font-bold text-white">"{propertyToDelete.title}"</span> - {propertyToDelete.code})
             </p>
 
             <div className="grid grid-cols-2 gap-3 pt-2">

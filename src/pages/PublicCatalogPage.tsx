@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppRoute, Property } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 import { Footer } from '../components/marketing/Footer';
 import {
   Building2,
@@ -24,6 +25,7 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
   onRouteChange,
   onOpenPrompt,
 }) => {
+  const { t } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -145,10 +147,10 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
               <Sparkles className="w-3.5 h-3.5" /> Catálogo Inmobiliario Oficial
             </div>
             <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
-              Explora Inmuebles & Encuentra tu Propiedad Ideal
+              {t('catalog_title')}
             </h1>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-              Filtra en tiempo real entre departamentos, casas, terrenos y locales comerciales. Consulta al instante con nuestro Asistente de IA o agenda una visita directa por WhatsApp.
+              {t('catalog_subtitle')}
             </p>
           </div>
         </div>
@@ -161,7 +163,7 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
               <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Buscar por barrio, ciudad, código o dirección..."
+                placeholder={t('search_placeholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 rounded-2xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
@@ -171,9 +173,9 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
             {/* Quick Operation Selector */}
             <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto scrollbar-none">
               {[
-                { id: 'all', label: 'Todas las Operaciones' },
-                { id: 'sale', label: '🏷️ Venta' },
-                { id: 'rent', label: '🔑 Alquiler' },
+                { id: 'all', label: t('all_operations') },
+                { id: 'sale', label: `🏷️ ${t('sale')}` },
+                { id: 'rent', label: `🔑 ${t('rent')}` },
               ].map((op) => (
                 <button
                   key={op.id}
@@ -195,39 +197,38 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
             {/* Property Type Dropdown */}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Tipo de Inmueble
+                {t('all_property_types')}
               </label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
               >
-                <option value="all">Todos los Inmuebles</option>
-                <option value="apartment">🏢 Departamento / Piso</option>
-                <option value="house">🏠 Casa / Chalet</option>
-                <option value="ph">🏡 PH (Propiedad Horizontal)</option>
-                <option value="land">🌲 Terreno / Lote</option>
-                <option value="commercial">🏪 Local Comercial</option>
-                <option value="office">💼 Oficina / Consultorio</option>
+                <option value="all">{t('all_property_types')}</option>
+                <option value="apartment">🏢 {t('apartment')}</option>
+                <option value="house">🏠 {t('house')}</option>
+                <option value="land">🌲 {t('land')}</option>
+                <option value="commercial">🏪 {t('commercial')}</option>
+                <option value="office">💼 {t('office')}</option>
               </select>
             </div>
 
             {/* Price Range */}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Precio Mín / Máx ({currencyFilter})
+                {t('min_price')} / {t('max_price')} ({currencyFilter})
               </label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
-                  placeholder="Mín"
+                  placeholder={t('min_price')}
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
                   className="w-1/2 px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
                 />
                 <input
                   type="number"
-                  placeholder="Máx"
+                  placeholder={t('max_price')}
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                   className="w-1/2 px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
@@ -238,25 +239,25 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
             {/* Dormitorios */}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Dormitorios
+                {t('bedrooms')}
               </label>
               <select
                 value={bedroomsFilter}
                 onChange={(e) => setBedroomsFilter(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500"
               >
-                <option value="all">Cualquier cantidad</option>
-                <option value="1">1+ Dormitorios</option>
-                <option value="2">2+ Dormitorios</option>
-                <option value="3">3+ Dormitorios</option>
-                <option value="4">4+ Dormitorios</option>
+                <option value="all">{t('any_bedrooms')}</option>
+                <option value="1">1+ {t('bedrooms')}</option>
+                <option value="2">2+ {t('bedrooms')}</option>
+                <option value="3">3+ {t('bedrooms')}</option>
+                <option value="4">4+ {t('bedrooms')}</option>
               </select>
             </div>
 
             {/* Currency selector */}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                Moneda
+                {t('currency')}
               </label>
               <div className="flex flex-row gap-2 rounded-xl bg-slate-950 p-1 border border-white/10">
                 <button
@@ -289,7 +290,7 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
         {/* Results Info Bar */}
         <div className="flex items-center justify-between text-xs text-slate-400">
           <p>
-            Mostrando <span className="font-bold text-white">{filtered.length}</span> inmuebles disponibles en el catálogo
+            <span className="font-bold text-white">{filtered.length}</span> {t('all_property_types')}
           </p>
           {(searchTerm || operationFilter !== 'all' || typeFilter !== 'all' || minPrice || maxPrice || bedroomsFilter !== 'all') && (
             <button
@@ -318,10 +319,7 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
         ) : filtered.length === 0 ? (
           <div className="p-12 rounded-3xl bg-slate-900 border border-white/10 text-center space-y-4 max-w-lg mx-auto">
             <Building2 className="w-12 h-12 text-slate-500 mx-auto" />
-            <h3 className="text-lg font-bold text-white">No se encontraron propiedades</h3>
-            <p className="text-xs text-slate-400">
-              No hay inmuebles que coincidan con los criterios seleccionados. Prueba ajustar el rango de precio o la zona.
-            </p>
+            <h3 className="text-lg font-bold text-white">{t('no_properties_found')}</h3>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -371,11 +369,11 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
                       <div className="grid grid-cols-3 gap-2 py-3 border-y border-white/5 text-xs text-slate-300">
                         <div className="flex items-center gap-1">
                           <Bed className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>{prop.features.bedrooms} hab</span>
+                          <span>{prop.features.bedrooms} {t('bedrooms')}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Bath className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>{prop.features.bathrooms} baños</span>
+                          <span>{prop.features.bathrooms}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Maximize className="w-3.5 h-3.5 text-emerald-400" />
@@ -394,7 +392,7 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
                       }}
                       className="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/10 transition-all cursor-pointer flex items-center justify-center gap-1"
                     >
-                      <span>Ver Ficha ➔</span>
+                      <span>{t('view_details')} ➔</span>
                     </button>
                     <a
                       href={waUrl}
@@ -403,7 +401,7 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
                       className="py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-slate-950 font-black text-xs transition-all cursor-pointer flex items-center justify-center gap-1"
                     >
                       <MessageSquare className="w-3.5 h-3.5 fill-current" />
-                      <span>WhatsApp</span>
+                      <span>{t('contact_whatsapp')}</span>
                     </a>
                   </div>
                 </div>
