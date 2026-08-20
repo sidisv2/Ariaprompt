@@ -52,11 +52,11 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
   const realId = property.id || property.code || (property as any)._id || 'PROP-2026';
-  const realPropertyUrl = typeof window !== 'undefined'
+  const realUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/properties/${realId}`
     : `https://ariaprop.online/properties/${realId}`;
 
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realPropertyUrl)}`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(realUrl)}`;
 
   const handlePrintPdf = () => {
     const targetTitle = (title || 'Propiedad').replace(/[^a-zA-Z0-9\s_-]/g, '').trim();
@@ -90,7 +90,7 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
 ${property.description || 'Excelente propiedad con acabados de alta gama.'}
 
 📲 *Contacto / Visitas:* ${agencyPhone}
-🌐 *Ver Ficha Online:* ${realPropertyUrl}`;
+🌐 *Ver Ficha Online:* ${realUrl}`;
 
     navigator.clipboard.writeText(waText);
     setCopied(true);
@@ -144,37 +144,34 @@ ${property.description || 'Excelente propiedad con acabados de alta gama.'}
         <div id="ficha-a4-content" className="flex-1 overflow-y-auto bg-slate-950 p-6 rounded-2xl border border-white/10 space-y-6 scrollbar-thin">
           <style>{`
             @media print {
-              body.is-printing-ficha * {
-                display: none !important;
+              body * {
+                visibility: hidden !important;
               }
-              body.is-printing-ficha #ficha-a4-content,
-              body.is-printing-ficha #ficha-a4-content * {
-                display: block !important;
+              #ficha-a4-content, #ficha-a4-content * {
                 visibility: visible !important;
               }
-              body.is-printing-ficha #ficha-a4-content {
-                display: block !important;
-                position: absolute !important;
+              #ficha-a4-content {
+                position: fixed !important;
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
                 height: auto !important;
-                background-color: #ffffff !important;
-                color: #0f172a !important;
-                padding: 24px !important;
                 margin: 0 !important;
+                padding: 20px !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                z-index: 999999 !important;
                 border: none !important;
                 box-shadow: none !important;
-                overflow: visible !important;
               }
-              body.is-printing-ficha #ficha-a4-content * {
+              #ficha-a4-content * {
                 color: #0f172a !important;
                 border-color: #cbd5e1 !important;
-                background-color: transparent !important;
               }
-              body.is-printing-ficha #ficha-a4-content img {
-                display: inline-block !important;
+              #ficha-a4-content img {
                 max-width: 100% !important;
+                display: block !important;
+                object-fit: cover !important;
               }
             }
           `}</style>

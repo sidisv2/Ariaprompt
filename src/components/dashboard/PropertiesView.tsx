@@ -62,6 +62,19 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [formDescription, setFormDescription] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80');
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setFormImageUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const filteredProperties = (properties || []).filter((p) => {
     const matchesSearch =
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -447,13 +460,46 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
                   </div>
 
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">URL Fotografía Principal</label>
-                    <input
-                      type="text"
-                      value={formImageUrl}
-                      onChange={(e) => setFormImageUrl(e.target.value)}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white"
-                    />
+                    <label className="block text-slate-300 font-semibold mb-1">Fotografía Principal del Inmueble</label>
+                    
+                    <div
+                      onClick={() => document.getElementById('property-image-file')?.click()}
+                      className="p-4 rounded-2xl bg-slate-950 border border-dashed border-emerald-500/40 hover:border-emerald-400 text-center space-y-2 cursor-pointer transition-all group"
+                    >
+                      <input
+                        type="file"
+                        id="property-image-file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        className="hidden"
+                      />
+                      {formImageUrl ? (
+                        <div className="relative rounded-xl overflow-hidden h-36 w-full max-w-sm mx-auto border border-white/10 group-hover:scale-105 transition-transform">
+                          <img src={formImageUrl} alt="Vista previa" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-xs font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-lg border border-white/10">
+                              📷 Cambiar imagen
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1 py-3">
+                          <Upload className="w-6 h-6 text-emerald-400 mx-auto group-hover:scale-110 transition-transform" />
+                          <p className="text-white text-xs font-bold">Subir Fotografía desde tu Dispositivo</p>
+                          <p className="text-[10px] text-slate-400">Haz clic o arrastra un archivo JPG, PNG o WEBP aquí</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        value={formImageUrl}
+                        onChange={(e) => setFormImageUrl(e.target.value)}
+                        placeholder="O pega una URL directa de imagen (https://...)"
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

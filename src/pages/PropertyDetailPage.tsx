@@ -192,7 +192,7 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
           <div className="lg:col-span-8 space-y-6">
             <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl group">
               <img
-                src={propData.images?.[0] || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'}
+                src={propData.images?.[0] || (propData as any).image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'}
                 alt={propData.title}
                 className="w-full h-[450px] object-cover transition-transform duration-500 group-hover:scale-105"
               />
