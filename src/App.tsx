@@ -246,12 +246,14 @@ function AppInner() {
     }
 
     const orgId = (user as any)?.organizationId || authUserId;
+    const rawOp = (newPropData as any).operation_type || (newPropData as any).operation || (Number(newPropData.price) < 5000 ? 'rent' : 'sale');
+    const normalizedOp = String(rawOp).toLowerCase().includes('alquiler') || String(rawOp).toLowerCase().includes('rent') ? 'rent' : 'sale';
 
     const dbPayload: any = {
       title: newPropData.title || 'Propiedad sin título',
       code: newPropData.code || `PROP-${Math.floor(100 + Math.random() * 900)}`,
       type: newPropData.type || 'apartment',
-      operation_type: newPropData.price < 5000 ? 'rent' : 'sale',
+      operation_type: normalizedOp,
       price: Number(newPropData.price) || 0,
       currency: newPropData.currency || 'USD',
       surface_m2: Number(newPropData.features?.areaM2) || 0,
