@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle, Heart, FlaskConical } from 'lucide-react';
+import { X, MessageCircle, Heart, FlaskConical, ExternalLink } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
-import { useAuth } from '../../context/AuthContext';
 
 const SESSION_KEY = 'aria_beta_banner_dismissed';
 
@@ -18,38 +17,12 @@ export const WhatsAppFloatingButton: React.FC = () => (
     rel="noopener noreferrer"
     aria-label="Contactar por WhatsApp"
     title="Contactar por WhatsApp"
-    style={{
-      position: 'fixed',
-      bottom: '24px',
-      right: '24px',
-      zIndex: 9998,
-      width: '52px',
-      height: '52px',
-      borderRadius: '50%',
-      background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
-      boxShadow: '0 4px 20px rgba(37,211,102,0.45)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      textDecoration: 'none',
-      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      cursor: 'pointer',
-    }}
-    onMouseEnter={e => {
-      const el = e.currentTarget as HTMLElement;
-      el.style.transform = 'scale(1.1)';
-      el.style.boxShadow = '0 6px 28px rgba(37,211,102,0.6)';
-    }}
-    onMouseLeave={e => {
-      const el = e.currentTarget as HTMLElement;
-      el.style.transform = 'scale(1)';
-      el.style.boxShadow = '0 4px 20px rgba(37,211,102,0.45)';
-    }}
+    className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 w-12 h-12 md:w-13 md:h-13 rounded-full bg-gradient-to-tr from-[#25D366] to-[#128C7E] shadow-xl shadow-emerald-900/40 flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
   >
     {/* WhatsApp SVG icon (official) */}
     <svg
-      width="26"
-      height="26"
+      width="24"
+      height="24"
       viewBox="0 0 24 24"
       fill="white"
       aria-hidden="true"
@@ -99,218 +72,90 @@ export const BetaBanner: React.FC = () => {
       id="beta-banner"
       role="banner"
       aria-label={t('betaBanner.label')}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background:
-          'linear-gradient(90deg, #0c1a2e 0%, #0d2c24 40%, #0c1a2e 100%)',
-        borderBottom: '1px solid rgba(52,211,153,0.20)',
-        boxShadow: '0 2px 32px 0 rgba(16,185,129,0.08)',
-        padding: '10px 52px 10px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '6px',
-      }}
+      className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-[#0c1a2e] via-[#0d2c24] to-[#0c1a2e] border-b border-emerald-500/20 shadow-lg transition-all"
     >
-      {/* Row 1: Badge + Main message */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          width: '100%',
-        }}
-      >
-        {/* Beta pill */}
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '2px 9px',
-            borderRadius: '999px',
-            background: 'rgba(52,211,153,0.12)',
-            border: '1px solid rgba(52,211,153,0.30)',
-            color: '#34d399',
-            fontSize: '10px',
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            flexShrink: 0,
-          }}
-        >
-          <FlaskConical size={10} aria-hidden="true" />
-          {t('betaBanner.label')}
-        </span>
-
-        {/* Main message */}
-        <span
-          style={{
-            fontSize: '12.5px',
-            fontWeight: 500,
-            color: '#cbd5e1',
-            lineHeight: 1.4,
-            textAlign: 'center',
-          }}
-        >
-          {t('betaBanner.message')}
-        </span>
-      </div>
-
-      {/* Row 2: Help text + CTA buttons */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          width: '100%',
-        }}
-      >
-        <span
-          style={{
-            fontSize: '11.5px',
-            color: '#64748b',
-            textAlign: 'center',
-          }}
-        >
-          {t('betaBanner.helpText')}
-        </span>
-
-        {/* WhatsApp CTA */}
-        <a
-          id="beta-banner-whatsapp"
-          href={WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('betaBanner.whatsapp')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            padding: '4px 13px',
-            borderRadius: '999px',
-            background: 'rgba(37,211,102,0.13)',
-            border: '1px solid rgba(37,211,102,0.32)',
-            color: '#4ade80',
-            fontWeight: 700,
-            fontSize: '11.5px',
-            textDecoration: 'none',
-            transition: 'background 0.18s, transform 0.15s',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(37,211,102,0.25)';
-            el.style.transform = 'scale(1.04)';
-          }}
-          onMouseLeave={e => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(37,211,102,0.13)';
-            el.style.transform = 'scale(1)';
-          }}
-        >
-          <MessageCircle size={12} aria-hidden="true" />
-          WhatsApp
-        </a>
-
-        {/* Donate text + link */}
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            fontSize: '11.5px',
-            color: '#475569',
-          }}
-        >
-          <span>{t('betaBanner.donatePrefix')}</span>
+      {/* ─── Mobile Ultra-Compact Single-Line Layout (block md:hidden) ─── */}
+      <div className="flex md:hidden items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-200">
+        <div className="flex items-center gap-1.5 truncate">
+          <span className="text-amber-400 font-extrabold shrink-0">⚠️ Beta</span>
+          <span className="text-slate-500">•</span>
+          <span className="truncate text-slate-300">Mobile en optimización (Usar PC)</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           <a
-            id="beta-banner-mercadopago"
-            href={MERCADO_PAGO_URL}
+            href={WHATSAPP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={t('betaBanner.donateLink')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '4px 13px',
-              borderRadius: '999px',
-              background: 'rgba(99,102,241,0.11)',
-              border: '1px solid rgba(99,102,241,0.28)',
-              color: '#a5b4fc',
-              fontWeight: 700,
-              fontSize: '11.5px',
-              textDecoration: 'none',
-              transition: 'background 0.18s, transform 0.15s',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = 'rgba(99,102,241,0.22)';
-              el.style.transform = 'scale(1.04)';
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = 'rgba(99,102,241,0.11)';
-              el.style.transform = 'scale(1)';
-            }}
+            className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-500/30 transition-colors"
           >
-            <Heart size={11} aria-hidden="true" />
-            {t('betaBanner.donateLink')}
+            <span>Feedback ↗</span>
           </a>
-          <span style={{ color: '#334155' }}>{t('betaBanner.donateSuffix')}</span>
-        </span>
+          <button
+            onClick={handleDismiss}
+            className="text-slate-400 hover:text-white p-0.5 transition-colors cursor-pointer"
+            aria-label="Cerrar banner"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
-      {/* Close button */}
-      <button
-        id="beta-banner-close"
-        onClick={handleDismiss}
-        aria-label={t('betaBanner.close')}
-        title={t('betaBanner.close')}
-        style={{
-          position: 'absolute',
-          top: '50%',
-          right: '12px',
-          transform: 'translateY(-50%)',
-          background: 'transparent',
-          border: 'none',
-          color: '#475569',
-          cursor: 'pointer',
-          padding: '6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '6px',
-          transition: 'color 0.15s, background 0.15s',
-          lineHeight: 1,
-        }}
-        onMouseEnter={e => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.color = '#94a3b8';
-          el.style.background = 'rgba(255,255,255,0.05)';
-        }}
-        onMouseLeave={e => {
-          const el = e.currentTarget as HTMLElement;
-          el.style.color = '#475569';
-          el.style.background = 'transparent';
-        }}
-      >
-        <X size={14} aria-hidden="true" />
-      </button>
+      {/* ─── Desktop Full 2-Row Layout (hidden md:flex) ─── */}
+      <div className="hidden md:flex flex-col items-center gap-1.5 py-2.5 px-12 relative text-center">
+        {/* Row 1: Badge + Main message */}
+        <div className="flex items-center justify-center gap-2.5 flex-wrap w-full">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+            <FlaskConical size={10} aria-hidden="true" />
+            {t('betaBanner.label')}
+          </span>
+          <span className="text-xs text-slate-300 font-medium leading-relaxed">
+            {t('betaBanner.message')}
+          </span>
+        </div>
+
+        {/* Row 2: Help text + CTA buttons */}
+        <div className="flex items-center justify-center gap-2 flex-wrap w-full text-xs">
+          <span className="text-slate-400 text-[11px]">{t('betaBanner.helpText')}</span>
+
+          {/* WhatsApp CTA */}
+          <a
+            id="beta-banner-whatsapp"
+            href={WHATSAPP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold hover:bg-emerald-500/25 transition-all"
+          >
+            <MessageCircle size={12} aria-hidden="true" />
+            WhatsApp
+          </a>
+
+          {/* Donate text + link */}
+          <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
+            <span>{t('betaBanner.donatePrefix')}</span>
+            <a
+              id="beta-banner-mercadopago"
+              href={MERCADO_PAGO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold hover:bg-indigo-500/25 transition-all"
+            >
+              <Heart size={11} aria-hidden="true" />
+              {t('betaBanner.donateLink')}
+            </a>
+            <span className="text-slate-500">{t('betaBanner.donateSuffix')}</span>
+          </span>
+        </div>
+
+        {/* Desktop Close button */}
+        <button
+          id="beta-banner-close"
+          onClick={handleDismiss}
+          aria-label={t('betaBanner.close')}
+          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          <X size={14} />
+        </button>
+      </div>
     </div>
   );
 };

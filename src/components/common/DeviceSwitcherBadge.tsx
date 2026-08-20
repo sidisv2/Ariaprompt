@@ -18,7 +18,7 @@ export const DeviceSwitcherBadge: React.FC<DeviceSwitcherBadgeProps> = ({
   const [expanded, setExpanded] = React.useState(false);
 
   return (
-    <div className="fixed bottom-16 right-3 sm:bottom-4 sm:right-4 z-50 font-sans">
+    <div className="hidden md:block fixed bottom-4 right-4 z-30 font-sans">
       {expanded ? (
         <div className="bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl p-3 shadow-2xl shadow-emerald-500/20 text-xs text-white space-y-2.5 animate-in fade-in slide-in-from-bottom-2 w-64">
           <div className="flex items-center justify-between border-b border-white/10 pb-2">

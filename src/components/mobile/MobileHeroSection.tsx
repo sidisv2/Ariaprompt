@@ -55,7 +55,7 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
   };
 
   return (
-    <div className="space-y-6 text-center pt-2">
+    <div className="space-y-6 text-center pt-4">
       {/* Top Badge */}
       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-wider shadow-sm">
         <Sparkles className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" />
@@ -63,14 +63,14 @@ export const MobileHeroSection: React.FC<MobileHeroSectionProps> = ({ sampleProp
       </div>
 
       {/* Headline */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-black text-white leading-tight tracking-tight">
+      <div className="space-y-2 px-3 pt-2">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight tracking-tight">
           {t('hero.title1')}{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-400">
             {t('hero.title2')}
           </span>.
         </h1>
-        <p className="text-xs text-slate-300 leading-relaxed px-2">
+        <p className="text-xs text-slate-300 leading-relaxed px-1">
           {t('hero.subtitle')}
         </p>
       </div>

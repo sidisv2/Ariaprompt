@@ -86,7 +86,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
           </div>
 
           {/* Main Title */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+          <h1 className="text-2xl sm:text-4xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight px-2 pt-2">
             No perdás más ventas por responder tarde.{' '}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
               Aria Prop cualifica y deriva las consultas en segundos.

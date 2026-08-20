@@ -70,7 +70,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
           </div>
 
           {/* Main Title */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
+          <h1 className="text-2xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] px-2 pt-2">
             {t('hero.title1')}{' '}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
               {t('hero.title2')}
