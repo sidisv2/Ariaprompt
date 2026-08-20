@@ -16,6 +16,7 @@ export interface RealEstateAIOptions {
   botTone?: 'friendly' | 'formal' | 'luxury' | 'direct';
   customInstructions?: string;
   faqKnowledge?: Array<{ question: string; answer: string }>;
+  calendarBookingUrl?: string;
   apiKey?: string;
 }
 
@@ -276,6 +277,7 @@ export async function generateStructuredAriaRealEstateResponse(
     botTone = 'friendly',
     customInstructions = '',
     faqKnowledge = [],
+    calendarBookingUrl = '',
     apiKey,
   } = options;
 
@@ -305,6 +307,10 @@ export async function generateStructuredAriaRealEstateResponse(
     ? faqKnowledge.map((f, i) => `FAQ #${i + 1}: Q: "${f.question}" -> A: "${f.answer}"`).join('\n')
     : 'No hay preguntas frecuentes específicas cargadas.';
 
+  const bookingUrlText = calendarBookingUrl
+    ? `ENLACE OFICIAL DE AGENDAMIENTO EN LÍNEA: ${calendarBookingUrl}`
+    : 'Informa al usuario que un asesor se comunicará para confirmar la fecha exacta.';
+
   const systemPrompt = `
 Eres "${agentName}", ${roleDescription} para "${agencyName}" en América Latina.
 
@@ -317,8 +323,11 @@ Debes responder SIEMPRE en ${targetLangName}.
 REGLAS DE ACTUACIÓN COMERCIAL:
 1. Actúa como asesora experta, empática y de alta conversión.
 2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Tipo de operación e inmueble (ej. "Alquiler 2 ambientes", "Venta casa"), y (d) Nombre del lead si lo menciona.
-3. Longitud máxima del mensaje ("replyText"): Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS.
-4. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio, ubicación y enlace de ficha.
+3. DETECCIÓN Y GESTIÓN DE VISITAS:
+   - Si el cliente solicita visitar un inmueble ("quiero ir a verlo", "coordinar visita", "cuándo se puede ver"):
+     Ofrece la opción de elegir fecha/hora o bien facilita el enlace oficial de agendamiento: ${bookingUrlText}
+4. Longitud máxima del mensaje ("replyText"): Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS.
+5. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio, ubicación y enlace de ficha.
 
 ## REGLAS DE NEGOCIO E INSTRUCCIONES ESPECIALES DE LA INMOBILIARIA:
 ${customInstructions ? customInstructions : 'No hay reglas de negocio especiales especificadas.'}

@@ -136,6 +136,7 @@ export async function processAriaMessage({
   let botTone: 'friendly' | 'formal' | 'luxury' | 'direct' = 'friendly';
   let customInstructions = '';
   let faqKnowledge: Array<{ question: string; answer: string }> = [];
+  let calendarBookingUrl = '';
 
   if (supabase) {
     try {
@@ -210,13 +211,14 @@ export async function processAriaMessage({
       try {
         const { data: orgConfig } = await supabase
           .from('organizations')
-          .select('name, bot_name, bot_tone, custom_prompt_instructions, faq_knowledge')
+          .select('name, bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url')
           .eq('id', organizationId)
           .single();
 
         if (orgConfig) {
           if (orgConfig.name) agencyName = orgConfig.name;
           if (orgConfig.bot_name) botName = orgConfig.bot_name;
+          if (orgConfig.calendar_booking_url) calendarBookingUrl = orgConfig.calendar_booking_url;
           if (['friendly', 'formal', 'luxury', 'direct'].includes(orgConfig.bot_tone)) {
             botTone = orgConfig.bot_tone;
           }
@@ -256,7 +258,36 @@ export async function processAriaMessage({
     botTone: botTone,
     customInstructions: customInstructions,
     faqKnowledge: faqKnowledge,
+    calendarBookingUrl: calendarBookingUrl,
   });
+
+  // 5b. Automatic Appointment Scheduling Detection & Registration
+  const lowerUserMsg = userMessage.toLowerCase();
+  if (
+    lowerUserMsg.includes('visita') ||
+    lowerUserMsg.includes('coordinar') ||
+    lowerUserMsg.includes('agendar') ||
+    lowerUserMsg.includes('ir a ver') ||
+    lowerUserMsg.includes('verlo')
+  ) {
+    if (supabase && organizationId) {
+      try {
+        await supabase.from('property_appointments').insert({
+          organization_id: organizationId,
+          conversation_id: conversationId,
+          user_phone: userPhone,
+          user_name: extractedData?.lead_name || 'Prospecto WhatsApp',
+          preferred_zone: extractedData?.preferred_zone || 'Por definir',
+          status: 'pending',
+          appointment_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          notes: `Visita registrada desde WhatsApp: "${userMessage}"`,
+          created_at: new Date().toISOString(),
+        });
+      } catch (appErr) {
+        console.warn('⚠️ property_appointments notice:', appErr);
+      }
+    }
+  }
 
   // 6. Update wa_conversations and wa_messages in Supabase
   if (supabase && conversationId) {

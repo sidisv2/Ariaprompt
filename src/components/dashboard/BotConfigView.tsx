@@ -42,6 +42,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
 
   // Bot Identity & Tone State
   const [botTone, setBotTone] = useState<'friendly' | 'formal' | 'luxury' | 'direct'>('friendly');
+  const [calendarBookingUrl, setCalendarBookingUrl] = useState<string>('https://cal.com/inmobiliaria-palermo/visita');
   const [customInstructions, setCustomInstructions] = useState<string>(
     'No aceptamos alquileres temporales de menos de 3 meses. El horario de visitas presenciales es de Lunes a Viernes de 10 a 18 hs.'
   );
@@ -73,13 +74,14 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
         if (profile?.organization_id) {
           const { data: org } = await supabase
             .from('organizations')
-            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, name')
+            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, name')
             .eq('id', profile.organization_id)
             .single();
 
           if (org) {
             if (org.bot_name) setAgentName(org.bot_name);
             if (org.name) setAgencyName(org.name);
+            if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
             if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
               setBotTone(org.bot_tone);
             }
@@ -163,6 +165,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                 bot_tone: botTone,
                 custom_prompt_instructions: customInstructions,
                 faq_knowledge: validFaqs,
+                calendar_booking_url: calendarBookingUrl.trim(),
                 updated_at: new Date().toISOString(),
               })
               .eq('id', profile.organization_id);
@@ -235,6 +238,20 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                  <span>Enlace de Agenda de Visitas (Calendly / Cal.com / Google Calendar)</span>
+                  <span className="text-[10px] text-emerald-400 font-mono">Auto-Entregable en WhatsApp</span>
+                </label>
+                <input
+                  type="url"
+                  value={calendarBookingUrl}
+                  onChange={(e) => setCalendarBookingUrl(e.target.value)}
+                  placeholder="Ej: https://cal.com/inmobiliaria-palermo/visita"
+                  className="w-full bg-slate-950 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 transition-all"
+                />
               </div>
             </div>
 
