@@ -77,10 +77,10 @@ export const TerminosPage: React.FC<TerminosPageProps> = ({ onRouteChange }) => 
           </h2>
           <p>
             {isEn
-              ? 'Aria Prop ("the Service") is a B2B Software as a Service (SaaS) property sales assistant and CRM integration platform provided by Valentin Lautaro Morales ("Company", "we", "us"). By registering, accessing or using the platform, you agree to be bound by these Terms of Service.'
+              ? 'Aria Prop ("the Service") is a B2B Software as a Service (SaaS) property sales assistant and CRM integration platform provided by MORALES VALENTIN LAUTARO ("Company", "we", "us"). By registering, accessing or using the platform, you agree to be bound by these Terms of Service.'
               : isPt
-              ? 'A Aria Prop ("o Serviço") é uma plataforma B2B de assistência comercial imobiliária e integração com CRMs fornecida por Valentin Lautaro Morales ("Empresa", "nós"). Ao se registrar ou usar a plataforma, você concorda em cumprir estes Termos de Serviço.'
-              : 'Aria Prop ("el Servicio") es una plataforma B2B de software como servicio (SaaS) para asistencia comercial inmobiliaria, cualificación de prospectos y sincronización de catálogos con CRMs, provista por Valentin Lautaro Morales ("La Empresa", "nosotros"). Al registrarse, acceder o utilizar la plataforma, usted acepta quedar vinculado por estos Términos de Servicio.'}
+              ? 'A Aria Prop ("o Serviço") é uma plataforma B2B de assistência comercial imobiliária e integração com CRMs fornecida por MORALES VALENTIN LAUTARO ("Empresa", "nós"). Ao se registrar ou usar a plataforma, você concorda em cumprir estes Termos de Serviço.'
+              : 'Aria Prop ("el Servicio") es una plataforma B2B de software como servicio (SaaS) para asistencia comercial inmobiliaria, cualificación de prospectos y sincronización de catálogos con CRMs, provista por MORALES VALENTIN LAUTARO ("La Empresa", "nosotros"). Al registrarse, acceder o utilizar la plataforma, usted acepta quedar vinculado por estos Términos de Servicio.'}
           </p>
         </section>
 
@@ -164,9 +164,9 @@ export const TerminosPage: React.FC<TerminosPageProps> = ({ onRouteChange }) => 
               : 'Para cualquier consulta relacionada con estos Términos de Servicio, contáctenos en:'}
           </p>
           <ul className="space-y-1 text-slate-300 text-xs font-mono">
-            <li>• <strong>{isEn ? 'Legal Holder / Company:' : isPt ? 'Razão Social:' : 'Razón Social / Titular Legal:'}</strong> Valentin Lautaro Morales</li>
+            <li>• <strong>{isEn ? 'Legal Holder / Company:' : isPt ? 'Razão Social:' : 'Razón Social / Titular Legal:'}</strong> MORALES VALENTIN LAUTARO</li>
             <li>• <strong>{isEn ? 'Tax ID / CUIT:' : isPt ? 'ID Fiscal:' : 'Identificación Fiscal / CUIT:'}</strong> CUIT 20-46398072-2 (20463980722)</li>
-            <li>• <strong>{isEn ? 'Address:' : isPt ? 'Endereço:' : 'Dirección Fiscal:'}</strong> San Rafael, Argentina</li>
+            <li>• <strong>{isEn ? 'Address:' : isPt ? 'Endereço:' : 'Dirección Fiscal / Domicilio Legal:'}</strong> Mariano Moreno 78, Villa Atuel, Mendoza, Argentina</li>
             <li>• <strong>Email Support:</strong> <a href="mailto:soporte@ariaprop.online" className="text-emerald-400 underline">soporte@ariaprop.online</a></li>
             <li>• <strong>Billing Merchant:</strong> Paddle.com Market Ltd, Judo Bank Building, 70 Red Lion St, London WC1R 4NA, UK</li>
           </ul>

@@ -157,13 +157,19 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
 
         </div>
 
-        {/* Bottom Copyright & Rights */}
-        <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© {new Date().getFullYear()} Aria Prop AI. {t('footer.rights')}</p>
-          <div className="flex items-center gap-4">
-            <span>Powered by Gemini 2.5 Flash & Next.js Engine</span>
-            <span>•</span>
-            <span className="text-emerald-400 font-bold">Respuesta en Segundos</span>
+        {/* Bottom Copyright & Legal Business Notice for Meta Verification */}
+        <div className="pt-8 border-t border-white/5 space-y-4">
+          <p className="text-[11px] text-slate-400 leading-relaxed text-center sm:text-left">
+            Aria Prop es una plataforma desarrollada y operada por <strong className="text-slate-200 font-semibold">MORALES VALENTIN LAUTARO</strong> (CUIT: 20-46398072-2). Domicilio legal: Mariano Moreno 78, Villa Atuel, Mendoza, Argentina.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500 pt-2 border-t border-white/5">
+            <p>© {new Date().getFullYear()} Aria Prop AI. {t('footer.rights')}</p>
+            <div className="flex items-center gap-4">
+              <span>Powered by Gemini 2.5 Flash & Next.js Engine</span>
+              <span>•</span>
+              <span className="text-emerald-400 font-bold">Respuesta en Segundos</span>
+            </div>
           </div>
         </div>
 
