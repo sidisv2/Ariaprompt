@@ -31,7 +31,7 @@ export interface ExtractedLeadData {
   budget_max_usd: number | null;
   preferred_zone: string | null;
   property_type: string | null;
-  status: 'active' | 'qualified' | 'closed';
+  status: 'active' | 'qualified' | 'handover' | 'human_handoff' | 'closed';
   lead_name: string | null;
 }
 

@@ -1,4 +1,7 @@
 import { sendWhatsAppTextMessage } from './whatsappClient.js';
+import { sendHandoverEmailNotification } from '../../lib/notifications/email.js';
+
+export { sendHandoverEmailNotification };
 
 export interface NotifyQualifiedLeadOptions {
   organizationId: string;

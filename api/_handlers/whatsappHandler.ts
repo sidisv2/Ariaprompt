@@ -2,10 +2,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
 import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
+import { sendHandoverEmailNotification } from '../../lib/notifications/email.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
-  const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  const supabaseKey = (process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
     return null;
   }
@@ -167,6 +168,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               }).eq('id', existingConvId);
             } catch {}
           }
+
+          // Asynchronously trigger email notification without delaying Meta's 200 OK response
+          sendHandoverEmailNotification({
+            organizationId,
+            userPhone: fromNumber,
+            lastMessage: textBody,
+            conversationId: existingConvId,
+            supabaseClient: supabase,
+          }).catch((err) => console.warn('⚠️ Handover email trigger warning:', err));
 
           return res.status(200).json({
             status: 'HANDOVER_HUMAN_ACTIVE',
