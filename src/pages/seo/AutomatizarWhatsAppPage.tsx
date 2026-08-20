@@ -58,6 +58,8 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
         'applicationCategory': 'BusinessApplication',
         'operatingSystem': 'All',
         'url': 'https://ariaprop.online/automatizar-whatsapp-inmobiliaria',
+        'image': 'https://ariaprop.online/og-image.jpg',
+        'screenshot': 'https://ariaprop.online/og-image.jpg',
         'description': 'Automatiza WhatsApp para inmobiliarias con IA: envía fichas técnicas en PDF, cualifica compradores y coordina visitas presenciales.',
         'offers': {
           '@type': 'Offer',
@@ -85,6 +87,7 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
         title="Automatizar WhatsApp para Inmobiliarias | Aria Prop"
         description="Aprende a automatizar el WhatsApp de tu inmobiliaria con IA oficial de Meta. Envía fichas técnicas PDF, cualifica prospectos y agenda visitas 24/7."
         url="https://ariaprop.online/automatizar-whatsapp-inmobiliaria"
+        image="https://ariaprop.online/og-image.jpg"
       />
 
       <script

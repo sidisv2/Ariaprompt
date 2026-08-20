@@ -59,6 +59,8 @@ export const IAParaInmobiliariasPage: React.FC<SEOPageProps> = ({
         'applicationCategory': 'BusinessApplication',
         'operatingSystem': 'All',
         'url': 'https://ariaprop.online/ia-para-inmobiliarias',
+        'image': 'https://ariaprop.online/og-image.jpg',
+        'screenshot': 'https://ariaprop.online/og-image.jpg',
         'description': 'Plataforma de Inteligencia Artificial para inmobiliarias que cualifica compradores y agenda visitas automáticas 24/7.',
         'offers': {
           '@type': 'Offer',
@@ -86,6 +88,7 @@ export const IAParaInmobiliariasPage: React.FC<SEOPageProps> = ({
         title="IA para Inmobiliarias | Agente Comercial 24/7 | Aria Prop"
         description="Descubre cómo la Inteligencia Artificial ayuda a tu inmobiliaria a atender consultas 24/7 en WhatsApp, cualificar compradores por presupuesto y agendar más visitas."
         url="https://ariaprop.online/ia-para-inmobiliarias"
+        image="https://ariaprop.online/og-image.jpg"
       />
 
       {/* JSON-LD Rich Snippet */}

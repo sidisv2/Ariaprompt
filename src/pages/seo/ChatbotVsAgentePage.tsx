@@ -51,6 +51,8 @@ export const ChatbotVsAgentePage: React.FC<SEOPageProps> = ({
         '@type': 'Article',
         'headline': 'Chatbot Inmobiliario Tradicional vs. Agente Comercial con IA',
         'description': 'Comparativa detallada entre chatbots con menús rígidos y agentes comerciales con Inteligencia Artificial para el sector inmobiliario.',
+        'image': 'https://ariaprop.online/og-image.jpg',
+        'screenshot': 'https://ariaprop.online/og-image.jpg',
         'mainEntityOfPage': {
           '@type': 'WebPage',
           '@id': 'https://ariaprop.online/chatbot-vs-agente-ia'
@@ -81,6 +83,7 @@ export const ChatbotVsAgentePage: React.FC<SEOPageProps> = ({
         title="Chatbot Inmobiliario vs Agente IA | Comparativa | Aria Prop"
         description="Descubre las diferencias entre un chatbot tradicional de menús rígidos y un Agente Comercial de IA que comprende lenguaje natural y cualifica presupuesto."
         url="https://ariaprop.online/chatbot-vs-agente-ia"
+        image="https://ariaprop.online/og-image.jpg"
       />
 
       <script

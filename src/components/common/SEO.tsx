@@ -11,7 +11,7 @@ export interface SEOProps {
 export const SEO: React.FC<SEOProps> = ({
   title,
   description,
-  image = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+  image = 'https://ariaprop.online/og-image.jpg',
   url,
   type = 'website',
 }) => {
@@ -37,6 +37,7 @@ export const SEO: React.FC<SEOProps> = ({
     setMetaTag('meta[property="og:title"]', 'property', 'og:title', pageTitle);
     setMetaTag('meta[property="og:description"]', 'property', 'og:description', description);
     setMetaTag('meta[property="og:image"]', 'property', 'og:image', image);
+    setMetaTag('meta[property="og:image:secure_url"]', 'property', 'og:image:secure_url', image);
     setMetaTag('meta[property="og:url"]', 'property', 'og:url', currentUrl);
     setMetaTag('meta[property="og:type"]', 'property', 'og:type', type);
     setMetaTag('meta[name="twitter:card"]', 'name', 'twitter:card', 'summary_large_image');
