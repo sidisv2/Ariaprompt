@@ -83,17 +83,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ sampleProperties, onRo
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
                 <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-                <span>Ir al Centro de Control / Dashboard</span>
-                <ArrowRight className="w-4 h-4 text-slate-950 stroke-[3]" />
+                <span>Ir a Mi Panel / Dashboard ➔</span>
               </button>
             ) : (
               <button
-                onClick={handleStartFreeTrial}
+                onClick={() => onRouteChange('app')}
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
                 <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-                <span>{t('hero.ctaPrimary')}</span>
-                <ArrowRight className="w-4 h-4 text-slate-950 stroke-[3]" />
+                <span>Probar Gratis (3 Consultas) ➔</span>
               </button>
             )}
 

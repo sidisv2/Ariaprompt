@@ -96,7 +96,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
       />
 
       {/* Main Content Layout */}
-      {currentRoute.startsWith('dashboard-') ? (
+      {(currentRoute.startsWith('dashboard-') || currentRoute === 'app' || currentRoute === 'aria-ai') ? (
         <div className="flex-1 flex min-h-[calc(100vh-4rem)] animate-page-fade">
           <DashboardSidebar
             currentRoute={currentRoute}
@@ -123,7 +123,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
             {currentRoute === 'dashboard-bot-config' && (
               <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
             )}
-            {(currentRoute === 'dashboard-assistant' || currentRoute === 'aria-ai') && (
+            {(currentRoute === 'app' || currentRoute === 'dashboard-assistant' || currentRoute === 'aria-ai') && (
               <AssistantPlaygroundView botConfig={botConfig} onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-checkout' && (
@@ -146,7 +146,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
             )}
           </main>
         </div>
-      ) : (currentRoute === 'aria-ai' || currentRoute === 'producto') ? (
+      ) : currentRoute === 'producto' ? (
         <main className="flex-1 animate-page-fade">
           <ProductoPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
           <Footer onRouteChange={onRouteChange} />

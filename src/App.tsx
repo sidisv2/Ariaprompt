@@ -15,7 +15,8 @@ const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
   const path = (window.location.pathname + window.location.hash).toLowerCase();
   if (path.includes('dashboard/integrations') || path.includes('integraciones')) return 'dashboard-integrations';
-  if (path.includes('app') || path.includes('dashboard/metrics') || path.includes('panel')) return 'dashboard-metrics';
+  if (path.includes('dashboard/metrics') || path.includes('panel')) return 'dashboard-metrics';
+  if (path.includes('app') || path.includes('dashboard/assistant') || path.includes('aria-ai')) return 'app';
   if (path.includes('producto')) return 'producto';
   if (path.includes('soluciones')) return 'soluciones';
   if (path.includes('recursos')) return 'recursos';

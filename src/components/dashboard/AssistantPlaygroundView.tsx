@@ -23,6 +23,7 @@ import {
 import { AppRoute, BotConfig } from '../../types';
 import { generateStructuredAriaRealEstateResponse, ExtractedLeadData } from '../../../api/_lib/openrouterService';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 interface AssistantPlaygroundViewProps {
   botConfig?: BotConfig;
@@ -51,6 +52,29 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
   botConfig,
   onRouteChange,
 }) => {
+  const { user } = useAuth();
+
+  const isUnlimitedUser = Boolean(
+    user &&
+      (user.isOwner ||
+        user.plan !== 'normal' ||
+        user.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com')
+  );
+
+  const MAX_FREE_MESSAGES = 3;
+
+  const [sentCount, setSentCount] = useState<number>(() => {
+    try {
+      const val = localStorage.getItem('aria_playground_guest_msg_count');
+      return val ? parseInt(val, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const remainingFreeMessages = Math.max(0, MAX_FREE_MESSAGES - sentCount);
+  const isFreeLimitReached = !isUnlimitedUser && sentCount >= MAX_FREE_MESSAGES;
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome-1',
@@ -82,13 +106,13 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
       if (!supabase) return;
       try {
         const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-        if (!user) return;
+        const sbUser = sessionData.session?.user;
+        if (!sbUser) return;
 
         const { data: profile } = await supabase
           .from('profiles')
           .select('organization_id')
-          .eq('id', user.id)
+          .eq('id', sbUser.id)
           .single();
 
         if (profile?.organization_id) {
@@ -116,6 +140,20 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
   const handleSendMessage = async (textToSend?: string) => {
     const query = (textToSend || inputMsg).trim();
     if (!query || isTyping) return;
+
+    if (!isUnlimitedUser && sentCount >= MAX_FREE_MESSAGES) {
+      return;
+    }
+
+    if (!isUnlimitedUser) {
+      const nextCount = sentCount + 1;
+      setSentCount(nextCount);
+      try {
+        localStorage.setItem('aria_playground_guest_msg_count', String(nextCount));
+      } catch (e) {
+        console.warn('Error updating guest msg count:', e);
+      }
+    }
 
     const userMsgObj: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -284,6 +322,31 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
           <p className="text-xs text-slate-400 mt-1">
             Simulador interactivo en tiempo real para verificar las respuestas comerciales, RAG de propiedades y reglas de negocio del bot.
           </p>
+
+          {/* Usage / Plan Banner */}
+          {isUnlimitedUser ? (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-teal-500/20 border border-amber-500/30 text-amber-300 text-xs font-black shadow-sm">
+              <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
+              <span>👑 Modo Enterprise / Owner - Mensajes Ilimitados</span>
+            </div>
+          ) : (
+            <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-extrabold border ${
+              isFreeLimitReached
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+            }`}>
+              <Zap className="w-4 h-4 text-emerald-400" />
+              <span>Prueba gratuita: Te quedan <strong className="text-white underline font-black">{remainingFreeMessages} de 3</strong> mensajes</span>
+              {isFreeLimitReached && (
+                <button
+                  onClick={() => onRouteChange?.('dashboard-checkout')}
+                  className="ml-2 px-2.5 py-0.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[10px] uppercase cursor-pointer"
+                >
+                  Desbloquear ➔
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -387,33 +450,52 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
               ].map((chip, idx) => (
                 <button
                   key={idx}
+                  disabled={isFreeLimitReached}
                   onClick={() => handleSendMessage(chip)}
-                  className="px-2.5 py-1 rounded-full bg-[#202c33] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 text-[10px] font-semibold border border-white/5 whitespace-nowrap transition-all cursor-pointer shrink-0"
+                  className="px-2.5 py-1 rounded-full bg-[#202c33] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 text-[10px] font-semibold border border-white/5 whitespace-nowrap transition-all cursor-pointer shrink-0 disabled:opacity-40"
                 >
                   {chip}
                 </button>
               ))}
             </div>
 
-            {/* Input Bar */}
-            <div className="p-3 bg-[#111b21] flex items-center gap-2 border-t border-slate-800">
-              <input
-                type="text"
-                value={inputMsg}
-                onChange={(e) => setInputMsg(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Escribe un mensaje de prueba..."
-                className="flex-1 bg-[#202c33] text-white placeholder-slate-500 rounded-2xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-transparent"
-              />
-              <button
-                disabled={!inputMsg.trim() || isTyping}
-                onClick={() => handleSendMessage()}
-                className="w-9 h-9 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 shrink-0"
-              >
-                <Send className="w-4 h-4 fill-current" />
-              </button>
-            </div>
-
+            {/* Input Bar or Locked Banner */}
+            {isFreeLimitReached ? (
+              <div className="p-4 bg-[#111b21] border-t border-rose-500/40 space-y-2 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-rose-400 font-extrabold text-xs">
+                  <ShieldCheck className="w-4 h-4 text-rose-400" />
+                  <span>Has alcanzado el límite de 3 mensajes de prueba</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-snug">
+                  Pasa a un plan Pro/Enterprise para desbloquear atención 24/7 ilimitada.
+                </p>
+                <button
+                  onClick={() => onRouteChange?.('dashboard-checkout')}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02]"
+                >
+                  <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
+                  <span>Desbloquear Mensajes Ilimitados ➔</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-3 bg-[#111b21] flex items-center gap-2 border-t border-slate-800">
+                <input
+                  type="text"
+                  value={inputMsg}
+                  onChange={(e) => setInputMsg(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Escribe un mensaje de prueba..."
+                  className="flex-1 bg-[#202c33] text-white placeholder-slate-500 rounded-2xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-transparent"
+                />
+                <button
+                  disabled={!inputMsg.trim() || isTyping}
+                  onClick={() => handleSendMessage()}
+                  className="w-9 h-9 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                >
+                  <Send className="w-4 h-4 fill-current" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
