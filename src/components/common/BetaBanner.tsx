@@ -74,8 +74,8 @@ export const BetaBanner: React.FC = () => {
       aria-label={t('betaBanner.label')}
       className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-[#0c1a2e] via-[#0d2c24] to-[#0c1a2e] border-b border-emerald-500/20 shadow-lg transition-all"
     >
-      {/* ─── Mobile Ultra-Compact Single-Line Layout (block md:hidden) ─── */}
-      <div className="flex md:hidden items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-200">
+      {/* ─── Mobile Ultra-Compact Single-Line Layout (hidden max-md:flex) ─── */}
+      <div className="hidden max-md:flex items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-200">
         <div className="flex items-center gap-1.5 truncate">
           <span className="text-amber-400 font-extrabold shrink-0">⚠️ Beta</span>
           <span className="text-slate-500">•</span>
