@@ -45,6 +45,7 @@ export interface Property {
   title: string;
   code: string;
   type: 'apartment' | 'house' | 'ph' | 'land' | 'commercial' | 'office' | 'warehouse' | 'penthouse' | 'villa' | 'chalet' | string;
+  operation_type?: string;
   status: 'available' | 'reserved' | 'sold' | 'rented' | string;
   is_public?: boolean;
   price: number;
@@ -64,6 +65,7 @@ export interface Property {
     bathrooms: number;
     areaM2: number;
     rooms?: number;
+    parking?: number;
     terraceM2?: number;
     pool: boolean;
     garage: boolean;

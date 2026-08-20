@@ -19,12 +19,14 @@ import {
   Sparkles,
   Trash2,
   Eye,
-  EyeOff
+  EyeOff,
+  Edit3
 } from 'lucide-react';
 
 import { PropertyImporterModal, ImportedPropertyItem } from '../properties/PropertyImporterModal';
 import { PropertyPdfExportModal } from '../properties/PropertyPdfExportModal';
 import { PropertyAdStudioModal } from '../properties/PropertyAdStudioModal';
+import { EditPropertyModal } from '../properties/EditPropertyModal';
 
 interface PropertiesViewProps {
   properties: Property[];
@@ -47,7 +49,49 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
   const [selectedPropertyForModal, setSelectedPropertyForModal] = useState<Property | null>(null);
   const [selectedAdProperty, setSelectedAdProperty] = useState<Property | null>(null);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+  const [propertyToEdit, setPropertyToEdit] = useState<Property | null>(null);
   const [isSyncingAI, setIsSyncingAI] = useState(false);
+
+  const handleSaveEditProperty = async (editedProp: Property) => {
+    if (supabase) {
+      try {
+        const dbPayload: any = {
+          title: editedProp.title,
+          type: editedProp.type,
+          operation_type: editedProp.operation_type || 'sale',
+          price: Number(editedProp.price) || 0,
+          currency: editedProp.currency || 'USD',
+          surface_m2: Number(editedProp.features?.areaM2) || 0,
+          area_m2: Number(editedProp.features?.areaM2) || 0,
+          bedrooms: Number(editedProp.features?.bedrooms) || 0,
+          bathrooms: Number(editedProp.features?.bathrooms) || 0,
+          parking_spaces: Number(editedProp.features?.parking) || 0,
+          address: editedProp.location?.address || '',
+          zone: editedProp.location?.zone || '',
+          city: editedProp.location?.city || '',
+          description: editedProp.description || '',
+          image_url: editedProp.images?.[0] || '',
+          images: editedProp.images || [],
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase
+          .from('properties')
+          .update(dbPayload)
+          .eq('id', editedProp.id);
+
+        if (error) {
+          console.error('Error al actualizar propiedad en Supabase:', error);
+        }
+      } catch (err) {
+        console.warn('Error al guardar edición en Supabase:', err);
+      }
+    }
+
+    if (onUpdateProperty) {
+      onUpdateProperty(editedProp.id, editedProp);
+    }
+  };
 
   const handleTogglePublic = async (prop: Property) => {
     const nextIsPublic = !(prop.is_public ?? true);
@@ -362,6 +406,16 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                   <option value="rented">🔵 {t('status_rented')}</option>
                   <option value="sold">🔴 {t('status_sold')}</option>
                 </select>
+
+                {/* Edit Button */}
+                <button
+                  onClick={() => setPropertyToEdit(prop)}
+                  className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer flex items-center gap-1 text-[10px] font-bold"
+                  title="Editar Inmueble"
+                >
+                  <Edit3 className="w-3 h-3 text-emerald-400" />
+                  <span>Editar</span>
+                </button>
 
                 {/* Delete Trash Button */}
                 <button
@@ -773,6 +827,15 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit Property Modal */}
+      {propertyToEdit && (
+        <EditPropertyModal
+          property={propertyToEdit}
+          onClose={() => setPropertyToEdit(null)}
+          onSave={handleSaveEditProperty}
+        />
       )}
 
     </div>

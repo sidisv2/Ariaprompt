@@ -17,7 +17,10 @@ import {
   ShieldCheck,
   Bot,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { ChatSlideOver } from '../components/chat/ChatSlideOver';
 import { INITIAL_PROPERTIES } from '../data/mockData';
@@ -38,6 +41,8 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
   const [copied, setCopied] = useState(false);
   const [isAriaChatOpen, setIsAriaChatOpen] = useState(false);
   const [ariaPrefilledPrompt, setAriaPrefilledPrompt] = useState('');
+  const [activeImgIndex, setActiveImgIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     async function fetchProperty() {
@@ -155,6 +160,18 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
 
   const propData = property || INITIAL_PROPERTIES[0];
 
+  const rawImages: string[] = propData.images && propData.images.length > 0
+    ? propData.images
+    : (propData as any).image_url
+    ? (propData as any).image_url.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : [];
+
+  const galleryImages = rawImages.length > 0
+    ? rawImages
+    : ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'];
+
+  const currentGalleryImg = galleryImages[activeImgIndex] || galleryImages[0];
+
   // 1. WhatsApp phone calculation with fallback 5491140143729
   const phone = (propData as any)?.contact_phone || (propData as any)?.agent_phone || (propData as any)?.phone || '5491140143729';
   const cleanPhone = String(phone).replace(/\D/g, '') || '5491140143729';
@@ -210,20 +227,85 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
           
           {/* Image & Overview (8 Cols) */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl group">
-              <img
-                src={propData.images?.[0] || (propData as any).image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'}
-                alt={propData.title}
-                className="w-full h-[450px] object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute top-4 left-4 flex gap-2">
-                <span className="px-3 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg">
-                  {propData.type.toUpperCase()}
-                </span>
-                <span className="px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-emerald-300 border border-emerald-500/30 font-extrabold text-xs">
-                  CÓDIGO: {propData.code}
-                </span>
+            
+            {/* Interactive Carousel Box */}
+            <div className="space-y-3">
+              <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900">
+                <img
+                  src={currentGalleryImg}
+                  alt={propData.title}
+                  onClick={() => setIsLightboxOpen(true)}
+                  className="w-full h-[450px] object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
+                />
+
+                {/* Top Badges */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  <span className="px-3 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg">
+                    {propData.type.toUpperCase()}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-emerald-300 border border-emerald-500/30 font-extrabold text-xs">
+                    CÓDIGO: {propData.code}
+                  </span>
+                </div>
+
+                {/* Counter Badge */}
+                <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-white font-mono font-bold text-xs border border-white/10">
+                  📷 {activeImgIndex + 1} / {galleryImages.length}
+                </div>
+
+                {/* Prev & Next Navigation Buttons */}
+                {galleryImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImgIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+                      }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl bg-slate-950/70 hover:bg-slate-950 text-white backdrop-blur-md border border-white/10 transition-all cursor-pointer shadow-lg hover:scale-110"
+                      title="Anterior"
+                    >
+                      <ChevronLeft className="w-5 h-5 text-emerald-400" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveImgIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0));
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-2xl bg-slate-950/70 hover:bg-slate-950 text-white backdrop-blur-md border border-white/10 transition-all cursor-pointer shadow-lg hover:scale-110"
+                      title="Siguiente"
+                    >
+                      <ChevronRight className="w-5 h-5 text-emerald-400" />
+                    </button>
+                  </>
+                )}
+
+                {/* Fullscreen Hint */}
+                <div
+                  onClick={() => setIsLightboxOpen(true)}
+                  className="absolute bottom-3 right-3 px-3 py-1 rounded-xl bg-slate-950/80 backdrop-blur-md text-slate-300 text-[10px] font-bold border border-white/10 cursor-pointer hover:text-white"
+                >
+                  🔍 Clic para ampliar a pantalla completa
+                </div>
               </div>
+
+              {/* Thumbnails Row */}
+              {galleryImages.length > 1 && (
+                <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+                  {galleryImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImgIndex(idx)}
+                      className={`relative rounded-2xl overflow-hidden w-20 h-20 shrink-0 border-2 transition-all cursor-pointer ${
+                        idx === activeImgIndex
+                          ? 'border-emerald-500 scale-105 shadow-lg shadow-emerald-500/20'
+                          : 'border-white/10 opacity-60 hover:opacity-100 hover:border-white/30'
+                      }`}
+                    >
+                      <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Property Header Info */}
@@ -350,6 +432,72 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
 
         </div>
       </main>
+
+      {/* Fullscreen Lightbox Modal */}
+      {isLightboxOpen && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-between p-4 sm:p-8 animate-fadeIn">
+          {/* Top Bar */}
+          <div className="w-full flex items-center justify-between text-white border-b border-white/10 pb-4 max-w-6xl">
+            <div>
+              <h3 className="font-extrabold text-sm sm:text-base text-white">{propData.title}</h3>
+              <p className="text-xs text-slate-400">
+                Imagen {activeImgIndex + 1} de {galleryImages.length}
+              </p>
+            </div>
+            <button
+              onClick={() => setIsLightboxOpen(false)}
+              className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Main Fullscreen Image Container */}
+          <div className="relative flex-1 w-full max-w-6xl flex items-center justify-center my-4 overflow-hidden">
+            <img
+              src={currentGalleryImg}
+              alt={propData.title}
+              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl"
+            />
+
+            {galleryImages.length > 1 && (
+              <>
+                <button
+                  onClick={() => setActiveImgIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1))}
+                  className="absolute left-2 sm:left-4 p-3 rounded-2xl bg-slate-900/80 hover:bg-slate-900 text-white border border-white/20 transition-all cursor-pointer hover:scale-110"
+                >
+                  <ChevronLeft className="w-6 h-6 text-emerald-400" />
+                </button>
+                <button
+                  onClick={() => setActiveImgIndex((prev) => (prev < galleryImages.length - 1 ? prev + 1 : 0))}
+                  className="absolute right-2 sm:right-4 p-3 rounded-2xl bg-slate-900/80 hover:bg-slate-900 text-white border border-white/20 transition-all cursor-pointer hover:scale-110"
+                >
+                  <ChevronRight className="w-6 h-6 text-emerald-400" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Bottom Thumbnails in Lightbox */}
+          {galleryImages.length > 1 && (
+            <div className="flex items-center gap-3 overflow-x-auto max-w-3xl py-2 scrollbar-none">
+              {galleryImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveImgIndex(idx)}
+                  className={`relative rounded-xl overflow-hidden w-16 h-16 shrink-0 border-2 transition-all cursor-pointer ${
+                    idx === activeImgIndex
+                      ? 'border-emerald-500 scale-105'
+                      : 'border-white/20 opacity-50 hover:opacity-100'
+                  }`}
+                >
+                  <img src={img} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <Footer onRouteChange={onRouteChange} />
 
