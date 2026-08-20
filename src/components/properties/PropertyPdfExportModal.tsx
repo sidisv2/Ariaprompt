@@ -51,39 +51,58 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       ? property.images[0]
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
+  const realPropId = property.id || property.code;
   const propertyUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/properties/${property.id || property.code || 'PROP-2026'}`
-    : `https://ariaprop.online/properties/${property.id || property.code || 'PROP-2026'}`;
+    ? `${window.location.origin}/properties/${realPropId}`
+    : `https://ariaprop.online/properties/${realPropId}`;
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(propertyUrl)}`;
 
   const handlePrintPdf = () => {
-    const pdfBundle = exportPropertySheetToPdf({
-      title,
-      price,
-      currency,
-      operationType: property.price && property.price < 5000 ? 'Alquiler' : 'Venta',
-      location: locationStr,
-      address: property.location?.address || locationStr,
-      bedrooms,
-      bathrooms,
-      totalAreaM2: areaM2,
-      description: property.description || 'Excelente propiedad con acabados de alta gama y gran conectividad.',
-      features: ['Luminoso', 'Balcón Corrido', 'Cochera Fija', 'Seguridad 24hs'],
-      images: property.images && property.images.length > 0 ? property.images : [imageUrl],
-      agencyName,
-      agencyPhone,
-    });
+    const oldTitle = document.title;
+    const cleanTitle = (title || 'Propiedad').replace(/[^a-zA-Z0-9\s_-]/g, '').trim();
+    document.title = `${cleanTitle}_Ficha_AriaProp`;
 
-    const printWin = window.open('', '_blank');
-    if (printWin) {
-      printWin.document.write(pdfBundle.html);
-      printWin.document.close();
-      setTimeout(() => {
-        printWin.focus();
-        printWin.print();
-      }, 300);
+    let opened = false;
+    try {
+      const pdfBundle = exportPropertySheetToPdf({
+        title,
+        price,
+        currency,
+        operationType: property.price && property.price < 5000 ? 'Alquiler' : 'Venta',
+        location: locationStr,
+        address: property.location?.address || locationStr,
+        bedrooms,
+        bathrooms,
+        totalAreaM2: areaM2,
+        description: property.description || 'Excelente propiedad con acabados de alta gama y gran conectividad.',
+        features: ['Luminoso', 'Balcón Corrido', 'Cochera Fija', 'Seguridad 24hs'],
+        images: property.images && property.images.length > 0 ? property.images : [imageUrl],
+        agencyName,
+        agencyPhone,
+      });
+
+      const printWin = window.open('', '_blank');
+      if (printWin) {
+        printWin.document.write(pdfBundle.html);
+        printWin.document.close();
+        opened = true;
+        setTimeout(() => {
+          printWin.focus();
+          printWin.print();
+        }, 250);
+      }
+    } catch (e) {
+      console.warn('⚠️ Window popup for PDF print blocked, triggering in-page print fallback:', e);
     }
+
+    if (!opened) {
+      window.print();
+    }
+
+    setTimeout(() => {
+      document.title = oldTitle;
+    }, 3000);
   };
 
   const handleCopyWhatsappText = () => {

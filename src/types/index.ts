@@ -44,7 +44,7 @@ export interface Property {
   id: string;
   title: string;
   code: string;
-  type: 'apartment' | 'house' | 'penthouse' | 'villa' | 'chalet' | 'commercial' | 'land';
+  type: 'apartment' | 'house' | 'ph' | 'land' | 'commercial' | 'office' | 'warehouse' | 'penthouse' | 'villa' | 'chalet' | string;
   status: 'available' | 'reserved' | 'sold';
   price: number;
   currency?: string;

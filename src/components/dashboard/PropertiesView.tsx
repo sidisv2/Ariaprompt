@@ -48,7 +48,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [formTitle, setFormTitle] = useState('');
   const [formCode, setFormCode] = useState('');
-  const [formType, setFormType] = useState<Property['type']>('chalet');
+  const [formType, setFormType] = useState<Property['type']>('apartment');
   const [formPrice, setFormPrice] = useState<number>(185000);
   const [formCurrency, setFormCurrency] = useState<'USD' | 'ARS' | 'EUR'>('USD');
   const [formCity, setFormCity] = useState('Buenos Aires');
@@ -353,12 +353,17 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
                       <select
                         value={formType}
                         onChange={(e) => setFormType(e.target.value as Property['type'])}
-                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white"
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-medium"
                       >
-                        <option value="chalet">Chalet</option>
-                        <option value="penthouse">Ático</option>
-                        <option value="villa">Villa</option>
-                        <option value="apartment">Piso / Loft</option>
+                        <option value="house">🏠 Casa</option>
+                        <option value="apartment">🏢 Departamento / Piso</option>
+                        <option value="ph">🏡 PH (Propiedad Horizontal)</option>
+                        <option value="land">🌲 Terreno / Lote</option>
+                        <option value="commercial">🏪 Local Comercial</option>
+                        <option value="office">💼 Oficina / Consultorio</option>
+                        <option value="warehouse">🏭 Galpón / Depósito</option>
+                        <option value="penthouse">🏰 Penthouse / Ático</option>
+                        <option value="chalet">🏡 Chalet / Villa</option>
                       </select>
                     </div>
                   </div>
