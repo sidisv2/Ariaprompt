@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { getPlanEmojiLabel } from '../../lib/planLimits';
 import { LanguageSelector } from './LanguageSelector';
 import { Sparkles, Globe, ChevronDown, User, LogOut, LayoutDashboard, Bot, FileText, Building } from 'lucide-react';
 
@@ -64,21 +65,20 @@ export const Header: React.FC<HeaderProps> = ({ currentRoute = 'marketing', onRo
               <span className="hidden sm:inline-block truncate max-w-[70px] text-white font-bold">
                 {user ? user.nombre.split(' ')[0] : t('nav.account')}
               </span>
-              {/* Plan badge — reads real PlanTier from AuthContext, never hardcoded */}
+              {/* Plan badge — reads real PlanTier & emoji */}
               {(() => {
-                if (!user) return <span className="px-1.5 py-0.2 rounded-full bg-slate-600 text-slate-200 text-[9px] font-black uppercase">{t('nav.guest')}</span>;
+                if (!user) return <span className="px-2 py-0.5 rounded-full bg-slate-700 text-slate-200 text-[9px] font-black uppercase flex items-center gap-1">⚡ GRATIS</span>;
                 const isOwner = user.isOwner || user.email.toLowerCase().trim() === 'valentinlautaromorales@gmail.com';
                 if (isOwner) {
                   return <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-300 text-slate-950 text-[10px] font-black tracking-tight uppercase shadow-md flex items-center gap-1">👑 OWNER</span>;
                 }
-                const label = getPlanBadgeLabel();
+                const emojiInfo = getPlanEmojiLabel(user.plan, false);
                 const badgeCls =
-                  label === 'Pro'  ? 'bg-emerald-400 text-slate-950' :
-                  label === 'Solo' ? 'bg-blue-400 text-slate-950' :
-                  label.includes('OWNER') ? 'bg-amber-400 text-slate-950' :
-                  label === 'Enterprise' || label === 'Dev' ? 'bg-violet-400 text-white' :
-                                     'bg-slate-600 text-slate-100'; // Gratis / normal
-                return <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase ${badgeCls}`}>{label}</span>;
+                  user.plan === 'pro'  ? 'bg-emerald-400 text-slate-950' :
+                  user.plan === 'solo' ? 'bg-blue-400 text-slate-950' :
+                  user.plan === 'desarrolladores' ? 'bg-amber-400 text-slate-950' :
+                  'bg-slate-700 text-slate-200';
+                return <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex items-center gap-1 ${badgeCls}`}>{emojiInfo.emoji} {emojiInfo.title}</span>;
               })()}
             </div>
 

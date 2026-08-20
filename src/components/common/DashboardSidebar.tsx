@@ -2,7 +2,7 @@ import React from 'react';
 import { AppRoute } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
-import { getPlanLimits } from '../../lib/planLimits';
+import { getPlanLimits, getPlanEmojiLabel } from '../../lib/planLimits';
 import { 
   BarChart3, 
   Building2, 
@@ -266,8 +266,8 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           /* Free plan: show upgrade prompt */
           <>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-                Plan Gratuito
+              <span className="text-[10px] uppercase tracking-widest text-slate-300 font-extrabold flex items-center gap-1">
+                {getPlanEmojiLabel(planTier, false).fullLabel}
               </span>
               <span className="text-[9px] text-slate-500">{planLimits.maxLeadsPerMonth} leads / mes</span>
             </div>
@@ -292,8 +292,8 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           /* Paid plan: show quota bar */
           <>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold">
-                {t('sidebar.activeQuota')}
+              <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-extrabold flex items-center gap-1">
+                {getPlanEmojiLabel(planTier, false).fullLabel}
               </span>
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></div>
             </div>

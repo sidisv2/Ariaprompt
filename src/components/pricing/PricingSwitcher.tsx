@@ -180,7 +180,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
     {
       id: 'solo',
       tierKey: 'solo' as const,
-      name: PLAN_LIMITS.solo_agent.name,
+      name: `${PLAN_LIMITS.solo.emoji} ${PLAN_LIMITS.solo_agent.name}`,
       tagline: PLAN_LIMITS.solo_agent.description,
       monthlyPrice: PLAN_LIMITS.solo_agent.monthlyPriceUsd,
       annualPrice: PLAN_LIMITS.solo_agent.annualPriceUsd,
@@ -197,7 +197,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
     {
       id: 'pro',
       tierKey: 'pro' as const,
-      name: PLAN_LIMITS.agency_pro.name,
+      name: `${PLAN_LIMITS.pro.emoji} ${PLAN_LIMITS.agency_pro.name}`,
       tagline: PLAN_LIMITS.agency_pro.description,
       monthlyPrice: PLAN_LIMITS.agency_pro.monthlyPriceUsd,
       annualPrice: PLAN_LIMITS.agency_pro.annualPriceUsd,
@@ -214,7 +214,7 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
     {
       id: 'desarrolladores',
       tierKey: 'desarrolladores' as const,
-      name: 'Desarrolladores / Enterprise',
+      name: `${PLAN_LIMITS.desarrolladores.emoji} Desarrolladores / Enterprise`,
       tagline: PLAN_LIMITS.enterprise.description,
       isCustom: true,
       monthlyPrice: 0,

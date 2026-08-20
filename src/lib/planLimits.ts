@@ -8,6 +8,7 @@ export type PlanTier = 'normal' | 'solo' | 'pro' | 'desarrolladores';
 export interface PlanLimits {
   id: PlanTier;
   name: string;
+  emoji: string;
   monthlyPriceUsd: number;
   annualPriceUsd: number;
   description: string;
@@ -27,6 +28,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimi
   normal: {
     id: 'normal',
     name: 'Gratuito',
+    emoji: '⚡',
     monthlyPriceUsd: 0,
     annualPriceUsd: 0,
     description: 'Acceso gratuito con funciones limitadas para explorar la plataforma.',
@@ -40,6 +42,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimi
   solo: {
     id: 'solo',
     name: 'Solo Agent',
+    emoji: '🎯',
     monthlyPriceUsd: 35,
     annualPriceUsd: 29,
     description: 'Ideal para corredores y agentes inmobiliarios independientes.',
@@ -53,6 +56,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimi
   pro: {
     id: 'pro',
     name: 'Agency Pro',
+    emoji: '🚀',
     monthlyPriceUsd: 99,
     annualPriceUsd: 79,
     description: 'Para agencias en crecimiento con WhatsApp y sincronización CRM.',
@@ -66,6 +70,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> & Record<PlanTier, PlanLimi
   desarrolladores: {
     id: 'desarrolladores',
     name: 'Desarrolladores',
+    emoji: '👑',
     monthlyPriceUsd: 0, // Custom pricing
     annualPriceUsd: 0,
     description: 'Para desarrolladoras, promotoras y redes inmobiliarias. Todo ilimitado.',
@@ -112,6 +117,26 @@ export function mapEstadoCuentaToPlanTier(estadoCuenta: string | null | undefine
  */
 export function getPlanLimits(tier: PlanTier | null | undefined): PlanLimits {
   return PLAN_LIMITS[tier ?? 'normal'];
+}
+
+/**
+ * Returns formatted emoji labels for badges, sidebar, and headers.
+ */
+export function getPlanEmojiLabel(tier: PlanTier | null | undefined, isOwner: boolean = false): { emoji: string; title: string; fullLabel: string } {
+  if (isOwner) {
+    return { emoji: '👑', title: 'Owner / Enterprise', fullLabel: '👑 SuperAdmin Owner' };
+  }
+  switch (tier) {
+    case 'solo':
+      return { emoji: '🎯', title: 'Solo Agent', fullLabel: '🎯 Plan Solo Agent' };
+    case 'pro':
+      return { emoji: '🚀', title: 'Agency Pro', fullLabel: '🚀 Plan Agency Pro' };
+    case 'desarrolladores':
+      return { emoji: '👑', title: 'Enterprise', fullLabel: '👑 Desarrolladores / Enterprise' };
+    case 'normal':
+    default:
+      return { emoji: '⚡', title: 'Invitado Express', fullLabel: '⚡ Invitado Express' };
+  }
 }
 
 // ─── Period Helpers ───────────────────────────────────────────────────────────

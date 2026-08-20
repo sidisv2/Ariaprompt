@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, CheckCircle2, Zap, X, Loader2 } from 'lucide-react';
-import { PlanTier } from '../../lib/planLimits';
+import { PlanTier, getPlanEmojiLabel } from '../../lib/planLimits';
 
 interface UpgradeConfirmModalProps {
   isOpen: boolean;
@@ -22,6 +22,9 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
 
   if (!isOpen) return null;
 
+  const currentLabel = getPlanEmojiLabel(currentPlan);
+  const targetLabel = getPlanEmojiLabel(targetPlan);
+
   const handleConfirm = async () => {
     setLoading(true);
     try {
@@ -36,12 +39,6 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const getTargetTitle = () => {
-    if (targetPlan === 'pro') return 'Agency Pro';
-    if (targetPlan === 'desarrolladores') return 'Enterprise / Desarrolladores';
-    return 'Solo Agent';
   };
 
   return (
@@ -65,7 +62,7 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
               Upgrade de Suscripción en Caliente
             </span>
             <h3 className="text-xl font-extrabold text-white mt-1">
-              Mejorar a {getTargetTitle()}
+              Mejorar a {targetLabel.emoji} {targetLabel.title}
             </h3>
           </div>
         </div>
@@ -76,14 +73,14 @@ export const UpgradeConfirmModal: React.FC<UpgradeConfirmModalProps> = ({
             <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto animate-bounce" />
             <h4 className="text-lg font-extrabold text-white">¡Upgrade Completado con Éxito!</h4>
             <p className="text-xs text-slate-300">
-              Tu organización ha sido actualizada al instante a <strong>{getTargetTitle()}</strong>. Todas las funciones avanzadas han sido desbloqueadas sin necesidad de re-login.
+              Tu organización ha sido actualizada al instante a <strong>{targetLabel.emoji} {targetLabel.title}</strong>. Todas las funciones avanzadas han sido desbloqueadas sin necesidad de re-login.
             </p>
           </div>
         ) : (
           <>
             <div className="p-4 rounded-2xl bg-slate-950/80 border border-white/10 space-y-3 text-xs leading-relaxed">
-              <p className="text-slate-200 font-semibold">
-                Estás mejorando tu plan de <span className="text-emerald-400 font-bold uppercase">{currentPlan === 'solo' ? 'Solo Agent' : 'Gratuito'}</span> a <span className="text-emerald-400 font-bold uppercase">{getTargetTitle()}</span>.
+              <p className="text-slate-200 font-semibold text-sm">
+                Estás mejorando tu plan de <span className="text-emerald-400 font-bold">{currentLabel.emoji} {currentLabel.title}</span> a <span className="text-emerald-400 font-bold">{targetLabel.emoji} {targetLabel.title}</span>.
               </p>
               <ul className="space-y-2 text-slate-300 pt-1">
                 <li className="flex items-center gap-2">
