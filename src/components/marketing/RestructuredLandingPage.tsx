@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppRoute } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { PLAN_LIMITS } from '../../lib/planLimits';
 import { RoiLeadCalculator } from './RoiLeadCalculator';
 import {
@@ -23,7 +24,10 @@ import {
   Globe2,
   HelpCircle,
   Check,
-  Send
+  Send,
+  Lock,
+  UserCheck,
+  FileCheck
 } from 'lucide-react';
 
 interface RestructuredLandingPageProps {
@@ -33,10 +37,13 @@ interface RestructuredLandingPageProps {
 
 export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = ({
   onRouteChange,
+  onOpenPrompt,
 }) => {
   const { user, loading, openAuthModal } = useAuth();
+  const { t } = useLanguage();
   const [billingCycle, setBillingCycle] = useState<'annual' | 'monthly'>('annual');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [sandboxStep, setSandboxStep] = useState<number>(0);
 
   const isUserLoggedInOrLoading = Boolean(
     loading ||
@@ -72,256 +79,306 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
     <div className="w-full bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950">
       
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SECCIÓN 1 — Hero: Respuesta Instantánea                            */}
+      {/* SECCIÓN 1 — Hero & Simulador Interactivo Sandbox                    */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <section className="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center overflow-hidden">
+      <section className="relative pt-10 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto overflow-hidden">
         {/* Background glow effects */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl mx-auto space-y-6">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-            <Clock className="w-4 h-4" />
-            <span>Respuesta Inmobiliaria Instantánea • Atención 24/7</span>
-          </div>
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          {/* Left Column: Value Prop & CTAs (7 Cols) */}
+          <div className="lg:col-span-7 space-y-6 text-left">
+            {/* Top Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold tracking-wide uppercase shadow-lg shadow-emerald-500/10">
+              <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span>{t('landing_hero_badge')}</span>
+            </div>
 
-          {/* Main Title */}
-          <h1 className="text-2xl sm:text-4xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight px-2 pt-2">
-            No perdás más ventas por responder tarde.{' '}
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
-              Aria Prop cualifica y deriva las consultas en segundos.
-            </span>
-          </h1>
+            {/* H1 Title */}
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
+              Tu inmobiliaria <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">nunca más pierde un lead</span> por responder tarde.
+            </h1>
 
-          {/* Subtitle */}
-          <p className="text-base sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed">
-            Tus prospectos navegan por la noche y los fines de semana. Aria atiende las dudas de tu catálogo al instante en tu web y WhatsApp, cualifica el presupuesto y agenda la visita directamente en tu calendario.
-          </p>
+            {/* Subtitle */}
+            <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl">
+              {t('landing_hero_subtitle')}
+            </p>
 
-          {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            {isUserLoggedInOrLoading ? (
+            {/* CTA Group */}
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <button
-                onClick={() => onRouteChange('dashboard-metrics')}
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
+                onClick={() => {
+                  if (onOpenPrompt) {
+                    onOpenPrompt('Hola, quisiera ver cómo Aria atiende una propiedad de mi catálogo.');
+                  } else {
+                    onRouteChange('app');
+                  }
+                }}
+                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm sm:text-base shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
               >
                 <Sparkles className="w-5 h-5 fill-slate-950 text-slate-950" />
-                <span>Ir a Mi Panel / Dashboard ➔</span>
+                <span>{t('landing_cta_primary')}</span>
               </button>
-            ) : (
+
               <button
-                onClick={() => onRouteChange('app')}
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-sm sm:text-base transition-all duration-200 shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer"
+                onClick={scrollToHowItWorks}
+                className="px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-200 font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Sparkles className="w-5 h-5 fill-slate-950 text-slate-950" />
-                <span>Probar Gratis (3 Consultas) ➔</span>
+                <span>{t('landing_cta_secondary')}</span>
               </button>
-            )}
+            </div>
 
-            <button
-              onClick={scrollToHowItWorks}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-semibold text-sm sm:text-base transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span>Ver Cómo Funciona</span>
-            </button>
+            {/* Microcopy of Trust */}
+            <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-slate-400 font-medium">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                {t('landing_microcopy')}
+              </span>
+            </div>
           </div>
 
-          {/* Trust Guarantees */}
-          {!isUserLoggedInOrLoading && (
-            <div className="flex flex-wrap items-center justify-center gap-6 pt-6 text-xs text-slate-400 font-medium">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Sin tarjeta de crédito requerida</span>
+          {/* Right Column: Interactive Sandbox Conversation Simulator (5 Cols) */}
+          <div className="lg:col-span-5">
+            <div className="rounded-3xl bg-slate-900/90 border border-emerald-500/30 p-5 shadow-2xl shadow-emerald-950/50 space-y-4 relative">
+              {/* Header Bar */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                      <Sparkles className="w-4 h-4 fill-emerald-400" />
+                    </div>
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-slate-950" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-white text-xs">Aria IA — Inmobiliaria 24/7</h3>
+                    <p className="text-[10px] text-emerald-400 font-semibold">🟢 WhatsApp & Web Widget</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/30">
+                  {t('demo_lead_score')}
+                </span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Configuración rápida, sin necesidad de código</span>
+
+              {/* Chat Messages */}
+              <div className="space-y-3 text-xs min-h-[220px] max-h-[300px] overflow-y-auto pr-1">
+                {/* Lead Msg 1 */}
+                <div className="flex justify-end">
+                  <div className="bg-emerald-600 text-slate-950 font-medium rounded-2xl rounded-tr-none px-4 py-2.5 max-w-[85%] shadow-md">
+                    {t('demo_lead_msg1')}
+                  </div>
+                </div>
+
+                {/* Aria Msg 1 */}
+                <div className="flex justify-start">
+                  <div className="bg-slate-950 border border-white/10 text-slate-200 rounded-2xl rounded-tl-none px-4 py-2.5 max-w-[90%] shadow-md space-y-2">
+                    <p className="leading-relaxed">{t('demo_aria_msg1')}</p>
+                    <div className="p-2 rounded-xl bg-slate-900 border border-emerald-500/20 text-[10px] flex items-center gap-2 text-emerald-300">
+                      <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Ficha Ref: PROP-102 · Palermo 2 amb</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lead Msg 2 */}
+                <div className="flex justify-end">
+                  <div className="bg-emerald-600 text-slate-950 font-medium rounded-2xl rounded-tr-none px-4 py-2.5 max-w-[85%] shadow-md">
+                    {t('demo_lead_msg2')}
+                  </div>
+                </div>
+
+                {/* Aria Msg 2 */}
+                <div className="flex justify-start">
+                  <div className="bg-slate-950 border border-white/10 text-slate-200 rounded-2xl rounded-tl-none px-4 py-2.5 max-w-[90%] shadow-md space-y-2">
+                    <p className="leading-relaxed">{t('demo_aria_msg2')}</p>
+                    <div className="pt-1 flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (onOpenPrompt) onOpenPrompt('Quiero agendar la visita para el jueves a las 16 hs.');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-[10px] cursor-pointer hover:bg-emerald-400 transition-colors"
+                      >
+                        📅 Confirmar Visita Jueves 16:00 hs
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Conexión nativa Tokko Broker & EasyBroker</span>
+
+              {/* Bottom Interactive Sandbox Trigger Bar */}
+              <div className="pt-2 border-t border-white/10 flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value="¿Tiene cochera disponible y acepta permuta?"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-white/10 text-slate-400 text-xs cursor-pointer"
+                  onClick={() => {
+                    if (onOpenPrompt) onOpenPrompt('¿Tiene cochera disponible y acepta permuta?');
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (onOpenPrompt) onOpenPrompt('¿Tiene cochera disponible y acepta permuta?');
+                  }}
+                  className="p-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          )}
-        </div>
-      </section>
-
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SECCIÓN 2 — Comparativa Tradicional vs Con Aria Prop                 */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-800/80">
-        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-          <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Comparativa Comercial</span>
-          <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
-            Atención Tradicional de Leads vs. Con Aria Prop
-          </h2>
-          <p className="text-sm text-slate-400">
-            Escenario cotidiano: ¿Qué ocurre cuando un prospecto consulta por un inmueble fuera del horario de oficina?
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Column 1: Without Aria */}
-          <div className="bg-slate-900/60 p-6 sm:p-8 rounded-3xl border border-red-500/20 space-y-6 relative overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-red-500/20 pb-4">
-              <div className="p-2.5 bg-red-500/10 text-red-400 rounded-xl">
-                <XCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Atención Tradicional Manual</h3>
-                <p className="text-xs text-red-400">Respuestas demoradas & fuga de prospectos</p>
-              </div>
-            </div>
-
-            <ul className="space-y-4 text-xs sm:text-sm text-slate-300">
-              <li className="flex items-start gap-3">
-                <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Demora de 10 a 14 horas en responder:</strong>
-                  Consulta realizada un Sábado a las 23:00 hs desatendida hasta el Lunes por la mañana.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Enfriamiento de la intención de compra:</strong>
-                  El prospecto pierde el interés o continúa buscando en portales y contratando a otra agencia.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Tiempo invertido en consultas no calificadas:</strong>
-                  Corredores perdiendo horas respondiendo precios básicos por WhatsApp a curiosos sin presupuesto.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Coordinación manual de visitas:</strong>
-                  Múltiples mensajes de ida y vuelta para encontrar un espacio libre en el calendario.
-                </div>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 2: With Aria Prop */}
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 sm:p-8 rounded-3xl border border-emerald-500/40 space-y-6 relative overflow-hidden shadow-xl shadow-emerald-500/5">
-            <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-4">
-              <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Con Aria Prop 24/7</h3>
-                <p className="text-xs text-emerald-400">Atención instantánea, cualificación & agendado</p>
-              </div>
-            </div>
-
-            <ul className="space-y-4 text-xs sm:text-sm text-slate-300">
-              <li className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Respuesta inmediata en segundos:</strong>
-                  Atención las 24hs en WhatsApp y Web. Muestra la ficha técnica exacta desde tu catálogo.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Datos 100% verificados sin alucinaciones:</strong>
-                  Motor RAG que consulta únicamente el inventario real de tu inmobiliaria (Tokko/EasyBroker/PDFs).
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Cualificación automática de presupuesto:</strong>
-                  Filtra curiosos analizando zona, urgencia y presupuesto antes de coordinar el contacto.
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block mb-0.5">Agendado directo en Google Calendar:</strong>
-                  Reserva la visita presencial en el horario del corredor y envía recordatorio por WhatsApp.
-                </div>
-              </li>
-            </ul>
           </div>
         </div>
       </section>
 
-
       {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* SECCIÓN 3 — Cómo Funciona (Flujo Visual en 4 Pasos Verificados)    */}
+      {/* SECCIÓN 2 — Flujo: De Consulta a Visita Agendada                     */}
       {/* ─────────────────────────────────────────────────────────────────── */}
-      <section id="how-it-works-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-800/80">
+      <section id="how-it-works-section" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-          <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Flujo de Trabajo</span>
-          <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
-            ¿Cómo funciona Aria Prop en tu inmobiliaria?
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" /> {t('flow_title')}
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+            {t('flow_subtitle')}
           </h2>
-          <p className="text-sm text-slate-400">
-            Cuatro pasos automatizados para transformar visitantes en visitas agendadas y cierres comerciales.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
           {/* Step 1 */}
-          <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4 relative">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-white/10 hover:border-emerald-500/40 transition-all space-y-4 relative shadow-xl">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-sm">
               01
             </div>
-            <h3 className="text-base font-bold text-white">Captura Multicanal & CRM</h3>
+            <h3 className="text-base font-extrabold text-white">{t('flow_step1_title')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Conectá tu catálogo vía API Key con <strong>Tokko Broker</strong>, <strong>EasyBroker</strong> o subí tus fichas directas (PDF/CSV). Recibe consultas en WhatsApp y Web.
+              {t('flow_step1_desc')}
             </p>
-            <div className="pt-2 text-[11px] text-slate-500 border-t border-slate-800">
-              * Para portales inmobiliarios, las consultas se centralizan hacia tu canal oficial de WhatsApp/Web.
-            </div>
           </div>
 
           {/* Step 2 */}
-          <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4 relative">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-white/10 hover:border-emerald-500/40 transition-all space-y-4 relative shadow-xl">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-sm">
               02
             </div>
-            <h3 className="text-base font-bold text-white">Atención RAG en Segundos</h3>
+            <h3 className="text-base font-extrabold text-white">{t('flow_step2_title')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              El motor RAG analiza el mensaje y responde al instante con el precio real, m², ambientes y fotos de la propiedad solicitada sin inventar datos.
+              {t('flow_step2_desc')}
             </p>
-            <div className="pt-2 text-[11px] text-emerald-400/80 border-t border-slate-800">
-              ✔ Cero respuestas alucinadas
-            </div>
           </div>
 
           {/* Step 3 */}
-          <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4 relative">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-white/10 hover:border-emerald-500/40 transition-all space-y-4 relative shadow-xl">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-sm">
               03
             </div>
-            <h3 className="text-base font-bold text-white">Cualificación & Agendado</h3>
+            <h3 className="text-base font-extrabold text-white">{t('flow_step3_title')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Aria valida el presupuesto del comprador, su urgencia y zona preferida. Coordina día y hora reservando la cita directamente en Google Calendar.
+              {t('flow_step3_desc')}
             </p>
-            <div className="pt-2 text-[11px] text-emerald-400/80 border-t border-slate-800">
-              ✔ Sincronizado en tu agenda
-            </div>
           </div>
 
           {/* Step 4 */}
-          <div className="bg-slate-900/80 p-6 rounded-2xl border border-slate-800 space-y-4 relative">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-emerald-500/40 shadow-xl shadow-emerald-500/5 space-y-4 relative">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-sm">
               04
             </div>
-            <h3 className="text-base font-bold text-white">Dashboard & Derivación</h3>
+            <h3 className="text-base font-extrabold text-white">{t('flow_step4_title')}</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              El lead queda registrado en tu panel con su scoring (0-100). Si requiere intervención humana o negociación, se deriva al WhatsApp del corredor asignado.
+              {t('flow_step4_desc')}
             </p>
-            <div className="pt-2 text-[11px] text-emerald-400/80 border-t border-slate-800">
-              ✔ Transferencia a WhatsApp humano
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SECCIÓN 3 — Comparativa Antes vs. Con Aria Prop                      */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">{t('comp_title')}</span>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Transformación Comercial para tu Inmobiliaria
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Column 1: Tradicional */}
+          <div className="bg-slate-900/60 p-6 sm:p-8 rounded-3xl border border-rose-500/20 space-y-6 relative overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-rose-500/20 pb-4">
+              <div className="p-2.5 bg-rose-500/10 text-rose-400 rounded-2xl">
+                <XCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">{t('comp_trad_title')}</h3>
+                <p className="text-xs text-rose-400">Pérdida de oportunidades por demoras</p>
+              </div>
             </div>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {t('comp_trad_desc')}
+            </p>
+          </div>
+
+          {/* Column 2: Con Aria Prop */}
+          <div className="bg-gradient-to-b from-slate-900 to-slate-950 p-6 sm:p-8 rounded-3xl border border-emerald-500/40 space-y-6 relative overflow-hidden shadow-xl shadow-emerald-500/5">
+            <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-4">
+              <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-2xl">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">{t('comp_aria_title')}</h3>
+                <p className="text-xs text-emerald-400">Respuesta inmediata & agenda llena</p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              {t('comp_aria_desc')}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* SECCIÓN 4 — Seguridad & Privacidad B2B                               */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
+        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4" /> {t('security_title')}
+          </div>
+          <p className="text-sm text-slate-400">
+            {t('security_subtitle')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-white/10 space-y-3">
+            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl w-fit">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-white text-base">{t('security_feat1_title')}</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {t('security_feat1_desc')}
+            </p>
+          </div>
+
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-white/10 space-y-3">
+            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl w-fit">
+              <FileCheck className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-white text-base">{t('security_feat2_title')}</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {t('security_feat2_desc')}
+            </p>
+          </div>
+
+          <div className="bg-slate-900/80 p-6 rounded-3xl border border-white/10 space-y-3">
+            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl w-fit">
+              <UserCheck className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-white text-base">{t('security_feat3_title')}</h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {t('security_feat3_desc')}
+            </p>
           </div>
         </div>
       </section>
