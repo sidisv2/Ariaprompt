@@ -138,18 +138,18 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             </h4>
             <ul className="space-y-2 text-slate-400 text-[11px]">
               <li>
-                <button onClick={() => handleNav('terminos')} className="hover:text-emerald-400 transition-colors text-left">
+                <button onClick={() => handleNav('terminos')} className="hover:text-emerald-400 transition-colors text-left font-normal">
                   {t('footer.terms')}
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('privacidad')} className="hover:text-emerald-400 transition-colors text-left">
+                <button onClick={() => handleNav('privacidad')} className="hover:text-emerald-400 transition-colors text-left font-normal">
                   {t('footer.privacy')}
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('reembolsos')} className="hover:text-emerald-400 transition-colors text-left">
-                  {t('footer.refunds') || (lang === 'en' ? 'Refund Policy' : lang === 'pt' ? 'Política de Reembolso' : 'Política de Reembolso')}
+                <button onClick={() => handleNav('reembolsos')} className="hover:text-emerald-400 transition-colors text-left font-normal">
+                  {t('footer.refunds')}
                 </button>
               </li>
             </ul>
