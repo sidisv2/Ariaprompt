@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AppRoute, Property } from '../types';
-import { Header } from '../components/common/Header';
 import { Footer } from '../components/marketing/Footer';
 import {
   Building2,
@@ -138,8 +137,6 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans">
-      <Header onRouteChange={onRouteChange} />
-
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fadeIn">
         {/* Catalog Banner */}
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/60 border border-emerald-500/30 p-8 sm:p-12 shadow-2xl">
@@ -261,19 +258,25 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Moneda
               </label>
-              <div className="flex rounded-xl bg-slate-950 p-1 border border-white/10">
+              <div className="flex flex-row gap-2 rounded-xl bg-slate-950 p-1 border border-white/10">
                 <button
+                  type="button"
                   onClick={() => setCurrencyFilter('USD')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    currencyFilter === 'USD' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
+                    currencyFilter === 'USD'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                      : 'bg-white/5 text-slate-400 hover:text-white'
                   }`}
                 >
                   USD ($)
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCurrencyFilter('ARS')}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    currencyFilter === 'ARS' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400'
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer ${
+                    currencyFilter === 'ARS'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                      : 'bg-white/5 text-slate-400 hover:text-white'
                   }`}
                 >
                   ARS ($)
