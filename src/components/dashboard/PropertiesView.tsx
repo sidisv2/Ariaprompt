@@ -20,6 +20,7 @@ import {
 
 import { PropertyImporterModal, ImportedPropertyItem } from '../properties/PropertyImporterModal';
 import { PropertyPdfExportModal } from '../properties/PropertyPdfExportModal';
+import { PropertyAdStudioModal } from '../properties/PropertyAdStudioModal';
 
 interface PropertiesViewProps {
   properties: Property[];
@@ -33,6 +34,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isImporterOpen, setIsImporterOpen] = useState(false);
   const [selectedPdfProperty, setSelectedPdfProperty] = useState<Property | null>(null);
+  const [selectedAdProperty, setSelectedAdProperty] = useState<Property | null>(null);
   const [isSyncingAI, setIsSyncingAI] = useState(false);
 
   const handleSyncAI = () => {
@@ -261,15 +263,19 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => setSelectedAdProperty(prop)}
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-[10px] shadow-sm transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3 fill-slate-950" />
+                  <span>🪄 Crear Anuncio IA</span>
+                </button>
+                <button
                   onClick={() => setSelectedPdfProperty(prop)}
                   className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[10px] border border-emerald-500/40 transition-all flex items-center gap-1 cursor-pointer"
                 >
                   <FileText className="w-3 h-3 text-emerald-400" />
                   <span>📄 Ficha PDF</span>
                 </button>
-                <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  AI Synced
-                </span>
               </div>
             </div>
 
@@ -537,6 +543,30 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({ properties, onAd
         isOpen={Boolean(selectedPdfProperty)}
         onClose={() => setSelectedPdfProperty(null)}
         property={selectedPdfProperty}
+      />
+
+      {/* Property AI Ad Studio Modal */}
+      <PropertyAdStudioModal
+        isOpen={Boolean(selectedAdProperty)}
+        onClose={() => setSelectedAdProperty(null)}
+        property={
+          selectedAdProperty
+            ? {
+                id: selectedAdProperty.id,
+                title: selectedAdProperty.title,
+                code: selectedAdProperty.code,
+                price: selectedAdProperty.price,
+                currency: 'USD',
+                type: selectedAdProperty.type,
+                operation: selectedAdProperty.price < 5000 ? 'alquiler' : 'venta',
+                bedrooms: selectedAdProperty.features.bedrooms,
+                area_m2: selectedAdProperty.features.areaM2,
+                zone: selectedAdProperty.location.zone || selectedAdProperty.location.city,
+                address: selectedAdProperty.location.address,
+                description: selectedAdProperty.description,
+              }
+            : null
+        }
       />
 
     </div>
