@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Check, Sparkles, Zap } from 'lucide-react';
+import { Check, Sparkles, Zap, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../hooks/useSubscription';
 import { AppRoute } from '../../types';
-
-import { PLAN_LIMITS } from '../../lib/planLimits';
+import { PLAN_LIMITS, PlanTier } from '../../lib/planLimits';
+import { UpgradeConfirmModal } from './UpgradeConfirmModal';
 
 interface PricingSwitcherProps {
   onRouteChange?: (route: AppRoute) => void;
@@ -12,16 +13,173 @@ interface PricingSwitcherProps {
 export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange }) => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const { user, openAuthModal, requireAuthForPayment } = useAuth();
+  const { userPlan, isOwner, upgradeSubscription } = useSubscription();
 
-  const isOwner = Boolean(
-    user && (user.isOwner || user.email?.toLowerCase().trim() === 'valentinlautaromorales@gmail.com')
-  );
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [targetUpgradePlan, setTargetUpgradePlan] = useState<PlanTier>('pro');
 
   const hasDiscount5 = Boolean(localStorage.getItem('aria_discount_5') === 'true');
 
+  const WHATSAPP_ENTERPRISE_URL =
+    'https://wa.me/5492604014372?text=Hola!%20Tengo%20un%20plan%20en%20Ariaprop%20y%20quiero%20escalar%20mi%20inmobiliaria%20a%20Enterprise%20%F0%9F%9A%80';
+
+  const getCardProps = (planTier: 'solo' | 'pro' | 'desarrolladores') => {
+    // 1. Owner / Superadmin state
+    if (isOwner) {
+      if (planTier === 'desarrolladores') {
+        return {
+          badge: '👑 Tu Plan Actual (Owner / Enterprise)',
+          buttonText: '✓ Acceso Total (Owner)',
+          disabled: true,
+          action: () => {},
+          isCurrent: true,
+          color: 'border-amber-400/60 bg-slate-900/90 shadow-2xl shadow-amber-500/10',
+        };
+      }
+      return {
+        badge: '✓ Incluido en tu Plan',
+        buttonText: '✓ Incluido en tu Plan',
+        disabled: true,
+        action: () => {},
+        isCurrent: true,
+        color: 'border-slate-800 bg-slate-900/60',
+      };
+    }
+
+    // 2. User has 'solo' plan
+    if (userPlan === 'solo') {
+      if (planTier === 'solo') {
+        return {
+          badge: '✓ Tu Plan Actual',
+          buttonText: '✓ Plan Solo Agent Activo',
+          disabled: true,
+          action: () => {},
+          isCurrent: true,
+          color: 'border-slate-700 bg-slate-900/80',
+        };
+      }
+      if (planTier === 'pro') {
+        return {
+          badge: '⚡ UPGRADE DISPONIBLE',
+          buttonText: '⚡ Mejorar a Agency Pro ➔',
+          disabled: false,
+          action: () => {
+            setTargetUpgradePlan('pro');
+            setUpgradeModalOpen(true);
+          },
+          isCurrent: false,
+          color: 'border-emerald-400 bg-slate-900/90 shadow-2xl shadow-emerald-500/20 ring-2 ring-emerald-400/30',
+        };
+      }
+      if (planTier === 'desarrolladores') {
+        return {
+          badge: 'Solución a Medida',
+          buttonText: 'Escalar a Enterprise ➔',
+          disabled: false,
+          action: () => {
+            window.open(WHATSAPP_ENTERPRISE_URL, '_blank');
+          },
+          isCurrent: false,
+          color: 'border-cyan-500/30 bg-slate-900/60',
+        };
+      }
+    }
+
+    // 3. User has 'pro' plan
+    if (userPlan === 'pro') {
+      if (planTier === 'solo' || planTier === 'pro') {
+        return {
+          badge: planTier === 'pro' ? '✓ Tu Plan Actual' : '✓ Incluido en tu Plan',
+          buttonText: planTier === 'pro' ? '✓ Plan Agency Pro Activo' : '✓ Incluido en tu Plan',
+          disabled: true,
+          action: () => {},
+          isCurrent: planTier === 'pro',
+          color: planTier === 'pro' ? 'border-emerald-500/50 bg-slate-900/90 shadow-2xl shadow-emerald-500/10' : 'border-slate-800 bg-slate-900/60',
+        };
+      }
+      if (planTier === 'desarrolladores') {
+        return {
+          badge: '👑 ESCALA CORPORATIVA',
+          buttonText: '👑 Escalar a Enterprise ➔',
+          disabled: false,
+          action: () => {
+            window.open(WHATSAPP_ENTERPRISE_URL, '_blank');
+          },
+          isCurrent: false,
+          color: 'border-amber-400/60 bg-slate-900/90 shadow-2xl shadow-amber-500/10',
+        };
+      }
+    }
+
+    // 4. User has 'desarrolladores' (Enterprise) plan
+    if (userPlan === 'desarrolladores') {
+      return {
+        badge: planTier === 'desarrolladores' ? '👑 Tu Plan Actual (Enterprise)' : '✓ Incluido en tu Plan',
+        buttonText: planTier === 'desarrolladores' ? '✓ Plan Enterprise Activo' : '✓ Incluido en tu Plan',
+        disabled: true,
+        action: () => {},
+        isCurrent: true,
+        color: planTier === 'desarrolladores' ? 'border-amber-400/60 bg-slate-900/90 shadow-2xl shadow-amber-500/10' : 'border-slate-800 bg-slate-900/60',
+      };
+    }
+
+    // 5. Default: Visitor or 'normal' (guest/gratis) tier
+    if (planTier === 'solo') {
+      return {
+        badge: '7 días de prueba gratis',
+        buttonText: 'Empezar Prueba Gratis',
+        disabled: false,
+        action: () => handleSelectPlan('solo'),
+        isCurrent: false,
+        color: 'border-slate-800 bg-slate-900/60',
+      };
+    }
+    if (planTier === 'pro') {
+      return {
+        badge: 'RECOMENDADO — PLAN MÁS VENDIDO',
+        buttonText: 'Probar Plan Pro Gratis',
+        disabled: false,
+        action: () => handleSelectPlan('pro'),
+        isCurrent: false,
+        color: 'border-emerald-500/50 bg-slate-900/90 shadow-2xl shadow-emerald-500/10',
+      };
+    }
+    return {
+      badge: 'Solución a Medida',
+      buttonText: 'Contactar Ventas',
+      disabled: false,
+      action: () => {
+        window.open(WHATSAPP_ENTERPRISE_URL, '_blank');
+      },
+      isCurrent: false,
+      color: 'border-cyan-500/30 bg-slate-900/60',
+    };
+  };
+
+  const handleSelectPlan = (planId: string) => {
+    localStorage.setItem('aria_selected_billing_cycle', billingCycle);
+    const passed = requireAuthForPayment({
+      planId,
+      targetRoute: 'dashboard-checkout',
+    });
+    if (!passed) {
+      openAuthModal('signup', planId, 'dashboard-checkout');
+    } else if (onRouteChange) {
+      onRouteChange('dashboard-checkout');
+    }
+  };
+
+  const handleExecuteUpgrade = async (targetPlan: PlanTier) => {
+    const res = await upgradeSubscription(targetPlan);
+    if (res.success && onRouteChange) {
+      onRouteChange('dashboard-metrics');
+    }
+  };
+
   const plans = [
     {
-      id: 'starter',
+      id: 'solo',
+      tierKey: 'solo' as const,
       name: PLAN_LIMITS.solo_agent.name,
       tagline: PLAN_LIMITS.solo_agent.description,
       monthlyPrice: PLAN_LIMITS.solo_agent.monthlyPriceUsd,
@@ -35,12 +193,10 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
         'Soporte por Email & Chat',
       ],
       popular: false,
-      badge: '7 días de prueba gratis',
-      buttonText: 'Empezar Prueba Gratis',
-      color: 'border-slate-800 bg-slate-900/60',
     },
     {
       id: 'pro',
+      tierKey: 'pro' as const,
       name: PLAN_LIMITS.agency_pro.name,
       tagline: PLAN_LIMITS.agency_pro.description,
       monthlyPrice: PLAN_LIMITS.agency_pro.monthlyPriceUsd,
@@ -54,12 +210,10 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
         'Soporte Prioritario VIP 24/7',
       ],
       popular: true,
-      badge: 'RECOMENDADO — PLAN MÁS VENDIDO',
-      buttonText: 'Probar Plan Pro Gratis',
-      color: 'border-emerald-500/50 bg-slate-900/90 shadow-2xl shadow-emerald-500/10',
     },
     {
-      id: 'custom',
+      id: 'desarrolladores',
+      tierKey: 'desarrolladores' as const,
       name: 'Desarrolladores / Enterprise',
       tagline: PLAN_LIMITS.enterprise.description,
       isCustom: true,
@@ -73,28 +227,8 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
         'Gerente de Cuenta Dedicado & SLA 99.9%',
       ],
       popular: false,
-      badge: isOwner ? '👑 Tu Plan Actual (Owner / Enterprise)' : 'Solución a Medida',
-      buttonText: isOwner ? '✓ Acceso Total' : 'Contactar Ventas',
-      color: isOwner ? 'border-amber-400/60 bg-slate-900/90 shadow-2xl shadow-amber-500/10' : 'border-cyan-500/30 bg-slate-900/60',
     },
   ];
-
-  const handleSelectPlan = (planId: string) => {
-    if (isOwner) {
-      if (onRouteChange) onRouteChange('app');
-      return;
-    }
-    localStorage.setItem('aria_selected_billing_cycle', billingCycle);
-    const passed = requireAuthForPayment({
-      planId,
-      targetRoute: 'dashboard-checkout',
-    });
-    if (!passed) {
-      openAuthModal('signup', planId, 'dashboard-checkout');
-    } else if (onRouteChange) {
-      onRouteChange('dashboard-checkout');
-    }
-  };
 
   return (
     <div className="space-y-10">
@@ -138,31 +272,35 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
         {plans.map((plan) => {
           const rawPrice = billingCycle === 'annual' ? plan.annualPrice : plan.monthlyPrice;
           const price = hasDiscount5 ? Math.round(rawPrice * 0.95) : rawPrice;
+          const cardProps = getCardProps(plan.tierKey);
+
           return (
             <div
               key={plan.id}
-              className={`relative rounded-3xl p-6 sm:p-8 flex flex-col justify-between border transition-all hover:scale-[1.02] ${plan.color}`}
+              className={`relative rounded-3xl p-6 sm:p-8 flex flex-col justify-between border transition-all hover:scale-[1.02] ${cardProps.color}`}
             >
-              {plan.popular && (
+              {plan.popular && !cardProps.isCurrent && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-emerald-400 text-slate-950 font-black text-[11px] uppercase tracking-wider shadow-lg shadow-emerald-400/40 flex items-center gap-1.5 border border-emerald-300 z-20 shrink-0 whitespace-nowrap">
                   <Zap className="w-3.5 h-3.5 fill-slate-950 stroke-none" />
-                  <span className="text-slate-950 font-black">{plan.badge}</span>
+                  <span className="text-slate-950 font-black">{cardProps.badge}</span>
                 </div>
               )}
 
               <div>
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                  {!plan.popular && (
-                    <span className="text-[10px] font-bold text-slate-300 bg-slate-800 px-2.5 py-1 rounded-full border border-white/10">
-                      {plan.badge}
+                  {(!plan.popular || cardProps.isCurrent) && (
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${
+                      cardProps.isCurrent ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-extrabold' : 'bg-slate-800 text-slate-300 border-white/10'
+                    }`}>
+                      {cardProps.badge}
                     </span>
                   )}
                 </div>
 
                 <p className="text-xs text-slate-400 mb-6 min-h-[32px]">{plan.tagline}</p>
 
-                {/* Price Display with Animated Transition */}
+                {/* Price Display */}
                 <div className="mb-6 pb-6 border-b border-white/10">
                   {plan.isCustom ? (
                     <div className="flex items-baseline gap-1">
@@ -207,20 +345,32 @@ export const PricingSwitcher: React.FC<PricingSwitcherProps> = ({ onRouteChange 
 
               {/* Action Button */}
               <button
-                onClick={() => handleSelectPlan(plan.id)}
-                className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                  plan.popular
-                    ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25'
-                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                onClick={cardProps.action}
+                disabled={cardProps.disabled}
+                className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 ${
+                  cardProps.disabled
+                    ? 'bg-slate-800 text-slate-400 border border-white/5 cursor-not-allowed'
+                    : plan.popular || cardProps.buttonText.includes('⚡')
+                    ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 cursor-pointer hover:scale-105'
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10 cursor-pointer hover:scale-105'
                 }`}
               >
-                <span>{plan.buttonText}</span>
+                <span>{cardProps.buttonText}</span>
               </button>
 
             </div>
           );
         })}
       </div>
+
+      {/* Instant Hot Upgrade Modal */}
+      <UpgradeConfirmModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        currentPlan={userPlan}
+        targetPlan={targetUpgradePlan}
+        onConfirmUpgrade={handleExecuteUpgrade}
+      />
 
     </div>
   );

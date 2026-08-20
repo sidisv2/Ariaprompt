@@ -48,6 +48,7 @@ interface AuthContextType {
   confirmSignOut: () => Promise<void>;
   cancelSignOut: () => void;
   updateUserProfile: (updates: { nombre?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateUserPlan: (newPlan: PlanTier) => Promise<{ success: boolean; error?: string }>;
   updateUserPreferences: (prefs: Partial<UserPreferences>) => void;
   requireAuthForPayment: (options?: { planId?: string; targetRoute?: AppRoute; onAuthenticated?: () => void }) => boolean;
   openAuthModal: (tab?: 'login' | 'signup', planId?: string, targetRoute?: AppRoute) => void;
@@ -577,6 +578,62 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
     setAuthModalOpen(false);
   };
 
+  const updateUserPlan = async (newPlan: PlanTier): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'Usuario no autenticado' };
+
+    try {
+      const estadoCuentaMap: Record<PlanTier, string> = {
+        normal: 'gratis',
+        solo: 'solo_agent',
+        pro: 'agency_pro',
+        desarrolladores: 'enterprise',
+      };
+      const estadoCuenta = estadoCuentaMap[newPlan] || 'agency_pro';
+
+      if (isSupabaseConfigured && supabase && user.id) {
+        await supabase
+          .from('profiles')
+          .update({
+            estado_cuenta: estadoCuenta,
+            plan_id: newPlan,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+
+        await supabase
+          .from('organizations')
+          .update({
+            plan: newPlan,
+            plan_tier: estadoCuenta,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id);
+      }
+
+      const updatedUser: AppUser = {
+        ...user,
+        plan: newPlan,
+      };
+      setUser(updatedUser);
+
+      const storedSession = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
+      if (storedSession) {
+        try {
+          const parsed = JSON.parse(storedSession);
+          localStorage.setItem(
+            LOCAL_STORAGE_SESSION_KEY,
+            JSON.stringify({ ...parsed, plan: newPlan })
+          );
+        } catch (e) {}
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error in updateUserPlan:', err);
+      return { success: false, error: err?.message || 'Error al actualizar el plan' };
+    }
+  };
+
   /** Maps PlanTier to a short human-readable badge label. */
   const getPlanBadgeLabel = (): string => {
     if (!user) return '';
@@ -613,6 +670,7 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         confirmSignOut,
         cancelSignOut,
         updateUserProfile,
+        updateUserPlan,
         updateUserPreferences,
         requireAuthForPayment,
         openAuthModal,
