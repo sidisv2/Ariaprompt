@@ -156,7 +156,9 @@ function AppInner() {
 
       let query = supabase.from('properties').select('*');
       if (authUserId && !user?.isDemoAccount) {
-        query = query.or(`user_id.eq.${authUserId},organization_id.eq.${orgId || authUserId}`);
+        const validOrgId = (user as any)?.organization_id || (user as any)?.organizationId;
+        const orgFilter = validOrgId ? `,organization_id.eq.${validOrgId}` : '';
+        query = query.or(`user_id.eq.${authUserId}${orgFilter}`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -245,11 +247,12 @@ function AppInner() {
       } catch {}
     }
 
-    const orgId = (user as any)?.organizationId || authUserId;
     const rawOp = (newPropData as any).operation_type || (newPropData as any).operation || (Number(newPropData.price) < 5000 ? 'rent' : 'sale');
     const normalizedOp = String(rawOp).toLowerCase().includes('alquiler') || String(rawOp).toLowerCase().includes('rent') ? 'rent' : 'sale';
 
     const dbPayload: any = {
+      user_id: authUserId || null,
+      organization_id: (user as any)?.organization_id || null,
       title: newPropData.title || 'Propiedad sin título',
       code: newPropData.code || `PROP-${Math.floor(100 + Math.random() * 900)}`,
       type: newPropData.type || 'apartment',
@@ -268,11 +271,6 @@ function AppInner() {
       images: newPropData.images || [],
       created_at: new Date().toISOString(),
     };
-
-    if (authUserId) {
-      dbPayload.user_id = authUserId;
-      dbPayload.organization_id = orgId || authUserId;
-    }
 
     if (isSupabaseConfigured && supabase) {
       console.log('Enviando propiedad a Supabase:', dbPayload);
