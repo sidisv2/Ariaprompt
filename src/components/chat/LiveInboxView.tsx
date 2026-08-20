@@ -19,6 +19,7 @@ import {
   Check,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { LeadScoringBadge, computeLeadScore } from './LeadScoringBadge';
 
 export interface InboxLeadItem {
   id: string;
@@ -365,21 +366,36 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                     </p>
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-md font-bold uppercase ${
-                          lead.status === 'handover'
-                            ? 'bg-amber-500/20 text-amber-300'
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`px-2 py-0.5 rounded-md font-bold uppercase ${
+                            lead.status === 'handover'
+                              ? 'bg-amber-500/20 text-amber-300'
+                              : lead.status === 'qualified'
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : 'bg-slate-800 text-slate-300'
+                          }`}
+                        >
+                          {lead.status === 'handover'
+                            ? '👤 Intervención'
                             : lead.status === 'qualified'
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : 'bg-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {lead.status === 'handover'
-                          ? '👤 Intervención'
-                          : lead.status === 'qualified'
-                          ? '🎯 Calificado'
-                          : '⚡ Frío'}
-                      </span>
+                            ? '🎯 Calificado'
+                            : '⚡ Frío'}
+                        </span>
+
+                        <LeadScoringBadge
+                          score={
+                            computeLeadScore({
+                              status: lead.status,
+                              budget_max_usd: lead.budget_max_usd,
+                              hasVisitRequested: lead.status === 'handover',
+                              totalMessages: lead.total_messages,
+                            }).score
+                          }
+                          size="sm"
+                        />
+                      </div>
+
                       <span>
                         {new Date(lead.last_message_at).toLocaleTimeString([], {
                           hour: '2-digit',
@@ -405,11 +421,24 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                     {activeLead.user_name ? activeLead.user_name.charAt(0).toUpperCase() : 'P'}
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-sm text-white">
-                      {activeLead.user_name || activeLead.user_phone}
-                    </h3>
-                    <p className="text-[10px] text-slate-400">
-                      Zona: {activeLead.preferred_zone || 'CABA'} · Presupuesto: ${activeLead.budget_max_usd?.toLocaleString()} USD
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-extrabold text-sm text-white">
+                        {activeLead.user_name || activeLead.user_phone}
+                      </h3>
+                      <LeadScoringBadge
+                        score={
+                          computeLeadScore({
+                            status: activeLead.status,
+                            budget_max_usd: activeLead.budget_max_usd,
+                            hasVisitRequested: activeLead.status === 'handover',
+                            totalMessages: activeLead.total_messages,
+                          }).score
+                        }
+                        size="sm"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Zona: <strong className="text-slate-200">{activeLead.preferred_zone || 'CABA'}</strong> · Presupuesto: <strong className="text-emerald-400">${activeLead.budget_max_usd?.toLocaleString()} USD</strong> · Visita: <strong className="text-amber-300">Viernes 16:00 hs</strong>
                     </p>
                   </div>
                 </div>

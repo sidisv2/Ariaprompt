@@ -27,6 +27,7 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { exportPropertySheetToPdf, generatePropertySheetDataUri } from '../../../lib/pdf/property-sheet';
 import { LiveInboxView } from '../chat/LiveInboxView';
+import { LeadScoringBadge, computeLeadScore } from '../chat/LeadScoringBadge';
 
 export interface CrmLead {
   id: string;
@@ -527,10 +528,11 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {[
               { id: 'all', label: 'Todos' },
-              { id: 'qualified', label: 'Calificados' },
-              { id: 'handover', label: 'Derivados' },
-              { id: 'active', label: 'Activos' },
-              { id: 'closed', label: 'Cerrados' },
+              { id: 'hot', label: '🔥 Calientes' },
+              { id: 'warm', label: '⚡ Tibios' },
+              { id: 'cold', label: '❄️ Fríos' },
+              { id: 'qualified', label: '🎯 Calificados' },
+              { id: 'handover', label: '👤 Derivados' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -570,6 +572,13 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                   ? new Date(lead.last_message_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
                   : '';
 
+                const computedScoring = computeLeadScore({
+                  status: lead.status,
+                  budget_max_usd: lead.budget_max_usd,
+                  hasVisitRequested: lead.status === 'handover',
+                  totalMessages: lead.total_messages,
+                });
+
                 return (
                   <div
                     key={lead.id}
@@ -581,10 +590,16 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <h4 className="font-bold text-white text-xs truncate">
-                        {lead.user_name || `Lead ${lead.user_phone}`}
-                      </h4>
-                      <span className="text-[10px] text-slate-400 font-mono">{formattedDate}</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h4 className="font-bold text-white text-xs truncate">
+                          {lead.user_name || `Lead ${lead.user_phone}`}
+                        </h4>
+                        <LeadScoringBadge
+                          score={computedScoring.score}
+                          size="sm"
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0">{formattedDate}</span>
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
