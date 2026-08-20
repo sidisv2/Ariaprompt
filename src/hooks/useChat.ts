@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { INITIAL_BOT_CONFIG } from '../data/mockData';
 import { useLanguage } from '../context/LanguageContext';
+import { generateStructuredAriaRealEstateResponse } from '../../api/_lib/openrouterService';
 
 export interface ChatMessage {
   id: string;
@@ -51,123 +52,130 @@ export function useChat(options?: { initialContext?: string }) {
 
     setMessages((prev) => [...prev, placeholderBotMsg]);
 
-    const historyPayload = messages
+    const historyPayload: { sender: 'user' | 'assistant'; content: string }[] = messages
       .filter((m) => m.content && m.content !== INITIAL_BOT_CONFIG.welcomeMessage)
-      .map((m) => ({ sender: m.sender === 'user' ? 'user' : 'bot', content: m.content || m.text || '' }));
+      .map((m) => ({ sender: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant', content: m.content || m.text || '' }));
 
     try {
+      let replyText = '';
+      let recommendedPropId: string | undefined = undefined;
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'text/event-stream, application/json',
+          'Accept': 'application/json, text/event-stream',
         },
         body: JSON.stringify({ message: text, history: historyPayload, context: ctx, lang }),
       });
 
-      if (!response.ok) {
-        let errDetails = `Error de servidor HTTP ${response.status}`;
-        try {
-          const errJson = await response.json();
-          if (errJson.error || errJson.details) {
-            errDetails = `${errJson.error || 'Error'}: ${errJson.details || ''}`;
+      const contentType = response.headers.get('content-type') || '';
+
+      if (response.ok) {
+        if (contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.replyText || data.response || data.text) {
+            replyText = data.replyText || data.response || data.text;
           }
-        } catch {}
-        throw new Error(errDetails);
-      }
+          if (data.matchedProperties && data.matchedProperties.length > 0) {
+            recommendedPropId = data.matchedProperties[0].id;
+          }
+        } else if (response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let done = false;
+          let buffer = '';
 
-      if (!response.body) {
-        throw new Error('Servidor devolvió respuesta vacía.');
-      }
+          while (!done) {
+            const { value, done: doneReading } = await reader.read();
+            done = doneReading;
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let accumulatedText = '';
-      let buffer = '';
-      let recommendedPropId: string | undefined = undefined;
+            if (value) {
+              buffer += decoder.decode(value, { stream: !done });
+              const parts = buffer.split('\n\n');
+              buffer = parts.pop() || '';
 
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-
-        if (value) {
-          buffer += decoder.decode(value, { stream: !done });
-          const parts = buffer.split('\n\n');
-          buffer = parts.pop() || '';
-
-          for (const part of parts) {
-            const line = part.trim();
-            if (line.startsWith('data: ')) {
-              try {
-                const jsonStr = line.replace('data: ', '').trim();
-                if (jsonStr) {
-                  const parsed = JSON.parse(jsonStr);
-                  if (parsed.error) {
-                    accumulatedText = `⚠️ **Error de la IA**: ${parsed.error}${parsed.details ? ` (${parsed.details})` : ''}. Por favor, reintente en unos momentos.`;
-                    setMessages((prev) =>
-                      prev.map((m) => (m.id === botMessageId ? { ...m, content: accumulatedText, text: accumulatedText } : m))
-                    );
-                    setIsTyping(false);
-                    return;
-                  }
-                  if (parsed.text) {
-                    accumulatedText += parsed.text;
-                    setMessages((prev) =>
-                      prev.map((m) => (m.id === botMessageId ? { ...m, content: accumulatedText, text: accumulatedText } : m))
-                    );
-                  }
-                  if (parsed.recommendedPropertyId) {
-                    recommendedPropId = parsed.recommendedPropertyId;
+              for (const part of parts) {
+                const line = part.trim();
+                if (line.startsWith('data: ')) {
+                  try {
+                    const jsonStr = line.replace('data: ', '').trim();
+                    if (jsonStr) {
+                      const parsed = JSON.parse(jsonStr);
+                      if (parsed.text) {
+                        replyText += parsed.text;
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === botMessageId
+                              ? { ...m, content: replyText, text: replyText }
+                              : m
+                          )
+                        );
+                      }
+                      if (parsed.recommendedPropertyId) {
+                        recommendedPropId = parsed.recommendedPropertyId;
+                      }
+                    }
+                  } catch (e) {
+                    console.warn('SSE Chunk parse warning:', e);
                   }
                 }
-              } catch (e) {
-                console.warn('SSE Chunk JSON Parse warning:', e);
               }
             }
           }
         }
+      } else {
+        console.warn(`HTTP ${response.status} from /api/chat, triggering client fallback engine...`);
       }
 
-      // Handle remaining buffer text if any
-      if (buffer.trim().startsWith('data: ')) {
-        try {
-          const jsonStr = buffer.trim().replace('data: ', '').trim();
-          if (jsonStr) {
-            const parsed = JSON.parse(jsonStr);
-            if (parsed.error) {
-              accumulatedText = `⚠️ **Error de la IA**: ${parsed.error}${parsed.details ? ` (${parsed.details})` : ''}. Por favor, reintente en unos momentos.`;
-            } else if (parsed.text) {
-              accumulatedText += parsed.text;
-            }
-          }
-        } catch {}
+      // If server response didn't produce text, use client-side OpenRouter / Gemini Real Estate Engine fallback
+      if (!replyText.trim()) {
+        const clientRes = await generateStructuredAriaRealEstateResponse({
+          message: text,
+          history: historyPayload,
+          agentName: 'Aria',
+          agencyName: 'Aria Prop',
+        });
+        replyText = clientRes.replyText;
       }
 
-      if (!accumulatedText.trim()) {
-        const fallbackErr = '⚠️ **Error de conexión con el motor de IA**: No se recibió respuesta. Por favor, reintente en unos momentos.';
-        setMessages((prev) =>
-          prev.map((m) => (m.id === botMessageId ? { ...m, content: fallbackErr, text: fallbackErr } : m))
-        );
-      } else if (recommendedPropId) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === botMessageId ? { ...m, recommendedPropertyId: recommendedPropId } : m))
-        );
-      }
-    } catch (err: any) {
-      console.error('❌ Chat API Fetch error:', err);
-      const errorMsg = `⚠️ **Error de conexión con el motor de IA**: ${err?.message || 'No fue posible comunicar con el servidor'}. Por favor, intente nuevamente.`;
       setMessages((prev) =>
         prev.map((m) =>
           m.id === botMessageId
             ? {
                 ...m,
-                content: errorMsg,
-                text: errorMsg,
+                content: replyText,
+                text: replyText,
+                recommendedPropertyId: recommendedPropId || m.recommendedPropertyId,
               }
             : m
         )
       );
+    } catch (err: any) {
+      console.warn('⚠️ Server /api/chat error, executing client real estate fallback:', err);
+      try {
+        const clientRes = await generateStructuredAriaRealEstateResponse({
+          message: text,
+          history: historyPayload,
+          agentName: 'Aria',
+          agencyName: 'Aria Prop',
+        });
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMessageId
+              ? { ...m, content: clientRes.replyText, text: clientRes.replyText }
+              : m
+          )
+        );
+      } catch (fallbackErr) {
+        const defaultReply =
+          '¡Hola! Soy Aria, tu asesora virtual inmobiliaria. Puedo ayudarte a buscar propiedades en venta o alquiler, cualificar tu presupuesto o agendar una visita. ¿Qué tipo de propiedad estás buscando?';
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botMessageId ? { ...m, content: defaultReply, text: defaultReply } : m
+          )
+        );
+      }
     } finally {
       setIsTyping(false);
     }

@@ -25,10 +25,10 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
   const endRef = useRef<HTMLDivElement | null>(null);
   const { user, openAuthModal } = useAuth();
 
-  // If a prefilledPrompt is passed when opened, set it in input or auto-send
+  // If a prefilledPrompt is passed when opened, auto-send it
   useEffect(() => {
-    if (isOpen && prefilledPrompt) {
-      setInput(prefilledPrompt);
+    if (isOpen && prefilledPrompt && prefilledPrompt.trim()) {
+      submit(undefined, prefilledPrompt);
     }
   }, [isOpen, prefilledPrompt]);
 
