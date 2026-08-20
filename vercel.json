@@ -1,8 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/v1/cron/clean-demo-accounts",
-      "schedule": "0 3 * * *"
+      "path": "/api/crm?action=reactivate_inactive_leads",
+      "schedule": "0 14 * * *"
     }
   ],
   "functions": {
