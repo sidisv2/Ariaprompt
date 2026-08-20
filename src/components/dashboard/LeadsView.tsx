@@ -214,6 +214,45 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   useEffect(() => {
     if (!supabase) return;
 
+    const playChime = () => {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+        gain1.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start();
+        osc1.stop(ctx.currentTime + 0.3);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+        gain2.gain.setValueAtTime(0.12, ctx.currentTime + 0.15);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + 0.15);
+        osc2.stop(ctx.currentTime + 0.45);
+      } catch {}
+    };
+
+    const notifyDesktop = (title: string, body: string) => {
+      playChime();
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title, { body, icon: '/favicon.ico' });
+        } catch {}
+      }
+    };
+
     const channel = supabase
       .channel('public:wa_realtime_crm')
       .on(
@@ -223,6 +262,12 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
           console.log('⚡ Supabase Realtime wa_conversations event:', payload.eventType);
           fetchLeads();
           fetchMetrics();
+
+          if (payload.new?.status === 'handover' || payload.new?.status === 'human_handoff') {
+            notifyDesktop('🚨 Solicitud de Asesor Humano', `El lead ${payload.new.user_name || payload.new.user_phone} solicitó atención.`);
+          } else if (payload.new?.status === 'qualified') {
+            notifyDesktop('⭐ Nuevo Lead Calificado', `El prospecto ${payload.new.user_name || payload.new.user_phone} ha sido cualificado.`);
+          }
 
           if (payload.new && selectedLead && payload.new.id === selectedLead.id) {
             setSelectedLead((prev) => (prev ? { ...prev, ...payload.new } : null));
@@ -234,6 +279,9 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
         { event: 'INSERT', schema: 'public', table: 'wa_messages' },
         (payload: any) => {
           console.log('⚡ Supabase Realtime wa_messages event:', payload);
+          if (payload.new?.sender_type === 'user') {
+            notifyDesktop('💬 Nuevo Mensaje de WhatsApp', payload.new.message_text || 'Nuevo mensaje recibido.');
+          }
           if (payload.new && selectedLead && payload.new.conversation_id === selectedLead.id) {
             setMessages((prev) => {
               if (prev.some((m) => m.id === payload.new.id)) return prev;

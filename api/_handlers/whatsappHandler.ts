@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
 import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
 import { sendHandoverEmailNotification } from '../../lib/notifications/email.js';
-import { sendTelegramLeadAlert } from '../../lib/notifications/telegram.js';
+import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.js';
 import { processIncomingVoiceMessage } from '../../lib/whatsapp/audioProcessor.js';
 
 function getBackendSupabaseClient() {
@@ -188,13 +188,13 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             supabaseClient: supabase,
           }).catch((err) => console.warn('⚠️ Handover email trigger warning:', err));
 
-          sendTelegramLeadAlert({
+          sendAdvisorWhatsAppAlert({
             orgId: organizationId,
-            phone: fromNumber,
+            leadPhone: fromNumber,
             lastMessage: textBody,
             reason: 'handover',
             supabaseClient: supabase,
-          }).catch((err) => console.warn('⚠️ Handover Telegram trigger warning:', err));
+          }).catch((err) => console.warn('⚠️ Handover advisor WhatsApp alert trigger warning:', err));
 
           return res.status(200).json({
             status: 'HANDOVER_HUMAN_ACTIVE',

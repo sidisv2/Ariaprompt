@@ -48,11 +48,20 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
     'No aceptamos alquileres temporales de menos de 3 meses. El horario de visitas presenciales es de Lunes a Viernes de 10 a 18 hs.'
   );
   
-  // Telegram Notifications State
-  const [telegramBotToken, setTelegramBotToken] = useState<string>('');
-  const [telegramChatId, setTelegramChatId] = useState<string>('');
-  const [notifyTelegramHandover, setNotifyTelegramHandover] = useState<boolean>(true);
-  const [notifyTelegramQualified, setNotifyTelegramQualified] = useState<boolean>(true);
+  // Notifications Settings State
+  const [alertEmail, setAlertEmail] = useState<string>('alertas@inmobiliariapalermo.com');
+  const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>('5491123456789');
+  const [notifyEmailHandover, setNotifyEmailHandover] = useState<boolean>(true);
+  const [desktopPermission, setDesktopPermission] = useState<string>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+
+  const handleRequestDesktopPermission = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setDesktopPermission(perm);
+    }
+  };
 
   // FAQ Dynamic List
   const [faqList, setFaqList] = useState<FaqItem[]>([
@@ -81,7 +90,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
         if (profile?.organization_id) {
           const { data: org } = await supabase
             .from('organizations')
-            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, telegram_bot_token, telegram_chat_id, notify_telegram_handover, notify_telegram_qualified, name')
+            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, alert_email, advisor_alert_phone, name')
             .eq('id', profile.organization_id)
             .single();
 
@@ -89,10 +98,8 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
             if (org.bot_name) setAgentName(org.bot_name);
             if (org.name) setAgencyName(org.name);
             if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
-            if (org.telegram_bot_token) setTelegramBotToken(org.telegram_bot_token);
-            if (org.telegram_chat_id) setTelegramChatId(org.telegram_chat_id);
-            if (typeof org.notify_telegram_handover === 'boolean') setNotifyTelegramHandover(org.notify_telegram_handover);
-            if (typeof org.notify_telegram_qualified === 'boolean') setNotifyTelegramQualified(org.notify_telegram_qualified);
+            if (org.alert_email) setAlertEmail(org.alert_email);
+            if (org.advisor_alert_phone) setAdvisorAlertPhone(org.advisor_alert_phone);
             if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
               setBotTone(org.bot_tone);
             }
@@ -177,10 +184,8 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                 custom_prompt_instructions: customInstructions,
                 faq_knowledge: validFaqs,
                 calendar_booking_url: calendarBookingUrl.trim(),
-                telegram_bot_token: telegramBotToken.trim(),
-                telegram_chat_id: telegramChatId.trim(),
-                notify_telegram_handover: notifyTelegramHandover,
-                notify_telegram_qualified: notifyTelegramQualified,
+                alert_email: alertEmail.trim(),
+                advisor_alert_phone: advisorAlertPhone.trim(),
                 updated_at: new Date().toISOString(),
               })
               .eq('id', profile.organization_id);
@@ -369,60 +374,60 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
               </div>
             </div>
 
-            {/* Telegram Instant Alerts Settings */}
-            <div className="space-y-3 pt-2 border-t border-white/10">
+            {/* Clean Notifications & Alert Settings */}
+            <div className="space-y-4 pt-2 border-t border-white/10">
               <label className="block text-slate-300 font-semibold flex items-center gap-1.5">
-                <Send className="w-4 h-4 text-emerald-400" />
-                Notificaciones Instantáneas por Telegram
+                <Zap className="w-4 h-4 text-emerald-400" />
+                Notificaciones & Alertas Comerciales
               </label>
               <p className="text-[11px] text-slate-400">
-                Recibe alertas instantáneas en tu grupo de Telegram cuando un lead solicite asesor humano o sea cualificado.
+                Configura los canales inmediatos para avisar a tus asesores cuando un lead solicite atención presencial o sea cualificado.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-semibold mb-1">Telegram Bot Token (Opcional)</label>
+                  <label className="block text-[11px] text-slate-300 font-semibold mb-1">Email para Resumen de Lead</label>
                   <input
-                    type="password"
-                    value={telegramBotToken}
-                    onChange={(e) => setTelegramBotToken(e.target.value)}
-                    placeholder="Ej: 123456789:ABCdefGHIjkl..."
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                    type="email"
+                    value={alertEmail}
+                    onChange={(e) => setAlertEmail(e.target.value)}
+                    placeholder="alertas@inmobiliaria.com"
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-semibold mb-1">Telegram Chat ID / Group ID</label>
+                  <label className="block text-[11px] text-slate-300 font-semibold mb-1">WhatsApp Interno de Alertas del Asesor</label>
                   <input
-                    type="text"
-                    value={telegramChatId}
-                    onChange={(e) => setTelegramChatId(e.target.value)}
-                    placeholder="Ej: -100123456789 o @grupo_asesores"
+                    type="tel"
+                    value={advisorAlertPhone}
+                    onChange={(e) => setAdvisorAlertPhone(e.target.value)}
+                    placeholder="Ej: 5491123456789"
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 pt-1">
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifyTelegramHandover}
-                    onChange={(e) => setNotifyTelegramHandover(e.target.checked)}
-                    className="w-4 h-4 rounded bg-slate-950 border-white/10 text-emerald-500 focus:ring-0"
-                  />
-                  <span>Alertar en Solicitud de Asesor (Handover)</span>
-                </label>
+              {/* Desktop Browser Notifications Button */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-white/10 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-white">Notificaciones Web de Escritorio</p>
+                  <p className="text-[11px] text-slate-400">
+                    Emite alertas emergentes y sonido de campana en vivo cuando llegue un nuevo mensaje o handover en el CRM.
+                  </p>
+                </div>
 
-                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={notifyTelegramQualified}
-                    onChange={(e) => setNotifyTelegramQualified(e.target.checked)}
-                    className="w-4 h-4 rounded bg-slate-950 border-white/10 text-emerald-500 focus:ring-0"
-                  />
-                  <span>Alertar en Lead Cualificado</span>
-                </label>
+                <button
+                  type="button"
+                  onClick={handleRequestDesktopPermission}
+                  className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer shrink-0 ${
+                    desktopPermission === 'granted'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
+                  }`}
+                >
+                  {desktopPermission === 'granted' ? '✓ Notificaciones Activas' : 'Activar Notificaciones'}
+                </button>
               </div>
             </div>
 
