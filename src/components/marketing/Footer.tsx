@@ -107,25 +107,30 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
             </ul>
           </div>
 
-          {/* Column 4: Soluciones */}
+          {/* Column 4: Soluciones & Guías SEO */}
           <div className="space-y-3">
             <h4 className="text-white font-extrabold text-xs uppercase tracking-wider">
-              {t('footer.col2')}
+              Soluciones & Guías SEO
             </h4>
             <ul className="space-y-2 text-slate-400 text-[11px]">
               <li>
-                <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors">
+                <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors text-left">
                   {t('footer.for_agencies')}
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors">
-                  {t('footer.for_developers')}
+                <button onClick={() => handleNav('ia-para-inmobiliarias')} className="hover:text-emerald-400 transition-colors text-left">
+                  IA para Inmobiliarias
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('soluciones')} className="hover:text-emerald-400 transition-colors">
-                  {t('footer.for_investors')}
+                <button onClick={() => handleNav('automatizar-whatsapp-inmobiliaria')} className="hover:text-emerald-400 transition-colors text-left">
+                  Automatizar WhatsApp Inmobiliario
+                </button>
+              </li>
+              <li>
+                <button onClick={() => handleNav('chatbot-vs-agente-ia')} className="hover:text-emerald-400 transition-colors text-left">
+                  Chatbot vs. Agente IA
                 </button>
               </li>
             </ul>

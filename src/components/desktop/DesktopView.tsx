@@ -45,6 +45,9 @@ import { RestructuredLandingPage } from '../marketing/RestructuredLandingPage';
 import { useAuth } from '../../context/AuthContext';
 import { Tag, Sparkles } from 'lucide-react';
 import { ComparisonPage } from '../pages/ComparisonPage';
+import { IAParaInmobiliariasPage } from '../../pages/seo/IAParaInmobiliariasPage';
+import { AutomatizarWhatsAppPage } from '../../pages/seo/AutomatizarWhatsAppPage';
+import { ChatbotVsAgentePage } from '../../pages/seo/ChatbotVsAgentePage';
 
 interface DesktopViewProps {
   currentRoute: AppRoute;
@@ -181,6 +184,18 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
       ) : currentRoute === 'comparar-chatbots' ? (
         <main className="flex-1 animate-page-fade">
           <ComparisonPage type="chatbots" onRouteChange={onRouteChange} />
+        </main>
+      ) : currentRoute === 'ia-para-inmobiliarias' ? (
+        <main className="flex-1 animate-page-fade">
+          <IAParaInmobiliariasPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
+        </main>
+      ) : currentRoute === 'automatizar-whatsapp-inmobiliaria' ? (
+        <main className="flex-1 animate-page-fade">
+          <AutomatizarWhatsAppPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
+        </main>
+      ) : currentRoute === 'chatbot-vs-agente-ia' ? (
+        <main className="flex-1 animate-page-fade">
+          <ChatbotVsAgentePage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
         </main>
       ) : currentRoute === 'embed-preview' ? (
         <div className="flex-1 p-8 max-w-4xl mx-auto space-y-6 text-center animate-page-fade">

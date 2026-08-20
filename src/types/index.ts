@@ -151,7 +151,10 @@ export type AppRoute =
   | 'explorar'
   | 'comparar-manual'
   | 'comparar-crm'
-  | 'comparar-chatbots';
+  | 'comparar-chatbots'
+  | 'ia-para-inmobiliarias'
+  | 'automatizar-whatsapp-inmobiliaria'
+  | 'chatbot-vs-agente-ia';
 
 export type UserSubscriptionRole =
   | 'admin'
