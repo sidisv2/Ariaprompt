@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Play, Sparkles } from 'lucide-react';
+import { InteractiveBotDemo } from './InteractiveBotDemo';
 import { Playground } from '../playground/Playground';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const InteractiveDemoSection: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'live' | 'video'>('live');
+  const [activeTab, setActiveTab] = useState<'simulator' | 'rag' | 'video'>('simulator');
   const { t } = useLanguage();
 
   return (
@@ -19,26 +20,36 @@ export const InteractiveDemoSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
             <Sparkles className="w-4 h-4 fill-current" />
-            <span>{t('demo.badge')}</span>
+            <span>Simulador Interactivo de IA Inmobiliaria</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-            {t('demo.title')}
+            Prueba el motor de IA inmobiliaria en tiempo real
           </h2>
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-            {t('demo.subtitle')}
+            Experimenta cómo la inteligencia artificial de Ariaprop atiende prospectos en WhatsApp recomendando propiedades reales y calculando opciones financieras.
           </p>
 
           {/* Toggle Tabs */}
-          <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-slate-950 border border-white/10 mt-4">
+          <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-slate-950 border border-white/10 mt-4 flex-wrap justify-center">
             <button
-              onClick={() => setActiveTab('live')}
+              onClick={() => setActiveTab('simulator')}
               className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                activeTab === 'live'
+                activeTab === 'simulator'
+                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              📱 Simulador WhatsApp
+            </button>
+            <button
+              onClick={() => setActiveTab('rag')}
+              className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                activeTab === 'rag'
                   ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              {t('demo.tab1')}
+              ⚡ Motor RAG de Agente
             </button>
             <button
               onClick={() => setActiveTab('video')}
@@ -48,13 +59,17 @@ export const InteractiveDemoSection: React.FC = () => {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              {t('demo.tab2')}
+              🎬 Demo en Video
             </button>
           </div>
         </div>
 
         {/* Content Display */}
-        {activeTab === 'live' ? (
+        {activeTab === 'simulator' ? (
+          <div className="rounded-3xl bg-slate-950/80 p-4 sm:p-8 border border-emerald-500/30 shadow-2xl">
+            <InteractiveBotDemo />
+          </div>
+        ) : activeTab === 'rag' ? (
           <div className="rounded-3xl bg-slate-950 p-2 sm:p-6 border border-indigo-500/30 shadow-2xl">
             <Playground />
           </div>
