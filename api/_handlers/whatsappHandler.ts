@@ -128,84 +128,172 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           textBody = 'Hola';
         }
 
-        let conversationStatus = 'active';
-        let existingConvId: string | null = null;
+        // 1. Idempotency & Deduplication Check (processed_messages)
+        if (supabase && wamid) {
+          try {
+            const { data: existingProc } = await supabase
+              .from('processed_messages')
+              .select('id')
+              .eq('wamid', wamid)
+              .maybeSingle();
 
-        if (supabase) {
-          const { data: conv } = await supabase
-            .from('wa_conversations')
-            .select('id, status')
-            .eq('organization_id', organizationId)
-            .eq('user_phone', fromNumber)
-            .single();
+            if (existingProc) {
+              console.log(`ℹ️ [DEDUPLICATION] Message wamid "${wamid}" already processed. Skipping duplicate execution.`);
+              return res.status(200).json({ status: 'EVENT_RECEIVED', duplicate: true });
+            }
 
-          if (conv) {
-            existingConvId = conv.id;
-            conversationStatus = conv.status || 'active';
+            await supabase.from('processed_messages').insert({
+              wamid,
+              organization_id: organizationId,
+              created_at: new Date().toISOString(),
+            });
+          } catch (dedupErr) {
+            console.warn('⚠️ Webhook deduplication check notice:', dedupErr);
           }
         }
 
+        let conversationStatus = 'active';
+        let botStatus = 'active';
+        let existingConvId: string | null = null;
+        let lastHumanInteractionAt: string | null = null;
+
+        if (supabase) {
+          try {
+            const { data: conv } = await supabase
+              .from('wa_conversations')
+              .select('id, status, bot_status, last_human_interaction_at, updated_at')
+              .eq('organization_id', organizationId)
+              .eq('user_phone', fromNumber)
+              .maybeSingle();
+
+            if (conv) {
+              existingConvId = conv.id;
+              conversationStatus = conv.status || 'active';
+              botStatus = conv.bot_status || conv.status || 'active';
+              lastHumanInteractionAt = conv.last_human_interaction_at || conv.updated_at || null;
+            }
+          } catch {}
+        }
+
         const cleanLowerMsg = textBody.toLowerCase().trim();
+        const isHumanTakeoverKeyword =
+          cleanLowerMsg.includes('quiero hablar con un asesor') ||
+          cleanLowerMsg.includes('hablar con una persona') ||
+          cleanLowerMsg.includes('asesor real') ||
+          cleanLowerMsg.includes('asesor humano') ||
+          cleanLowerMsg.includes('hablar con alguien') ||
+          cleanLowerMsg.includes('atencion humana') ||
+          cleanLowerMsg.includes('contactar un asesor');
+
         const isReactivationKeyword =
           cleanLowerMsg === 'activar bot' ||
           cleanLowerMsg === 'reiniciar ia' ||
           cleanLowerMsg === 'hablar con bot' ||
           cleanLowerMsg === 'reiniciar bot';
 
-        if (isReactivationKeyword && supabase && existingConvId) {
-          conversationStatus = 'active';
-          await supabase
-            .from('wa_conversations')
-            .update({ status: 'active', updated_at: new Date().toISOString() })
-            .eq('id', existingConvId);
-        }
+        if (isHumanTakeoverKeyword) {
+          conversationStatus = 'handover';
+          botStatus = 'human_takeover';
 
-        if ((conversationStatus === 'handover' || conversationStatus === 'closed') && !isReactivationKeyword) {
+          let assignedAdvisorId: string | null = null;
+          if (supabase && organizationId) {
+            try {
+              const { data: advisor } = await supabase
+                .from('advisors')
+                .select('id')
+                .eq('organization_id', organizationId)
+                .eq('status', 'active')
+                .maybeSingle();
+              if (advisor) assignedAdvisorId = advisor.id;
+            } catch {}
+          }
+
           if (supabase && existingConvId) {
             try {
-              await supabase.from('wa_messages').insert({
-                conversation_id: existingConvId,
-                organization_id: organizationId,
-                wamid: wamid || undefined,
-                sender_type: 'user',
-                message_text: textBody,
-                created_at: new Date().toISOString(),
-              });
-            } catch {}
-
-            try {
               await supabase.from('wa_conversations').update({
-                last_message_at: new Date().toISOString(),
+                status: 'handover',
+                bot_status: 'human_takeover',
+                last_human_interaction_at: new Date().toISOString(),
+                ...(assignedAdvisorId ? { assigned_advisor_id: assignedAdvisorId } : {}),
+                updated_at: new Date().toISOString(),
               }).eq('id', existingConvId);
             } catch {}
           }
+        } else if (isReactivationKeyword && supabase && existingConvId) {
+          conversationStatus = 'active';
+          botStatus = 'active';
+          await supabase
+            .from('wa_conversations')
+            .update({ status: 'active', bot_status: 'active', updated_at: new Date().toISOString() })
+            .eq('id', existingConvId);
+        }
 
-          // Asynchronously trigger email & Telegram notifications without delaying Meta's 200 OK response
-          sendHandoverEmailNotification({
-            organizationId,
-            userPhone: fromNumber,
-            lastMessage: textBody,
-            conversationId: existingConvId,
-            supabaseClient: supabase,
-          }).catch((err) => console.warn('⚠️ Handover email trigger warning:', err));
+        const isPausedOrHandover = conversationStatus === 'handover' || conversationStatus === 'closed' || botStatus === 'human_takeover' || botStatus === 'paused';
 
-          try {
-            sendAdvisorWhatsAppAlert({
-              orgId: organizationId,
-              leadPhone: fromNumber,
+        if (isPausedOrHandover && !isReactivationKeyword) {
+          const lastTime = lastHumanInteractionAt ? new Date(lastHumanInteractionAt).getTime() : 0;
+          const hoursElapsed = lastTime > 0 ? (Date.now() - lastTime) / (1000 * 60 * 60) : 3;
+
+          if (hoursElapsed >= 2) {
+            console.log(`⏱️ [AUTO-REACTIVATION] >2h elapsed (${hoursElapsed.toFixed(1)}h). Auto-reactivating AI bot.`);
+            conversationStatus = 'active';
+            botStatus = 'active';
+            if (supabase && existingConvId) {
+              try {
+                await supabase.from('wa_conversations').update({
+                  status: 'active',
+                  bot_status: 'active',
+                  updated_at: new Date().toISOString(),
+                }).eq('id', existingConvId);
+              } catch {}
+            }
+          } else {
+            if (supabase && existingConvId) {
+              try {
+                await supabase.from('wa_messages').insert({
+                  conversation_id: existingConvId,
+                  organization_id: organizationId,
+                  wamid: wamid || undefined,
+                  sender_type: 'user',
+                  message_text: textBody,
+                  created_at: new Date().toISOString(),
+                });
+              } catch {}
+
+              try {
+                await supabase.from('wa_conversations').update({
+                  last_message_at: new Date().toISOString(),
+                }).eq('id', existingConvId);
+              } catch {}
+            }
+
+            sendHandoverEmailNotification({
+              organizationId,
+              userPhone: fromNumber,
               lastMessage: textBody,
-              reason: 'handover',
+              conversationId: existingConvId,
               supabaseClient: supabase,
-            }).catch((err) => console.warn('⚠️ Handover advisor WhatsApp alert trigger warning:', err));
-          } catch (alertErr) {
-            console.warn('⚠️ Handover advisor WhatsApp alert isolated exception:', alertErr);
-          }
+            }).catch((err) => console.warn('⚠️ Handover email trigger warning:', err));
 
-          return res.status(200).json({
-            status: 'HANDOVER_HUMAN_ACTIVE',
-            conversationStatus,
-            message: 'User message logged, AI auto-reply bypassed.',
-          });
+            try {
+              sendAdvisorWhatsAppAlert({
+                orgId: organizationId,
+                leadPhone: fromNumber,
+                lastMessage: textBody,
+                reason: 'handover',
+                supabaseClient: supabase,
+              }).catch((err) => console.warn('⚠️ Handover advisor WhatsApp alert trigger warning:', err));
+            } catch (alertErr) {
+              console.warn('⚠️ Handover advisor WhatsApp alert isolated exception:', alertErr);
+            }
+
+            return res.status(200).json({
+              status: 'HANDOVER_HUMAN_ACTIVE',
+              conversationStatus,
+              botStatus,
+              message: 'User message logged, AI auto-reply bypassed during takeover window.',
+            });
+          }
         }
 
         const { text: aiResponseText, conversationId } = await processAriaMessage({

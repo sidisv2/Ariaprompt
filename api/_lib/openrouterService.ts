@@ -279,8 +279,23 @@ export async function generateStructuredAriaRealEstateResponse(
     customInstructions = '',
     faqKnowledge = [],
     calendarBookingUrl = '',
-    apiKey,
+    apiKey: explicitKey,
   } = options;
+
+  const apiKey = getOpenRouterApiKey(explicitKey);
+  if (!apiKey || apiKey.includes('placeholder')) {
+    return {
+      replyText: 'Hola, gracias por escribirnos. ¿Qué tipo de propiedad estás buscando y en qué zona?',
+      extractedData: {
+        budget_max_usd: null,
+        preferred_zone: null,
+        property_type: null,
+        status: 'active',
+        lead_name: null,
+        appointment: null,
+      },
+    };
+  }
 
   const openai = getOpenAIClient(apiKey);
   const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
@@ -323,12 +338,9 @@ Debes responder SIEMPRE en ${targetLangName}.
 
 REGLAS DE ACTUACIÓN COMERCIAL:
 1. Actúa como asesora experta, empática y de alta conversión.
-2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Tipo de operación e inmueble (ej. "Alquiler 2 ambientes", "Venta casa"), y (d) Nombre del lead si lo menciona.
+2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Tipo de operación e inmueble, y (d) Nombre del lead si lo menciona.
 3. DETECCIÓN Y GESTIÓN DE VISITAS:
-   - Si el cliente solicita visitar un inmueble ("quiero ir a verlo", "coordinar visita", "cuándo se puede ver"):
-     Ofrece la opción de elegir fecha/hora o bien facilita el enlace oficial de agendamiento: ${bookingUrlText}
-4. Longitud máxima del mensaje ("replyText"): Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS.
-5. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio, ubicación y enlace de ficha.
+   - Si el cliente solicita agendar una visita/cita (Lunes a Viernes 9 a 18 hs, Sábados 9 a 13 hs), propone o confirma la fecha hábil.
 
 ## REGLAS DE NEGOCIO E INSTRUCCIONES ESPECIALES DE LA INMOBILIARIA:
 ${customInstructions ? customInstructions : 'No hay reglas de negocio especiales especificadas.'}
@@ -343,21 +355,29 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
     "budget_max_usd": number | null,
     "preferred_zone": string | null,
     "property_type": string | null,
-    "status": "active" | "qualified" | "closed",
-    "lead_name": string | null
+    "status": "active" | "qualified" | "handover" | "closed",
+    "lead_name": string | null,
+    "appointment": {
+      "requested_date": string | null,
+      "property_title": string | null,
+      "notes": string | null
+    } | null
   }
 }
 
 REGLAS DE EXTRACCIÓN:
 - budget_max_usd: presupuesto numérico en USD si el usuario lo menciona o null.
-- preferred_zone: zona o barrio especificado (ej. "Barrio Bombal", "Polanco", "Puerto Madero") o null.
-- property_type: tipo de inmueble y operación (ej. "Alquiler 2 ambientes", "Venta casa") o null.
+- preferred_zone: zona o barrio especificado o null.
+- property_type: tipo de inmueble y operación o null.
 - status:
-  * "handover": SI EL USUARIO PIDE EXPLÍCITAMENTE "hablar con una persona", "un asesor humano", "un agente", "hablar con alguien" o solicita atención humana directa. En este caso, genera en "replyText" un mensaje de despedida cordial indicando que un asesor del equipo se comunicará inmediatamente.
+  * "handover": SI EL USUARIO PIDE EXPLÍCITAMENTE "hablar con una persona", "un asesor humano", "un agente", "hablar con alguien" o atencion humana.
   * "qualified": si ya se identificó al menos la zona, el tipo de inmueble y el presupuesto estimado.
   * "closed": si cerró la operación o no requiere más seguimiento.
   * "active": en conversación inicial o exploratoria.
 - lead_name: nombre del prospecto si se identifica en el chat o null.
+- appointment:
+  * Si el cliente solicita agendar una visita/cita, especifica fecha u horario hábil (Lunes a Viernes 9 a 18 hs, Sábados 9 a 13 hs):
+    { "requested_date": "2026-08-25 15:00", "property_title": "Nombre de la propiedad", "notes": "Visita coordinada" }
 
 ## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
 ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al cliente a especificar sus criterios.'}
@@ -386,12 +406,18 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
     const parsed = JSON.parse(cleanJson);
 
     const replyText = parsed.replyText || parsed.message || parsed.response || rawContent;
+    const apptRaw = parsed.extractedData?.appointment || parsed.appointment;
     const extractedData: ExtractedLeadData = {
       budget_max_usd: typeof parsed.extractedData?.budget_max_usd === 'number' ? parsed.extractedData.budget_max_usd : null,
       preferred_zone: typeof parsed.extractedData?.preferred_zone === 'string' ? parsed.extractedData.preferred_zone : null,
       property_type: typeof parsed.extractedData?.property_type === 'string' ? parsed.extractedData.property_type : null,
-      status: ['active', 'qualified', 'closed'].includes(parsed.extractedData?.status) ? parsed.extractedData.status : 'active',
+      status: ['active', 'qualified', 'handover', 'closed'].includes(parsed.extractedData?.status) ? parsed.extractedData.status : 'active',
       lead_name: typeof parsed.extractedData?.lead_name === 'string' ? parsed.extractedData.lead_name : null,
+      appointment: apptRaw ? {
+        requested_date: typeof apptRaw.requested_date === 'string' ? apptRaw.requested_date : null,
+        property_title: typeof apptRaw.property_title === 'string' ? apptRaw.property_title : null,
+        notes: typeof apptRaw.notes === 'string' ? apptRaw.notes : null,
+      } : null,
     };
 
     return { replyText, extractedData };
@@ -406,6 +432,7 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
         property_type: null,
         status: 'active',
         lead_name: null,
+        appointment: null,
       },
     };
   }

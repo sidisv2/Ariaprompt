@@ -266,28 +266,67 @@ export async function processAriaMessage({
 
   // 5b. Automatic Appointment Scheduling Detection & Registration
   const lowerUserMsg = userMessage.toLowerCase();
-  if (
+  const isAppointmentIntention =
+    extractedData?.appointment?.requested_date ||
     lowerUserMsg.includes('visita') ||
     lowerUserMsg.includes('coordinar') ||
     lowerUserMsg.includes('agendar') ||
     lowerUserMsg.includes('ir a ver') ||
-    lowerUserMsg.includes('verlo')
-  ) {
+    lowerUserMsg.includes('verlo');
+
+  if (isAppointmentIntention) {
     if (supabase && organizationId) {
       try {
+        const requestedDateISO =
+          extractedData?.appointment?.requested_date && !isNaN(Date.parse(extractedData.appointment.requested_date))
+            ? new Date(extractedData.appointment.requested_date).toISOString()
+            : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+        const propertyTitle = extractedData?.appointment?.property_title || extractedData?.property_type || 'Propiedad seleccionada';
+
+        // Check assigned or available advisor from advisors table
+        let assignedAdvisorId: string | null = null;
+        try {
+          const { data: advisor } = await supabase
+            .from('advisors')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('status', 'active')
+            .maybeSingle();
+          if (advisor?.id) assignedAdvisorId = advisor.id;
+        } catch {}
+
         await supabase.from('property_appointments').insert({
           organization_id: organizationId,
           conversation_id: conversationId,
           user_phone: userPhone,
           user_name: extractedData?.lead_name || 'Prospecto WhatsApp',
           preferred_zone: extractedData?.preferred_zone || 'Por definir',
-          status: 'pending',
-          appointment_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          notes: `Visita registrada desde WhatsApp: "${userMessage}"`,
+          property_title: propertyTitle,
+          status: 'scheduled',
+          appointment_date: requestedDateISO,
+          notes: extractedData?.appointment?.notes || `Visita agendada por Aria Bot: "${userMessage}"`,
+          ...(assignedAdvisorId ? { advisor_id: assignedAdvisorId } : {}),
           created_at: new Date().toISOString(),
         });
+
+        // Also insert into appointments / turnos table fallback if exists
+        try {
+          await supabase.from('appointments').insert({
+            organization_id: organizationId,
+            conversation_id: conversationId,
+            user_phone: userPhone,
+            lead_name: extractedData?.lead_name || userPhone,
+            property_title: propertyTitle,
+            scheduled_at: requestedDateISO,
+            status: 'scheduled',
+            notes: `Visita registrada desde WhatsApp: ${userMessage}`,
+            ...(assignedAdvisorId ? { advisor_id: assignedAdvisorId } : {}),
+            created_at: new Date().toISOString(),
+          });
+        } catch {}
       } catch (appErr) {
-        console.warn('⚠️ property_appointments notice:', appErr);
+        console.warn('⚠️ Property appointment scheduling notice:', appErr);
       }
     }
   }
