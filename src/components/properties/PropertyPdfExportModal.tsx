@@ -51,7 +51,7 @@ export const PropertyPdfExportModal: React.FC<PropertyPdfExportModalProps> = ({
       ? property.images[0]
       : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80';
 
-  const propertyId = property.id || property.code;
+  const propertyId = property.id;
   const realUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/properties/${propertyId}`
     : `https://ariaprop.online/properties/${propertyId}`;

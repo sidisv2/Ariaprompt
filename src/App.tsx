@@ -161,8 +161,11 @@ function AppInner() {
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (isMounted) {
-        if (!error && data && data.length > 0) {
+      if (error) {
+        console.error('Error al cargar propiedades de Supabase:', error);
+      } else if (data && isMounted) {
+        console.log('Propiedades recuperadas de Supabase:', data.length);
+        if (data.length > 0) {
           const mappedProps: Property[] = data.map((item: any) => ({
             id: item.id,
             title: item.title || 'Propiedad Inmobiliaria',
@@ -242,9 +245,87 @@ function AppInner() {
       } catch {}
     }
 
-    const orgId = (user as any)?.organizationId || authUserId || 'org-default';
+    const orgId = (user as any)?.organizationId || authUserId;
 
-    const propPayload: Property = {
+    const dbPayload: any = {
+      title: newPropData.title || 'Propiedad sin título',
+      code: newPropData.code || `PROP-${Math.floor(100 + Math.random() * 900)}`,
+      type: newPropData.type || 'apartment',
+      operation_type: newPropData.price < 5000 ? 'rent' : 'sale',
+      price: Number(newPropData.price) || 0,
+      currency: newPropData.currency || 'USD',
+      surface_m2: Number(newPropData.features?.areaM2) || 0,
+      area_m2: Number(newPropData.features?.areaM2) || 0,
+      bedrooms: Number(newPropData.features?.bedrooms) || 0,
+      bathrooms: Number(newPropData.features?.bathrooms) || 0,
+      address: newPropData.location?.address || 'Ubicación pendiente',
+      city: newPropData.location?.city || 'Buenos Aires',
+      zone: newPropData.location?.zone || newPropData.location?.address || 'Palermo',
+      description: newPropData.description || '',
+      image_url: (newPropData.images && newPropData.images[0]) || '',
+      images: newPropData.images || [],
+      created_at: new Date().toISOString(),
+    };
+
+    if (authUserId) {
+      dbPayload.user_id = authUserId;
+      dbPayload.organization_id = orgId || authUserId;
+    }
+
+    if (isSupabaseConfigured && supabase) {
+      console.log('Enviando propiedad a Supabase:', dbPayload);
+      const { data, error } = await supabase
+        .from('properties')
+        .insert([dbPayload])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('ERROR CRÍTICO AL INSERTAR EN SUPABASE:', error);
+        alert('Error al guardar en base de datos: ' + error.message);
+        return; // NO avanzar con IDs falsos si la base de datos falla
+      }
+
+      console.log('Propiedad guardada exitosamente en Supabase con ID real:', data.id);
+
+      const realProperty: Property = {
+        id: data.id,
+        title: data.title || 'Propiedad Inmobiliaria',
+        code: data.code || `PROP-${String(data.id).slice(0, 4)}`,
+        type: data.type || 'apartment',
+        status: data.status || 'available',
+        price: Number(data.price || 0),
+        currency: data.currency || 'USD',
+        location: {
+          address: data.address || 'Ubicación sin especificar',
+          city: data.city || 'Buenos Aires',
+          zone: data.zone || data.address || 'Palermo',
+        },
+        features: {
+          bedrooms: data.bedrooms || 0,
+          bathrooms: data.bathrooms || 0,
+          areaM2: data.surface_m2 || data.area_m2 || 0,
+          pool: data.pool || false,
+          garage: data.garage || false,
+          elevator: data.elevator || true,
+          airConditioning: data.air_conditioning || true,
+        },
+        description: data.description || '',
+        images:
+          data.images && data.images.length > 0
+            ? data.images
+            : [data.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
+        createdAt: data.created_at || new Date().toISOString(),
+        documents: [],
+        featured: data.featured || false,
+      };
+
+      setProperties((prev) => [realProperty, ...prev]);
+      return;
+    }
+
+    // Fallback for offline demo mode
+    const fallbackProp: Property = {
       id: `prop-${Date.now()}`,
       code: newPropData.code || `PROP-${Math.floor(100 + Math.random() * 900)}`,
       title: newPropData.title,
@@ -260,49 +341,7 @@ function AppInner() {
       featured: false,
       createdAt: new Date().toISOString().split('T')[0],
     };
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const newRecord = {
-          user_id: authUserId,
-          organization_id: orgId,
-          title: propPayload.title,
-          code: propPayload.code,
-          type: propPayload.type,
-          operation_type: propPayload.price < 5000 ? 'rent' : 'sale',
-          price: Number(propPayload.price),
-          currency: propPayload.currency || 'USD',
-          surface_m2: Number(propPayload.features.areaM2),
-          area_m2: Number(propPayload.features.areaM2),
-          bedrooms: Number(propPayload.features.bedrooms),
-          bathrooms: Number(propPayload.features.bathrooms),
-          address: propPayload.location.address || 'Ubicación no especificada',
-          city: propPayload.location.city || 'Buenos Aires',
-          zone: propPayload.location.zone,
-          image_url: propPayload.images[0] || '',
-          images: propPayload.images,
-          description: propPayload.description || '',
-          created_at: new Date().toISOString(),
-        };
-
-        const { data, error } = await supabase
-          .from('properties')
-          .insert([newRecord])
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error insertando en Supabase:', error);
-        } else if (data && data.id) {
-          propPayload.id = data.id;
-          if (data.code) propPayload.code = data.code;
-        }
-      } catch (err) {
-        console.warn('⚠️ Supabase property insert fallback:', err);
-      }
-    }
-
-    setProperties((prev) => [propPayload, ...prev]);
+    setProperties((prev) => [fallbackProp, ...prev]);
   };
 
   const handleUpdateLeadStatus = async (leadId: string, newStatus: Lead['status']) => {
