@@ -14,6 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { WhatsAppConnectView } from './WhatsAppConnectView';
 
 declare global {
   interface Window {
@@ -271,28 +272,9 @@ export const WhatsAppSettings: React.FC = () => {
   const isConnected = Boolean(orgStatus?.wa_connected);
 
   return (
-    <div className="space-y-6 text-slate-100">
-      
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
-        <div>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-emerald-400" />
-            Integración Oficial WhatsApp Business Cloud API
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Conecta la línea oficial de tu inmobiliaria con el flujo oficial Embedded Signup de Meta.
-          </p>
-        </div>
-
-        <button
-          onClick={fetchStatus}
-          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs border border-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refrescar Estado</span>
-        </button>
-      </div>
+    <div className="space-y-8 text-slate-100">
+      {/* Primary Evolution QR Code & Meta Cloud API Connection View */}
+      <WhatsAppConnectView />
 
       {/* Notifications */}
       {successMsg && (
@@ -439,7 +421,6 @@ export const WhatsAppSettings: React.FC = () => {
 
         </div>
       )}
-
     </div>
   );
 };
