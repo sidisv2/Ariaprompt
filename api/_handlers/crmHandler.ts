@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import { sendTemplateMessage } from '../../lib/whatsapp/templates.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -151,6 +152,116 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
       return res.status(200).send(csvContent);
     } catch (err: any) {
       console.error('❌ Exception in export_leads CSV:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // 3. ACTION: SEND MANUAL HSM TEMPLATE (action=send_template)
+  if (action === 'send_template' || subRoute === 'send-template') {
+    try {
+      const body = req.body || {};
+      const targetPhone = body.phone || (req.query.phone as string);
+      const templateName = body.templateName || (req.query.templateName as string);
+      const languageCode = body.languageCode || 'es';
+      const components = body.components || [];
+
+      if (!targetPhone || !templateName) {
+        return res.status(400).json({ success: false, error: 'Campos requeridos: phone, templateName' });
+      }
+
+      const result = await sendTemplateMessage({
+        orgId: organizationId || 'demo-org',
+        phone: targetPhone,
+        templateName,
+        languageCode,
+        components,
+        supabaseClient: supabase,
+      });
+
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // 4. ACTION: REACTIVATE INACTIVE LEADS > 24H (action=reactivate_inactive_leads)
+  if (action === 'reactivate_inactive_leads' || subRoute === 'reactivate') {
+    try {
+      const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+      let query = supabase
+        .from('wa_conversations')
+        .select('*')
+        .in('status', ['active', 'qualifying', 'qualified'])
+        .lt('last_message_at', cutoffTime);
+
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const { data: inactiveLeads, error } = await query.limit(50);
+
+      if (error) {
+        console.warn('⚠️ Error fetching inactive leads for reactivation:', error.message);
+      }
+
+      const leadsToReactivate = inactiveLeads || [];
+      let reactivatedCount = 0;
+      const results: any[] = [];
+
+      for (const lead of leadsToReactivate) {
+        const attempts = lead.reactivation_attempts || 0;
+        if (attempts >= 2) continue; // Skip if already attempted 2 times
+
+        const leadName = lead.user_name || 'Estimado cliente';
+        const zone = lead.preferred_zone || 'su zona de preferencia';
+
+        const dispatchResult = await sendTemplateMessage({
+          orgId: lead.organization_id || organizationId || 'demo-org',
+          phone: lead.user_phone,
+          templateName: 'seguimiento_propiedad_v1',
+          languageCode: 'es',
+          components: [
+            {
+              type: 'body',
+              parameters: [
+                { type: 'text', text: leadName },
+                { type: 'text', text: zone },
+              ],
+            },
+          ],
+          supabaseClient: supabase,
+        });
+
+        if (dispatchResult.success) {
+          reactivatedCount++;
+          try {
+            await supabase
+              .from('wa_conversations')
+              .update({
+                last_outbound_template_at: new Date().toISOString(),
+                reactivation_attempts: attempts + 1,
+              })
+              .eq('id', lead.id);
+          } catch {}
+        }
+
+        results.push({
+          leadId: lead.id,
+          phone: lead.user_phone,
+          result: dispatchResult,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Proceso de reactivación completado. ${reactivatedCount} plantillas enviadas.`,
+        reactivatedCount,
+        totalChecked: leadsToReactivate.length,
+        results,
+      });
+    } catch (err: any) {
+      console.error('❌ Exception in reactivate_inactive_leads:', err);
       return res.status(500).json({ success: false, error: err.message });
     }
   }
