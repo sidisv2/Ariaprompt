@@ -90,6 +90,13 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       locked: false,
     },
     {
+      id: 'dashboard-assistant' as AppRoute,
+      label: 'Asistente IA 24/7 (Sandbox)',
+      icon: Bot,
+      badge: '✦ En Vivo',
+      locked: false,
+    },
+    {
       id: 'dashboard-files' as AppRoute,
       label: t('sidebar.files'),
       icon: FolderKey,

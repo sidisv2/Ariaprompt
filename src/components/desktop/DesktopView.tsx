@@ -11,6 +11,7 @@ import { MetricsView } from '../dashboard/MetricsView';
 import { PropertiesView } from '../dashboard/PropertiesView';
 import { LeadsView } from '../dashboard/LeadsView';
 import { BotConfigView } from '../dashboard/BotConfigView';
+import { AssistantPlaygroundView } from '../dashboard/AssistantPlaygroundView';
 import { CheckoutView } from '../dashboard/CheckoutView';
 import { CrmIntegrationsView } from '../dashboard/CrmIntegrationsView';
 import { UserProfileDashboard } from '../profile/UserProfileDashboard';
@@ -119,6 +120,9 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
             )}
             {currentRoute === 'dashboard-bot-config' && (
               <BotConfigView botConfig={botConfig} onUpdateBotConfig={onUpdateBotConfig} />
+            )}
+            {(currentRoute === 'dashboard-assistant' || currentRoute === 'aria-ai') && (
+              <AssistantPlaygroundView botConfig={botConfig} onRouteChange={onRouteChange} />
             )}
             {currentRoute === 'dashboard-checkout' && (
               <CheckoutView onRouteChange={onRouteChange} />

@@ -133,6 +133,7 @@ export type AppRoute =
   | 'dashboard-properties'
   | 'dashboard-leads'
   | 'dashboard-bot-config'
+  | 'dashboard-assistant'
   | 'dashboard-checkout'
   | 'dashboard-profile'
   | 'dashboard-files'

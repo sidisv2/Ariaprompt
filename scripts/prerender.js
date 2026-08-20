@@ -299,6 +299,15 @@ const PUBLIC_ROUTES = [
     contentHtml: `<div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans"><main class="max-w-7xl mx-auto px-4 py-8"><h1 class="text-2xl font-bold text-white">Configuración del Agente</h1></main></div>`,
   },
   {
+    path: '/dashboard/assistant',
+    title: 'Centro de Mando del Asistente IA 24/7 | Aria Prop Workspace',
+    description: 'Simulador sandbox interactivo y centro de inspección RAG en tiempo real de la IA comercial de Aria Prop.',
+    ogTitle: 'Centro de Mando Asistente IA | Aria Prop',
+    ogDescription: 'Simulador WhatsApp en vivo e inspecctores de entidades cualificadas.',
+    ogImage: `${BASE_URL}/assets/og-app.jpg`,
+    contentHtml: `<div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans"><main class="max-w-7xl mx-auto px-4 py-8"><h1 class="text-2xl font-bold text-white">Centro de Mando del Asistente IA</h1></main></div>`,
+  },
+  {
     path: '/dashboard/checkout',
     title: 'Suscripción & Plan | Aria Prop Workspace',
     description: 'Gestiona tu plan de facturación y límites de catálogo de Aria Prop.',

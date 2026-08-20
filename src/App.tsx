@@ -30,6 +30,7 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('dashboard/properties')) return 'dashboard-properties';
   if (path.includes('dashboard/leads')) return 'dashboard-leads';
   if (path.includes('dashboard/bot-config')) return 'dashboard-bot-config';
+  if (path.includes('dashboard/assistant') || path.includes('aria-ai')) return 'dashboard-assistant';
   if (path.includes('dashboard/checkout')) return 'dashboard-checkout';
   if (path.includes('dashboard/profile')) return 'dashboard-profile';
   if (path.includes('dashboard/files')) return 'dashboard-files';
@@ -58,6 +59,7 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'dashboard-properties': return '/dashboard/properties';
     case 'dashboard-leads': return '/dashboard/leads';
     case 'dashboard-bot-config': return '/dashboard/bot-config';
+    case 'dashboard-assistant': return '/dashboard/assistant';
     case 'dashboard-checkout': return '/dashboard/checkout';
     case 'dashboard-profile': return '/dashboard/profile';
     case 'dashboard-files': return '/dashboard/files';
