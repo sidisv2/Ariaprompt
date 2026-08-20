@@ -168,7 +168,7 @@ export const WhatsAppSettings: React.FC = () => {
     if (!window.FB) {
       // Direct OAuth dialog URL fallback if Facebook SDK is blocked
       const redirectUri = `${window.location.origin}/api/whatsapp/oauth`;
-      const oauthUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=public_profile,email,whatsapp_business_management,whatsapp_business_messaging&response_type=code`;
+      const oauthUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=whatsapp_business_management,whatsapp_business_messaging,public_profile`;
       window.open(oauthUrl, 'FacebookLogin', 'width=600,height=700');
       return;
     }
@@ -186,7 +186,7 @@ export const WhatsAppSettings: React.FC = () => {
         }
       },
       {
-        scope: 'public_profile,email,whatsapp_business_management,whatsapp_business_messaging',
+        scope: 'whatsapp_business_management,whatsapp_business_messaging,public_profile',
         config_id: configId || undefined,
         response_type: 'code',
         override_default_response_type: true,
