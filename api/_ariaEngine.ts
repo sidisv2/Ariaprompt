@@ -389,6 +389,79 @@ export async function processAriaMessage({
         created_at: new Date().toISOString(),
       });
     } catch {}
+
+    // 7. Sync to leads and lead_messages table for CRM integration
+    try {
+      const cleanPhone = userPhone || 'Desconocido';
+      const leadName = extractedData.lead_name || cleanPhone;
+      
+      const { data: existingLead } = await supabase
+        .from('leads')
+        .select('id')
+        .or(`phone.eq.${cleanPhone},user_phone.eq.${cleanPhone}`)
+        .maybeSingle();
+
+      let targetLeadId = existingLead?.id;
+
+      if (targetLeadId) {
+        await supabase
+          .from('leads')
+          .update({
+            organization_id: organizationId,
+            user_id: organizationId,
+            name: leadName,
+            status: extractedData.status || 'active',
+            budget_max_usd: extractedData.budget_max_usd || null,
+            preferred_zone: extractedData.preferred_zone || null,
+            property_type: extractedData.property_type || null,
+            last_message: userMessage,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', targetLeadId);
+      } else {
+        const { data: createdLead } = await supabase
+          .from('leads')
+          .insert({
+            organization_id: organizationId,
+            user_id: organizationId,
+            phone: cleanPhone,
+            user_phone: cleanPhone,
+            name: leadName,
+            status: extractedData.status || 'active',
+            budget_max_usd: extractedData.budget_max_usd || null,
+            preferred_zone: extractedData.preferred_zone || null,
+            property_type: extractedData.property_type || null,
+            last_message: userMessage,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        targetLeadId = createdLead?.id;
+      }
+
+      if (targetLeadId) {
+        await supabase.from('lead_messages').insert([
+          {
+            lead_id: targetLeadId,
+            conversation_id: conversationId,
+            sender_type: 'user',
+            message_text: userMessage,
+            created_at: new Date().toISOString(),
+          },
+          {
+            lead_id: targetLeadId,
+            conversation_id: conversationId,
+            sender_type: 'assistant',
+            message_text: replyText,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      }
+    } catch (syncLeadErr) {
+      console.warn('⚠️ leads / lead_messages sync notice:', syncLeadErr);
+    }
   }
 
   return {

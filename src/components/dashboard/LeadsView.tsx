@@ -99,76 +99,73 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      let token = '';
       if (supabase) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        token = sessionData.session?.access_token || '';
-      }
-
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '20',
-        status: statusFilter,
-        search: search.trim(),
-      });
-
-      const res = await fetch(`/api/crm/leads?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          const list: CrmLead[] = data.leads || [];
-          setLeads(list);
-          setTotalCount(data.pagination?.total || 0);
-          setTotalPages(data.pagination?.totalPages || 1);
-
-          if (!selectedLead && list.length > 0) {
-            setSelectedLead(list[0]);
-          } else if (selectedLead) {
-            const updated = list.find((l) => l.id === selectedLead.id);
-            if (updated) setSelectedLead(updated);
-          }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLeads([]);
+          setSelectedLead(null);
+          setLoading(false);
+          return;
         }
-      } else {
-        // Fallback directly to Supabase client
-        if (supabase) {
-          let query = supabase.from('crm_leads_overview').select('*', { count: 'exact' });
-          if (statusFilter !== 'all') {
-            query = query.eq('status', statusFilter);
-          }
-          if (search.trim()) {
-            query = query.or(
-              `user_phone.ilike.%${search}%,user_name.ilike.%${search}%,preferred_zone.ilike.%${search}%`
-            );
-          }
 
-          const offset = (page - 1) * 20;
-          const { data: sbLeads, count: sbCount } = await query
-            .order('last_message_at', { ascending: false })
-            .range(offset, offset + 19);
+        let query = supabase
+          .from('leads')
+          .select('*, lead_messages(*)');
 
-          const list = (sbLeads as CrmLead[]) || [];
+        if (!(user as any)?.isDemoAccount) {
+          query = query.or(`user_id.eq.${user.id},organization_id.eq.${user.id}`);
+        }
+
+        if (statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
+
+        const { data, error } = await query.order('updated_at', { ascending: false });
+
+        if (error) {
+          console.error('Error al cargar leads:', error);
+          setLeads([]);
+          setSelectedLead(null);
+        } else {
+          const list: CrmLead[] = (data || []).map((item: any) => ({
+            id: item.id,
+            organization_id: item.organization_id || item.user_id,
+            user_phone: item.phone || item.user_phone || item.name || 'Sin teléfono',
+            user_name: item.name || item.user_name || item.phone || 'Cliente',
+            status: item.status || 'active',
+            budget_max_usd: item.budget_max_usd || item.budgetMax || null,
+            preferred_zone: item.preferred_zone || item.preferredZone || null,
+            property_type: item.property_type || item.propertyType || null,
+            last_message: item.last_message || item.chatHistorySummary || 'Lead captado',
+            last_message_at: item.updated_at || item.created_at || new Date().toISOString(),
+            total_messages: item.total_messages || (item.lead_messages ? item.lead_messages.length : 1),
+            agent_notes: item.agent_notes || item.notes || null,
+          }));
+
           setLeads(list);
-          setTotalCount(sbCount || 0);
-          setTotalPages(Math.ceil((sbCount || 0) / 20));
+          setTotalCount(list.length);
+          setTotalPages(1);
 
-          if (!selectedLead && list.length > 0) {
-            setSelectedLead(list[0]);
+          if (list.length > 0) {
+            if (!selectedLead) {
+              setSelectedLead(list[0]);
+            } else {
+              const updated = list.find((l) => l.id === selectedLead.id);
+              if (updated) setSelectedLead(updated);
+            }
+          } else {
+            setSelectedLead(null);
           }
         }
       }
     } catch (err) {
       console.error('❌ Error fetching CRM leads:', err);
+      setLeads([]);
+      setSelectedLead(null);
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, search, selectedLead]);
+  }, [statusFilter, selectedLead]);
 
   const fetchMetrics = useCallback(async () => {
     if (!supabase) return;
@@ -561,9 +558,14 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 </div>
               ))
             ) : leads.length === 0 ? (
-              <div className="p-8 text-center text-slate-500 text-xs">
-                <Users className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p>No se encontraron prospectos</p>
+              <div className="p-8 text-center space-y-3 my-auto">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <h3 className="font-extrabold text-white text-sm">Sin prospectos aún</h3>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Los clientes que interactúen por WhatsApp, Instagram o el chat web de tus propiedades aparecerán aquí en tiempo real calificados por Aria.
+                </p>
               </div>
             ) : (
               leads.map((lead) => {
@@ -818,9 +820,16 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs">
-              <Users className="w-10 h-10 text-slate-600 mb-2" />
-              <p>Selecciona un lead de la lista izquierda para gestionar su ficha y notas</p>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-md mx-auto my-auto">
+              <div className="w-16 h-16 rounded-3xl bg-slate-950 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-2xl">
+                <MessageSquare className="w-8 h-8" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-black text-white text-lg">Sin prospectos aún</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Los clientes que interactúen por WhatsApp, Instagram o el chat web de tus propiedades aparecerán aquí en tiempo real calificados por Aria.
+                </p>
+              </div>
             </div>
           )}
 

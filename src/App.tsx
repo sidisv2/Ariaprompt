@@ -91,7 +91,7 @@ function AppInner() {
     return INITIAL_PROPERTIES;
   });
   const [leads, setLeads] = useState<Lead[]>(() => {
-    return user?.isDemoAccount ? INITIAL_LEADS : INITIAL_LEADS;
+    return user?.isDemoAccount ? INITIAL_LEADS : [];
   });
   const [botConfig, setBotConfig] = useState<BotConfig>(INITIAL_BOT_CONFIG);
   const [selectedLeadForChat, setSelectedLeadForChat] = useState<string | undefined>(undefined);

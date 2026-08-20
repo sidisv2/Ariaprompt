@@ -76,24 +76,33 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
     setLoading(true);
     try {
       if (supabase) {
-        const { data, error } = await supabase
-          .from('conversations')
-          .select('*')
-          .order('updated_at', { ascending: false })
-          .limit(50);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLeads([]);
+          setSelectedLeadId(null);
+          setLoading(false);
+          return;
+        }
+
+        let query = supabase.from('leads').select('*, lead_messages(*)');
+        if (!(user as any)?.isDemoAccount) {
+          query = query.or(`user_id.eq.${user.id},organization_id.eq.${user.id}`);
+        }
+
+        const { data, error } = await query.order('updated_at', { ascending: false });
 
         if (!error && data && data.length > 0) {
           const mapped: InboxLeadItem[] = data.map((item: any) => ({
             id: item.id,
-            user_phone: item.user_phone || '54911' + item.id.substring(0, 7),
-            user_name: item.user_name || 'Prospecto Inmobiliario',
-            status: item.status || (item.handover_requested ? 'handover' : 'active'),
-            preferred_zone: item.preferred_zone || 'Palermo / Belgrano',
-            budget_max_usd: item.budget_max_usd || 150000,
-            last_message: item.last_message || 'Hola, me interesa ver este departamento.',
-            last_message_at: item.updated_at || new Date().toISOString(),
-            total_messages: item.total_messages || 4,
-            channel: item.channel === 'webchat' ? 'webchat' : 'whatsapp',
+            user_phone: item.phone || item.user_phone || item.name || 'Sin teléfono',
+            user_name: item.name || item.user_name || item.phone || 'Cliente',
+            status: item.status || 'active',
+            preferred_zone: item.preferred_zone || item.preferredZone || null,
+            budget_max_usd: item.budget_max_usd || item.budgetMax || null,
+            last_message: item.last_message || item.chatHistorySummary || 'Sin mensajes aún',
+            last_message_at: item.updated_at || item.created_at || new Date().toISOString(),
+            total_messages: item.total_messages || (item.lead_messages ? item.lead_messages.length : 0),
+            channel: item.channel || 'whatsapp',
             is_bot_active: item.is_bot_active !== false,
           }));
           setLeads(mapped);
@@ -101,54 +110,44 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
             setSelectedLeadId(mapped[0].id);
           }
         } else {
-          // Fallback Mock Data for Instant Interactive Demo
-          const mockLeads: InboxLeadItem[] = [
-            {
-              id: 'lead-1',
-              user_phone: '+54 9 11 4014-3729',
-              user_name: 'Valentin Morales (Interesado Palermo)',
-              status: 'handover',
-              preferred_zone: 'Palermo Hollywood',
-              budget_max_usd: 180000,
-              last_message: 'Quiero agendar una visita para el viernes por la tarde.',
-              last_message_at: new Date(Date.now() - 5 * 60000).toISOString(),
-              total_messages: 6,
+          // Check wa_conversations fallback
+          const { data: waConvs } = await supabase
+            .from('wa_conversations')
+            .select('*')
+            .eq('organization_id', user.id)
+            .order('last_message_at', { ascending: false });
+
+          if (waConvs && waConvs.length > 0) {
+            const mapped: InboxLeadItem[] = waConvs.map((item: any) => ({
+              id: item.id,
+              user_phone: item.user_phone || 'WhatsApp Lead',
+              user_name: item.user_name || item.user_phone || 'Prospecto WhatsApp',
+              status: item.status || 'active',
+              preferred_zone: item.preferred_zone || null,
+              budget_max_usd: item.budget_max_usd || null,
+              last_message: item.last_message || 'Mensaje de WhatsApp',
+              last_message_at: item.last_message_at || item.created_at || new Date().toISOString(),
+              total_messages: 1,
               channel: 'whatsapp',
-              is_bot_active: false,
-            },
-            {
-              id: 'lead-2',
-              user_phone: '+54 9 11 5522-8811',
-              user_name: 'Carolina Ruiz',
-              status: 'qualified',
-              preferred_zone: 'Belgrano R',
-              budget_max_usd: 250000,
-              last_message: '¿Tiene cochera fija y balcón terraza?',
-              last_message_at: new Date(Date.now() - 25 * 60000).toISOString(),
-              total_messages: 8,
-              channel: 'whatsapp',
-              is_bot_active: true,
-            },
-            {
-              id: 'lead-3',
-              user_phone: '+54 9 260 401-4372',
-              user_name: 'Gonzalo Fernández',
-              status: 'active',
-              preferred_zone: 'Recoleta',
-              budget_max_usd: 120000,
-              last_message: '¿Aceptan permuta por departamento más chico?',
-              last_message_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-              total_messages: 3,
-              channel: 'webchat',
-              is_bot_active: true,
-            },
-          ];
-          setLeads(mockLeads);
-          if (!selectedLeadId) setSelectedLeadId('lead-1');
+              is_bot_active: item.is_bot_active !== false,
+            }));
+            setLeads(mapped);
+            if (!selectedLeadId && mapped.length > 0) {
+              setSelectedLeadId(mapped[0].id);
+            }
+          } else {
+            setLeads([]);
+            setSelectedLeadId(null);
+          }
         }
+      } else {
+        setLeads([]);
+        setSelectedLeadId(null);
       }
     } catch (e) {
       console.error('Error fetching inbox leads:', e);
+      setLeads([]);
+      setSelectedLeadId(null);
     } finally {
       setLoading(false);
     }
@@ -162,55 +161,36 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
 
     try {
       if (supabase) {
-        const { data } = await supabase
-          .from('messages')
+        let { data } = await supabase
+          .from('lead_messages')
           .select('*')
-          .eq('conversation_id', leadId)
+          .eq('lead_id', leadId)
           .order('created_at', { ascending: true });
+
+        if (!data || data.length === 0) {
+          const { data: waData } = await supabase
+            .from('wa_messages')
+            .select('*')
+            .eq('conversation_id', leadId)
+            .order('created_at', { ascending: true });
+          data = waData;
+        }
 
         if (data && data.length > 0) {
           const mappedMsgs: ChatMessage[] = data.map((m: any) => ({
             id: m.id,
             sender_type: m.sender_type || (m.role === 'user' ? 'user' : 'assistant'),
             message_text: m.message_text || m.content || '',
-            created_at: m.created_at,
+            created_at: m.created_at || new Date().toISOString(),
           }));
           setMessages(mappedMsgs);
           return;
         }
       }
-
-      // Mock Timeline for selected lead
-      const mockTimeline: ChatMessage[] = [
-        {
-          id: 'msg-1',
-          sender_type: 'user',
-          message_text: 'Hola! Vi el departamento en Palermo de 3 ambientes a 180.000 USD.',
-          created_at: new Date(Date.now() - 15 * 60000).toISOString(),
-        },
-        {
-          id: 'msg-2',
-          sender_type: 'assistant',
-          message_text:
-            '¡Hola Valentin! Claro que sí 🏢 Cuenta con 75 m², balcón corrido al frente y amoblado de categoría. ¿Te gustaría coordinar una visita presencial?',
-          created_at: new Date(Date.now() - 14 * 60000).toISOString(),
-        },
-        {
-          id: 'msg-3',
-          sender_type: 'user',
-          message_text: 'Sí, me interesa ir el viernes a las 16 hs. ¿Hay un asesor disponible?',
-          created_at: new Date(Date.now() - 5 * 60000).toISOString(),
-        },
-        {
-          id: 'msg-4',
-          sender_type: 'system',
-          message_text: '⚠️ Lead ha solicitado atención personalizada. Intervención Humana recomendada.',
-          created_at: new Date(Date.now() - 4 * 60000).toISOString(),
-        },
-      ];
-      setMessages(mockTimeline);
+      setMessages([]);
     } catch (e) {
       console.error('Error fetching messages:', e);
+      setMessages([]);
     }
   };
 
@@ -326,8 +306,14 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                 <p>Cargando bandeja de entrada...</p>
               </div>
             ) : filteredLeads.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs">
-                No hay conversaciones activas.
+              <div className="p-8 text-center space-y-3 my-auto">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                  <MessageSquare className="w-6 h-6" />
+                </div>
+                <h3 className="font-extrabold text-white text-sm">Sin prospectos aún</h3>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Los clientes que interactúen por WhatsApp, Instagram o el chat web de tus propiedades aparecerán aquí en tiempo real calificados por Aria.
+                </p>
               </div>
             ) : (
               filteredLeads.map((lead) => {
@@ -552,8 +538,16 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
               </form>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center p-8 text-center text-slate-500 text-xs">
-              Selecciona una conversación de la lista para ver el historial y tomar el control humano.
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 max-w-md mx-auto">
+              <div className="w-16 h-16 rounded-3xl bg-slate-900 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-2xl">
+                <MessageSquare className="w-8 h-8" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="font-black text-white text-lg">Sin prospectos aún</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Los clientes que interactúen por WhatsApp, Instagram o el chat web de tus propiedades aparecerán aquí en tiempo real calificados por Aria.
+                </p>
+              </div>
             </div>
           )}
         </div>
