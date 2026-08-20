@@ -21,6 +21,7 @@ import {
 
 import { WhatsAppSettings } from './WhatsAppSettings';
 import { AgentWizardModal, AgentData } from './AgentWizardModal';
+import { TeamAssignmentSettings } from '../settings/TeamAssignmentSettings';
 import { supabase } from '../../lib/supabaseClient';
 
 export interface FaqItem {
@@ -544,6 +545,11 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
 
         </div>
 
+      </div>
+
+      {/* Commercial Team Round-Robin Lead Assignment */}
+      <div className="pt-6 border-t border-white/10">
+        <TeamAssignmentSettings />
       </div>
 
       {/* WhatsApp Official Embedded Signup Section */}
