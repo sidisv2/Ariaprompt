@@ -18,7 +18,10 @@ import {
   Search,
   User,
   ArrowRight,
-  Database
+  Database,
+  Paperclip,
+  Smile,
+  CheckCheck
 } from 'lucide-react';
 import { AppRoute, BotConfig } from '../../types';
 import { generateStructuredAriaRealEstateResponse, ExtractedLeadData } from '../../../api/_lib/openrouterService';
@@ -79,7 +82,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
     {
       id: 'welcome-1',
       sender: 'bot',
-      text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad estás interesado hoy?`,
+      text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA comercial de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad o zona estás interesado hoy?`,
       timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -258,7 +261,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
         {
           id: `msg-${Date.now()}`,
           sender: 'bot',
-          text: `Tenemos departamentos disponibles en Palermo desde $800 USD. ¿Te gustaría coordinar una visita presencial?`,
+          text: `Entendido. He registrado tu consulta sobre "${query}". ¿Te gustaría que coordine una visita presencial con uno de nuestros asesores comerciales?`,
           timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -272,7 +275,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
       {
         id: 'welcome-1',
         sender: 'bot',
-        text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad estás interesado hoy?`,
+        text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA comercial de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad estás interesado hoy?`,
         timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
@@ -310,29 +313,29 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
   };
 
   return (
-    <div className="space-y-6 text-slate-100 pb-8 max-w-7xl mx-auto">
+    <div className="space-y-6 text-slate-100 pb-8 max-w-[1600px] mx-auto">
       
-      {/* Top Header */}
+      {/* Top Header & Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Bot className="w-6 h-6 text-emerald-400" />
-            Centro de Mando & Sandbox del Asistente IA 24/7
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+            <Bot className="w-7 h-7 text-emerald-400" />
+            Asistente IA 24/7 (Sandbox RAG en Tiempo Real)
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Simulador interactivo en tiempo real para verificar las respuestas comerciales, RAG de propiedades y reglas de negocio del bot.
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Simulador panorámico en vivo para testear respuestas comerciales, motor de recomendaciones y extracción RAG de entidades.
           </p>
 
           {/* Usage / Plan Banner */}
           {isUnlimitedUser ? (
-            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-teal-500/20 border border-amber-500/30 text-amber-300 text-xs font-black shadow-sm">
+            <div className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-emerald-500/20 to-teal-500/20 border border-amber-500/30 text-amber-300 text-xs font-black shadow-md">
               <Sparkles className="w-4 h-4 text-amber-400 fill-amber-400" />
               <span>👑 Modo Enterprise / Owner - Mensajes Ilimitados</span>
             </div>
           ) : (
-            <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-extrabold border ${
+            <div className={`mt-2.5 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold border ${
               isFreeLimitReached
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-rose-950/40 shadow-lg'
                 : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
             }`}>
               <Zap className="w-4 h-4 text-emerald-400" />
@@ -340,7 +343,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
               {isFreeLimitReached && (
                 <button
                   onClick={() => onRouteChange?.('dashboard-checkout')}
-                  className="ml-2 px-2.5 py-0.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[10px] uppercase cursor-pointer"
+                  className="ml-2 px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-[11px] uppercase cursor-pointer transition-all shadow-md hover:scale-105"
                 >
                   Desbloquear ➔
                 </button>
@@ -349,63 +352,80 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {onRouteChange && (
             <>
               <button
                 onClick={() => onRouteChange('dashboard-bot-config')}
-                className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs border border-white/10 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-200 font-bold text-xs border border-white/10 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+                <Sliders className="w-4 h-4 text-emerald-400" />
                 <span>Reglas & Tono</span>
               </button>
               <button
                 onClick={() => onRouteChange('dashboard-properties')}
-                className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-xs border border-emerald-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-extrabold text-xs border border-emerald-500/30 transition-all flex items-center gap-2 cursor-pointer shadow-sm"
               >
-                <Building className="w-3.5 h-3.5 text-emerald-400" />
+                <Building className="w-4 h-4 text-emerald-400" />
                 <span>Ver Inventario</span>
               </button>
             </>
           )}
+          <button
+            onClick={handleResetChat}
+            title="Reiniciar chat simulado"
+            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-emerald-400 border border-white/10 transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Main 2-Column Grid */}
+      {/* Main 2-Column Panoramic Workspace Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* LEFT COLUMN: WhatsApp Dark Smartphone Mockup (7 Cols) */}
-        <div className="lg:col-span-7 flex justify-center">
-          <div className="w-full max-w-md bg-[#0b141a] rounded-[40px] border-[6px] border-slate-800 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col h-[650px] relative">
+        {/* LEFT COLUMN: Wide Panoramic Chat Canvas (8 Cols - 70-75% Width) */}
+        <div className="lg:col-span-8 flex flex-col">
+          <div className="w-full bg-[#0b141a] rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col h-[700px] relative backdrop-blur-xl">
             
-            {/* Phone Top Speaker Bar */}
-            <div className="bg-[#111b21] pt-3 pb-2 px-6 flex items-center justify-between border-b border-slate-800/80">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-slate-950 font-bold text-sm shadow-md">
-                  <Bot className="w-5 h-5 text-slate-950" />
+            {/* Panoramic Header Bar */}
+            <div className="bg-[#111b21] py-3.5 px-6 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-300 flex items-center justify-center text-slate-950 font-black text-base shadow-lg shadow-emerald-500/20">
+                  <Bot className="w-6 h-6 text-slate-950" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-xs tracking-wide">
-                    {botConfig?.agentName || 'Aria Assistant'}
+                  <h3 className="font-extrabold text-white text-sm tracking-wide flex items-center gap-2">
+                    <span>{botConfig?.agentName || 'Aria Assistant'}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                      Asistente Inmobiliario IA
+                    </span>
                   </h3>
-                  <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>en línea 24/7 ({botConfig?.agencyName || 'Aria Prop'})</span>
+                  <p className="text-xs text-emerald-400 font-medium flex items-center gap-1.5 mt-0.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>🟢 En línea 24/7 ({botConfig?.agencyName || 'Aria Prop LATAM'})</span>
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={handleResetChat}
-                title="Reiniciar chat simulado"
-                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-emerald-400 transition-all cursor-pointer"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
+              {/* Model Pill & Status */}
+              <div className="hidden sm:flex items-center gap-3">
+                <div className="px-3 py-1 rounded-full bg-slate-900 border border-white/10 text-[11px] font-mono text-slate-300 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Gemini 2.5 Flash / Aria RAG</span>
+                </div>
+                <button
+                  onClick={handleResetChat}
+                  title="Reiniciar chat simulado"
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-emerald-400 transition-all cursor-pointer"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Chat Messages Body */}
-            <div className="flex-1 bg-[#0b141a] p-4 overflow-y-auto space-y-3 font-sans text-xs bg-[radial-gradient(#202c33_1px,transparent_1px)] [background-size:16px_16px]">
+            {/* Panoramic Chat Canvas Body */}
+            <div className="flex-1 bg-[#0b141a] p-6 overflow-y-auto space-y-4 font-sans bg-[radial-gradient(#202c33_1px,transparent_1px)] [background-size:20px_20px]">
               {messages.map((msg) => {
                 const isUser = msg.sender === 'user';
                 return (
@@ -414,27 +434,30 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
                     className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed shadow-md ${
+                      className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-lg ${
                         isUser
-                          ? 'bg-[#005c4b] text-white rounded-tr-none'
-                          : 'bg-[#202c33] text-slate-100 rounded-tl-none border border-white/5'
+                          ? 'bg-[#005c4b] text-white rounded-tr-none border border-emerald-500/20'
+                          : 'bg-[#202c33] text-slate-100 rounded-tl-none border border-white/10'
                       }`}
                     >
                       <p className="whitespace-pre-line">{msg.text}</p>
                     </div>
-                    <span className="text-[9px] text-slate-500 mt-1 font-mono px-1">
-                      {msg.timestamp}
-                    </span>
+                    <div className="flex items-center gap-1 mt-1 px-1">
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {msg.timestamp}
+                      </span>
+                      {isUser && <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />}
+                    </div>
                   </div>
                 );
               })}
 
               {isTyping && (
-                <div className="flex items-center gap-2 p-3 rounded-2xl bg-[#202c33] border border-white/5 text-slate-400 text-xs w-32 rounded-tl-none animate-pulse">
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"></span>
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                  <span className="text-[10px] text-slate-400 font-semibold ml-1">Escribiendo...</span>
+                <div className="flex items-center gap-2.5 p-4 rounded-2xl bg-[#202c33] border border-white/10 text-slate-300 text-xs w-64 rounded-tl-none animate-pulse shadow-md">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"></span>
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                  <span className="text-xs text-slate-300 font-bold ml-1">Aria está redactando la respuesta...</span>
                 </div>
               )}
 
@@ -442,69 +465,80 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
             </div>
 
             {/* Quick Suggestion Chips */}
-            <div className="px-3 py-2 bg-[#111b21] border-t border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="px-4 py-2.5 bg-[#111b21] border-t border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
               {[
                 '¿Tienen 2 ambientes en alquiler?',
                 '¿Qué propiedades tienen en venta hasta $150,000 USD?',
                 'Quiero coordinar una visita presencial',
+                '¿Aceptan permutas o crédito hipotecario?',
               ].map((chip, idx) => (
                 <button
                   key={idx}
                   disabled={isFreeLimitReached}
                   onClick={() => handleSendMessage(chip)}
-                  className="px-2.5 py-1 rounded-full bg-[#202c33] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 text-[10px] font-semibold border border-white/5 whitespace-nowrap transition-all cursor-pointer shrink-0 disabled:opacity-40"
+                  className="px-3 py-1.5 rounded-full bg-[#202c33] hover:bg-emerald-500/20 text-slate-300 hover:text-emerald-300 text-xs font-semibold border border-white/5 whitespace-nowrap transition-all cursor-pointer shrink-0 disabled:opacity-40 shadow-sm"
                 >
                   {chip}
                 </button>
               ))}
             </div>
 
-            {/* Input Bar or Locked Banner */}
+            {/* Panoramic Input Bar or Locked Banner */}
             {isFreeLimitReached ? (
-              <div className="p-4 bg-[#111b21] border-t border-rose-500/40 space-y-2 text-center">
-                <div className="flex items-center justify-center gap-1.5 text-rose-400 font-extrabold text-xs">
-                  <ShieldCheck className="w-4 h-4 text-rose-400" />
-                  <span>Has alcanzado el límite de 3 mensajes de prueba</span>
+              <div className="p-6 bg-[#111b21] border-t border-rose-500/40 space-y-3 text-center">
+                <div className="flex items-center justify-center gap-2 text-rose-400 font-extrabold text-sm">
+                  <ShieldCheck className="w-5 h-5 text-rose-400" />
+                  <span>Has alcanzado el límite de 3 mensajes de prueba gratuita</span>
                 </div>
-                <p className="text-[11px] text-slate-300 leading-snug">
-                  Pasa a un plan Pro/Enterprise para desbloquear atención 24/7 ilimitada.
+                <p className="text-xs text-slate-300 max-w-lg mx-auto leading-relaxed">
+                  Pasa a un plan Pro o Enterprise para desbloquear atención comercial 24/7 ilimitada en WhatsApp y Web.
                 </p>
                 <button
                   onClick={() => onRouteChange?.('dashboard-checkout')}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02]"
+                  className="px-8 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] mx-auto"
                 >
                   <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
                   <span>Desbloquear Mensajes Ilimitados ➔</span>
                 </button>
               </div>
             ) : (
-              <div className="p-3 bg-[#111b21] flex items-center gap-2 border-t border-slate-800">
+              <div className="p-4 bg-[#111b21] flex items-center gap-3 border-t border-slate-800">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <button type="button" className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer" title="Adjuntar ficha o documento (Simulación)">
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer" title="Insertar emoji (Simulación)">
+                    <Smile className="w-4 h-4" />
+                  </button>
+                </div>
+
                 <input
                   type="text"
                   value={inputMsg}
                   onChange={(e) => setInputMsg(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Escribe un mensaje de prueba..."
-                  className="flex-1 bg-[#202c33] text-white placeholder-slate-500 rounded-2xl px-3.5 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-transparent"
+                  placeholder="Escribe tu consulta comercial sobre propiedades, precios o visitas..."
+                  className="flex-1 bg-[#202c33] text-white placeholder-slate-400 rounded-2xl px-4 py-3 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 border border-transparent shadow-inner"
                 />
+
                 <button
                   disabled={!inputMsg.trim() || isTyping}
                   onClick={() => handleSendMessage()}
-                  className="w-9 h-9 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 shrink-0"
+                  className="w-11 h-11 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center transition-all cursor-pointer disabled:opacity-40 shrink-0 shadow-lg shadow-emerald-500/20 hover:scale-105"
                 >
-                  <Send className="w-4 h-4 fill-current" />
+                  <Send className="w-5 h-5 fill-current" />
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Live RAG Inspector & Telemetry (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* RIGHT COLUMN: Live RAG Inspector & Telemetry (4 Cols - 25-30% Width) */}
+        <div className="lg:col-span-4 space-y-6">
 
           {/* Non-blocking Quota Notice Banner (if paid solo/pro plan) */}
           {!isUnlimitedUser && user?.plan && user.plan !== 'desarrolladores' && (
-            <div className="p-4 rounded-3xl bg-slate-900/90 border border-amber-500/30 text-amber-300 text-xs space-y-2 shadow-xl backdrop-blur-xl">
+            <div className="p-5 rounded-3xl bg-slate-900/90 border border-amber-500/30 text-amber-300 text-xs space-y-2 shadow-xl backdrop-blur-xl">
               <div className="flex items-center justify-between font-bold">
                 <span className="flex items-center gap-1.5 text-amber-300">
                   <Zap className="w-4 h-4 text-amber-400" />
@@ -642,3 +676,5 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
     </div>
   );
 };
+
+export default AssistantPlaygroundView;
