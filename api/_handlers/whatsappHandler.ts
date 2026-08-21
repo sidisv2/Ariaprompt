@@ -564,6 +564,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             wa_phone_number_id: phoneNumberId,
             wa_waba_id: wabaId || null,
             wa_connected: true,
+            wa_connected_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
 
@@ -594,6 +595,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             }
           }
 
+          // Verify update immediately in database
+          const { data: verifiedSavedOrg } = await supabase
+            .from('organizations')
+            .select('id, name, wa_phone_number_id, wa_waba_id, wa_connected, updated_at')
+            .eq('id', saveOrgId)
+            .maybeSingle();
+
+          console.log('🔍 [DB Verification after Connect]:', verifiedSavedOrg);
+
           // Also update profile if user is known
           if (userId) {
             try {
@@ -621,6 +631,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               wa_waba_id: wabaId || null,
               ...(accessToken ? { wa_access_token: accessToken } : {}),
               wa_connected: true,
+              wa_connected_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
