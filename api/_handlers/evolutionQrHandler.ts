@@ -185,6 +185,16 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
           state: 'connecting',
           wa_status: 'connecting',
         });
+      } else if (pairResult.qr) {
+        return res.status(200).json({
+          success: true,
+          instanceName,
+          qr: pairResult.qr,
+          qrcode: pairResult.qr,
+          state: 'connecting',
+          wa_status: 'connecting',
+          warning: 'Evolution API devolvió el Código QR para esta instancia en lugar de un código de 8 dígitos.',
+        });
       } else {
         return res.status(400).json({
           success: false,

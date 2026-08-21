@@ -220,6 +220,12 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
         setPairingCode(data.pairingCode);
         setWaStatus('connecting');
         setRefreshCountdown(60);
+      } else if (res.ok && data.success && (data.qr || data.qrcode)) {
+        setInstanceName(data.instanceName || '');
+        setQrCodeData(data.qr || data.qrcode);
+        setLinkMode('qr');
+        setWaStatus('connecting');
+        setRefreshCountdown(30);
       } else {
         setErrorMsg(data.error || 'No se pudo generar el código de vinculación.');
       }

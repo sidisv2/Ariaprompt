@@ -197,12 +197,13 @@ export async function getEvolutionInstanceStatus(instanceName: string): Promise<
 }
 
 /**
- * Requests an 8-digit Pairing Code for phone linking from Evolution API
+ * Requests an 8-digit Pairing Code for phone linking from Evolution API.
+ * Safely handles raw 2@ Baileys QR strings by converting them to QR DataURL if returned.
  */
 export async function getEvolutionPairingCode(
   instanceName: string,
   phoneNumber: string
-): Promise<{ success: boolean; pairingCode?: string; error?: string }> {
+): Promise<{ success: boolean; pairingCode?: string; qr?: string; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
@@ -223,15 +224,34 @@ export async function getEvolutionPairingCode(
     });
 
     const data = await res.json().catch(() => ({}));
-    const pairingCode: string | null =
+    const rawCandidate: string | null =
       data.pairingCode ||
       data.pairing_code ||
       data.code ||
       data.instance?.pairingCode ||
+      data.qrcode?.code ||
       null;
 
-    if (pairingCode) {
-      return { success: true, pairingCode: String(pairingCode) };
+    if (rawCandidate && typeof rawCandidate === 'string') {
+      const trimmed = rawCandidate.trim();
+
+      // If the string starts with '2@', contains '@', or is a raw QR payload (> 25 chars with non-alphanumeric separators), convert to QR image
+      if (trimmed.startsWith('2@') || trimmed.includes('@') || (trimmed.length > 25 && !/^[A-Za-z0-9-]+$/.test(trimmed))) {
+        console.log(`ℹ️ Received raw QR payload from connect endpoint for phone +${cleanNumber}. Converting to QR DataURL...`);
+        try {
+          const qrDataUrl = await QRCode.toDataURL(trimmed);
+          return {
+            success: true,
+            qr: qrDataUrl,
+            error: 'Evolution API devolvió el payload de QR crudo en lugar de un código de 8 dígitos.',
+          };
+        } catch {
+          return { success: false, error: 'Evolution API devolvió un payload de QR no válido.' };
+        }
+      }
+
+      // Valid short alphanumeric pairing code (e.g. 8 characters)
+      return { success: true, pairingCode: trimmed };
     }
 
     return {
