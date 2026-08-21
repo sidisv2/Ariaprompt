@@ -204,7 +204,18 @@ export async function getEvolutionInstanceStatus(instanceName: string): Promise<
 }
 
 /**
- * Requests an 8-digit Pairing Code for phone linking from Evolution API with automatic retry.
+ * Normalizes phone numbers, ensuring correct international format (e.g. 54911... for Argentina)
+ */
+export function normalizePhoneNumber(phone: string): string {
+  let clean = phone.replace(/\D/g, '');
+  if (clean.startsWith('54') && !clean.startsWith('549') && clean.length >= 10) {
+    clean = '549' + clean.slice(2);
+  }
+  return clean;
+}
+
+/**
+ * Requests an 8-digit Pairing Code for phone linking from Evolution API with 3 retries and logging.
  */
 export async function getEvolutionPairingCode(
   instanceName: string,
@@ -215,12 +226,14 @@ export async function getEvolutionPairingCode(
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  const cleanNumber = phoneNumber.replace(/\D/g, '');
+  const cleanNumber = normalizePhoneNumber(phoneNumber);
   if (!cleanNumber) {
     return { success: false, error: 'Número de teléfono no válido' };
   }
 
-  const fetchCode = async (): Promise<string | null> => {
+  console.log(`📌 Requesting Evolution API pairing code for instance "${instanceName}" and phone +${cleanNumber}...`);
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await fetch(`${baseUrl}/instance/connect/${instanceName}?number=${cleanNumber}`, {
         method: 'GET',
@@ -231,6 +244,8 @@ export async function getEvolutionPairingCode(
       });
 
       const data = await res.json().catch(() => ({}));
+      console.log(`📌 [Attempt ${attempt}/3] Evolution API connect response for +${cleanNumber}:`, JSON.stringify(data));
+
       const rawCandidate: string | null =
         data.pairingCode ||
         data.pairing_code ||
@@ -240,29 +255,20 @@ export async function getEvolutionPairingCode(
 
       if (rawCandidate && typeof rawCandidate === 'string') {
         const trimmed = rawCandidate.trim();
-        // Ensure string is not a raw Baileys QR code payload
+        // Ensure string is a short pairing code without @ or 2@
         if (!trimmed.startsWith('2@') && !trimmed.includes('@') && trimmed.length <= 16) {
-          return trimmed;
+          console.log(`✅ [Attempt ${attempt}/3] Evolution API pairing code received: "${trimmed}"`);
+          return { success: true, pairingCode: trimmed };
         }
       }
-      return null;
-    } catch {
-      return null;
+    } catch (err) {
+      console.warn(`⚠️ [Attempt ${attempt}/3] Exception fetching pairing code:`, err);
     }
-  };
 
-  // Attempt 1: Immediate fetch
-  let code = await fetchCode();
-
-  // Attempt 2: If code not ready, wait 1.5s and retry
-  if (!code) {
-    console.log(`⏱️ Waiting 1.5s for Evolution API pairing code generation for +${cleanNumber}...`);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    code = await fetchCode();
-  }
-
-  if (code) {
-    return { success: true, pairingCode: code };
+    if (attempt < 3) {
+      console.log(`⏱️ Pairing code not ready on attempt ${attempt}. Waiting 1.5s before retry...`);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
   }
 
   return {

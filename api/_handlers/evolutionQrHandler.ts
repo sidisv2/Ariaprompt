@@ -7,6 +7,7 @@ import {
   getEvolutionInstanceStatus,
   getEvolutionPairingCode,
   logoutEvolutionInstance,
+  normalizePhoneNumber,
 } from '../_lib/evolutionClient.js';
 
 function getBackendSupabaseClient() {
@@ -154,7 +155,10 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
     }
 
     if (action === 'pairing-code') {
-      const cleanPhone = String(body.phoneNumber || body.phone || '5491140143729').replace(/\D/g, '');
+      const cleanPhone = normalizePhoneNumber(String(body.phoneNumber || body.phone || '5491140143729'));
+
+      console.log(`📌 Purging any previous instance session "${instanceName}" before requesting pairing code...`);
+      await logoutEvolutionInstance(instanceName);
 
       console.log(`📌 Creating Evolution API pairing instance "${instanceName}" for phone +${cleanPhone} (qrcode: false)...`);
       await createEvolutionInstance(instanceName, userId, { qrcode: false, number: cleanPhone });
@@ -164,7 +168,7 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
       const webhookUrl = `${protocol}://${host}/api/webhook/evolution`;
       await setEvolutionWebhook(instanceName, webhookUrl);
 
-      console.log(`📌 Fetching Evolution API 8-digit Pairing Code for instance "${instanceName}"...`);
+      console.log(`📌 Fetching Evolution API 8-digit Pairing Code for instance "${instanceName}" and phone +${cleanPhone}...`);
       const pairResult = await getEvolutionPairingCode(instanceName, cleanPhone);
 
       if (supabase) {
