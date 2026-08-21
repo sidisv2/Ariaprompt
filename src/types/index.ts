@@ -154,6 +154,8 @@ export type AppRoute =
   | 'comparar-chatbots'
   | 'ia-para-inmobiliarias'
   | 'automatizar-whatsapp-inmobiliaria'
+  | 'whatsapp-para-inmobiliarias'
+  | 'chatbot-inmobiliario'
   | 'chatbot-vs-agente-ia';
 
 export type UserSubscriptionRole =

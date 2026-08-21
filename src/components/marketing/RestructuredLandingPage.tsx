@@ -494,6 +494,55 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* 4.5. SEGURIDAD Y AISLAMIENTO DE DATOS INSTITUCIONAL                */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
+        <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-extrabold uppercase tracking-wider">
+            <Lock className="w-3.5 h-3.5" /> Privacidad & Confianza
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+            Tus propiedades y tus clientes pertenecen 100% a tu inmobiliaria
+          </h2>
+          <p className="text-sm sm:text-base text-slate-400">
+            Seguridad de nivel bancario, aislamiento estricto y cumplimiento riguroso de políticas de Meta.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-slate-900/80 p-8 rounded-3xl border border-white/10 space-y-4 hover:border-emerald-500/30 transition-all">
+            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl w-fit border border-emerald-500/20">
+              <Database className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-white text-lg">Aislamiento Multi-Tenant Estricto</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              La base de datos, el inventario de propiedades y las conversaciones de cada organización operan en entornos completamente aislados mediante Row Level Security (RLS). Nadie fuera de tu equipo puede acceder a tus datos.
+            </p>
+          </div>
+
+          <div className="bg-slate-900/80 p-8 rounded-3xl border border-white/10 space-y-4 hover:border-emerald-500/30 transition-all">
+            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl w-fit border border-emerald-500/20">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-white text-lg">Tus Propias Credenciales Oficiales</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Conexión directa mediante Meta Cloud API con tu WABA ID y Phone Number ID oficial. Sin intermediarios no autorizados, sin emuladores inestables y con garantía de disponibilidad ininterrumpida.
+            </p>
+          </div>
+
+          <div className="bg-slate-900/80 p-8 rounded-3xl border border-white/10 space-y-4 hover:border-emerald-500/30 transition-all">
+            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-2xl w-fit border border-emerald-500/20">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h3 className="font-extrabold text-white text-lg">Privacidad de Contactos</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Tus leads, números de teléfono y registros de chat son propiedad exclusiva de tu inmobiliaria. Nunca se comparten con terceros ni se utilizan para entrenar modelos públicos de inteligencia artificial.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 4.5. MÉTRICAS DE IMPACTO COMERCIAL                                  */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">

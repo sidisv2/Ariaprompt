@@ -39,6 +39,9 @@ import { InteractiveDemoSection } from '../marketing/InteractiveDemoSection';
 import { TechStackSection } from '../marketing/TechStackSection';
 import { TrustSecuritySection } from '../marketing/TrustSecuritySection';
 import { RestructuredLandingPage } from '../marketing/RestructuredLandingPage';
+import { IAParaInmobiliariasPage } from '../../pages/seo/IAParaInmobiliariasPage';
+import { AutomatizarWhatsAppPage } from '../../pages/seo/AutomatizarWhatsAppPage';
+import { ChatbotVsAgentePage } from '../../pages/seo/ChatbotVsAgentePage';
 
 interface MobileViewProps {
   currentRoute: AppRoute;
@@ -136,6 +139,18 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <h2 className="text-lg font-bold text-white">Widget Embebible Mobile</h2>
             </div>
             <EmbedChatWidget botConfig={botConfig} properties={properties} />
+          </div>
+        ) : currentRoute === 'ia-para-inmobiliarias' ? (
+          <div>
+            <IAParaInmobiliariasPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
+          </div>
+        ) : currentRoute === 'whatsapp-para-inmobiliarias' || currentRoute === 'automatizar-whatsapp-inmobiliaria' ? (
+          <div>
+            <AutomatizarWhatsAppPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
+          </div>
+        ) : currentRoute === 'chatbot-inmobiliario' || currentRoute === 'chatbot-vs-agente-ia' ? (
+          <div>
+            <ChatbotVsAgentePage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
           </div>
         ) : currentRoute === 'catalog' || currentRoute === 'explorar' ? (
           <div>

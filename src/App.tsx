@@ -28,6 +28,9 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('comparar/manual')) return 'comparar-manual';
   if (path.includes('comparar/crm')) return 'comparar-crm';
   if (path.includes('comparar/chatbots')) return 'comparar-chatbots';
+  if (path.includes('ia-para-inmobiliarias')) return 'ia-para-inmobiliarias';
+  if (path.includes('whatsapp-para-inmobiliarias') || path.includes('automatizar-whatsapp-inmobiliaria')) return 'whatsapp-para-inmobiliarias';
+  if (path.includes('chatbot-inmobiliario') || path.includes('chatbot-vs-agente-ia')) return 'chatbot-inmobiliario';
   if (path.includes('properties/') || path.includes('propiedades/')) return 'property-detail';
   if (path.includes('dashboard/properties')) return 'dashboard-properties';
   if (path.includes('dashboard/leads')) return 'dashboard-leads';
@@ -58,6 +61,11 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'comparar-manual': return '/comparar/manual';
     case 'comparar-crm': return '/comparar/crm';
     case 'comparar-chatbots': return '/comparar/chatbots';
+    case 'ia-para-inmobiliarias': return '/ia-para-inmobiliarias';
+    case 'whatsapp-para-inmobiliarias':
+    case 'automatizar-whatsapp-inmobiliaria': return '/whatsapp-para-inmobiliarias';
+    case 'chatbot-inmobiliario':
+    case 'chatbot-vs-agente-ia': return '/chatbot-inmobiliario';
     case 'dashboard-properties': return '/dashboard/properties';
     case 'dashboard-leads': return '/dashboard/leads';
     case 'dashboard-bot-config': return '/dashboard/bot-config';

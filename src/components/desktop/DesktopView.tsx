@@ -189,11 +189,11 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
         <main className="flex-1 animate-page-fade">
           <IAParaInmobiliariasPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
         </main>
-      ) : currentRoute === 'automatizar-whatsapp-inmobiliaria' ? (
+      ) : currentRoute === 'whatsapp-para-inmobiliarias' || currentRoute === 'automatizar-whatsapp-inmobiliaria' ? (
         <main className="flex-1 animate-page-fade">
           <AutomatizarWhatsAppPage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
         </main>
-      ) : currentRoute === 'chatbot-vs-agente-ia' ? (
+      ) : currentRoute === 'chatbot-inmobiliario' || currentRoute === 'chatbot-vs-agente-ia' ? (
         <main className="flex-1 animate-page-fade">
           <ChatbotVsAgentePage onRouteChange={onRouteChange} onOpenPrompt={onOpenPrompt} />
         </main>

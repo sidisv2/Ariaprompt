@@ -15,7 +15,14 @@ import {
   ChevronUp,
   ArrowRight,
   ShieldCheck,
-  Smartphone
+  Smartphone,
+  Mic,
+  Building2,
+  ExternalLink,
+  Users,
+  Clock,
+  Database,
+  Lock
 } from 'lucide-react';
 
 interface SEOPageProps {
@@ -32,20 +39,20 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
 
   const faqs = [
     {
+      q: '¿Cómo evita Aria que se pierdan consultas de Zonaprop, Argenprop o Redes?',
+      a: 'Cada vez que entra un lead desde portales o campañas de Meta Ads a tu WhatsApp, Aria responde en menos de 10 segundos, califica el presupuesto, envía la ficha técnica y coordina la visita antes de que el usuario busque otra opción.'
+    },
+    {
       q: '¿Es compatible con la API Oficial de Meta WhatsApp Cloud?',
-      a: 'Sí. Aria Prop se conecta directamente con WhatsApp Cloud API (Meta Official Partner), lo que garantiza el cumplimiento de políticas de Meta, evitando bloqueos y permitiendo alta velocidad de envío.'
+      a: 'Sí. Aria Prop opera exclusivamente con WhatsApp Cloud API Oficial de Meta. Esto garantiza alta disponibilidad, velocidad extrema y soporte multi-asesor sin riesgo de bloqueos de número.'
     },
     {
-      q: '¿Puede enviar fichas PDF o fotos directamente en el chat?',
-      a: 'Por supuesto. Cuando el interesado consulta por una propiedad, Aria le adjunta la ficha técnica completa en formato PDF y la galería de fotos verificada directamente en la conversación de WhatsApp.'
+      q: '¿Varios asesores pueden atender el mismo número de WhatsApp?',
+      a: 'Sí. La arquitectura oficial multi-asesor permite que tu equipo comercial visualice los chats en simultáneo y tome el control cuando sea necesario con solo escribir un mensaje.'
     },
     {
-      q: '¿Qué ocurre si el usuario solicita agendar una visita?',
-      a: 'Aria le ofrece los horarios disponibles según tu Google Calendar, coordina el día y hora preferidos, confirma la reserva y envía la notificación al WhatsApp del corredor a cargo.'
-    },
-    {
-      q: '¿Mis asesores pueden intervenir en el chat de WhatsApp cuando quieran?',
-      a: 'Sí. En todo momento el equipo humano puede tomar el control del chat desde la bandeja de entrada unificada de Aria o desde la app oficial de WhatsApp Business.'
+      q: '¿Qué pasa si el cliente envía una nota de voz por WhatsApp?',
+      a: 'Aria procesa y transcribe el audio al instante con Gemini 2.5 Flash, entiende requerimientos complejos y responde con precisión técnica inmediata.'
     }
   ];
 
@@ -54,13 +61,12 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
     '@graph': [
       {
         '@type': 'SoftwareApplication',
-        'name': 'Aria Prop - Automatización de WhatsApp Inmobiliario',
+        'name': 'Aria Prop - Automatizá el WhatsApp de tu inmobiliaria con la API Oficial de Meta',
         'applicationCategory': 'BusinessApplication',
         'operatingSystem': 'All',
-        'url': 'https://ariaprop.online/automatizar-whatsapp-inmobiliaria',
+        'url': 'https://ariaprop.online/whatsapp-para-inmobiliarias',
         'image': 'https://ariaprop.online/og-image.jpg',
-        'screenshot': 'https://ariaprop.online/og-image.jpg',
-        'description': 'Automatiza WhatsApp para inmobiliarias con IA: envía fichas técnicas en PDF, cualifica compradores y coordina visitas presenciales.',
+        'description': 'Automatizá el WhatsApp de tu inmobiliaria con la API Oficial de Meta. Respuesta en menos de 10 segundos, atención 24/7 y multi-asesor.',
         'offers': {
           '@type': 'Offer',
           'price': '0',
@@ -84,9 +90,9 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       <SEO
-        title="Automatizar WhatsApp para Inmobiliarias | Aria Prop"
-        description="Aprende a automatizar el WhatsApp de tu inmobiliaria con IA oficial de Meta. Envía fichas técnicas PDF, cualifica prospectos y agenda visitas 24/7."
-        url="https://ariaprop.online/automatizar-whatsapp-inmobiliaria"
+        title="Automatizá el WhatsApp de tu inmobiliaria con la API Oficial de Meta | Aria Prop"
+        description="Respuesta en menos de 10 segundos para consultas de Zonaprop, Argenprop y Redes. Atención 24/7, comprensión de audios y WhatsApp multi-asesor con Aria Prop."
+        url="https://ariaprop.online/whatsapp-para-inmobiliarias"
         image="https://ariaprop.online/og-image.jpg"
       />
 
@@ -97,87 +103,131 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
 
       <Header currentRoute="soluciones" onRouteChange={onRouteChange} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
         
-        {/* Hero Section */}
+        {/* 1. Hero Section */}
         <section className="text-center max-w-4xl mx-auto space-y-6 pt-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/10">
             <Smartphone className="w-4 h-4 text-emerald-400 animate-pulse" />
-            <span>WhatsApp Business Official Cloud API</span>
+            <span>WhatsApp Cloud API Oficial de Meta</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
-            Cómo Automatizar el WhatsApp de tu Inmobiliaria{' '}
+            Automatizá el WhatsApp de tu inmobiliaria con la{' '}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
-              sin Perder Leads
+              API Oficial de Meta
             </span>
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-3xl mx-auto">
-            Descubre el método paso a paso para conectar tu catálogo de inmuebles a WhatsApp Cloud API. Entrega fichas PDF al instante, filtra interesados sin presupuesto y sincroniza visitas presenciales en Google Calendar.
+            Responde en menos de 10 segundos cada consulta de Zonaprop, Argenprop y Redes Sociales. Atención 24/7, soporte multi-asesor y sincronización directa con tu catálogo de propiedades.
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() => {
-                if (onOpenPrompt) onOpenPrompt('Hola, quisiera ver una demostración de automatización de WhatsApp.');
-                else onRouteChange('app');
-              }}
+              onClick={() => onRouteChange('dashboard-checkout')}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
             >
               <Sparkles className="w-5 h-5 fill-slate-950 text-slate-950" />
-              <span>Ver Demo en WhatsApp ➔</span>
+              <span>Comenzar prueba gratis de 14 días</span>
+              <ArrowRight className="w-4 h-4 ml-1" />
             </button>
+          </div>
 
-            <button
-              onClick={() => onRouteChange('catalog')}
-              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-emerald-400" />
-              <span>Ver Ejemplo de Ficha PDF</span>
-            </button>
+          <p className="text-xs text-slate-400 font-medium">
+            Sin contratos forzosos · Configuración en 15 minutos · Sin comisiones por venta
+          </p>
+        </section>
+
+        {/* 2. Interactive WhatsApp Simulator */}
+        <section className="max-w-md mx-auto">
+          <div className="rounded-3xl bg-slate-950 border border-emerald-500/40 p-4 shadow-2xl shadow-emerald-500/10 relative">
+            <div className="border-b border-white/10 pb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black text-xs border border-emerald-500/30">
+                    AP
+                  </div>
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-slate-950" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-xs flex items-center gap-1.5">
+                    WhatsApp Inmobiliaria
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">META API</span>
+                  </h3>
+                  <p className="text-[10px] text-emerald-400 font-semibold">🟢 Respuesta en &lt; 10s · 24/7</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-3 text-xs">
+              <div className="flex justify-end">
+                <div className="bg-emerald-600 text-slate-950 font-medium rounded-2xl rounded-tr-none px-3.5 py-2.5 max-w-[90%] shadow-md">
+                  <p className="leading-snug">Hola, vi la casa en Belgrano en Zonaprop. ¿Tienen el plano y las expensas?</p>
+                  <span className="text-[9px] text-slate-950/70 block text-right mt-1 font-mono">14:32</span>
+                </div>
+              </div>
+
+              <div className="flex justify-start">
+                <div className="bg-slate-900 border border-white/10 text-slate-200 rounded-2xl rounded-tl-none p-3 max-w-[95%] shadow-md space-y-2.5">
+                  <p className="leading-relaxed">
+                    ¡Hola! Sí, acá tenés la ficha técnica verificada de la propiedad en Belgrano R:
+                  </p>
+                  <div className="rounded-xl bg-slate-950 border border-emerald-500/30 p-2.5 flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-white text-xs">Casa 4 Amb · 210m²</div>
+                      <div className="text-[10px] text-emerald-400 font-semibold">USD 320.000 · Expensas $0</div>
+                    </div>
+                    <span className="px-2 py-1 rounded bg-emerald-500 text-slate-950 font-bold text-[10px]">
+                      Ficha PDF
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-slate-500 block text-right font-mono">14:32 · Respuesta en 6s</span>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Feature Cards Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        {/* 3. Three Key Pillars */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="p-8 rounded-3xl bg-slate-900/80 border border-white/10 space-y-4 shadow-xl">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <FileText className="w-6 h-6" />
+              <Clock className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-white">Fichas PDF Automatizadas</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Responde a cada consulta adjuntando el dossier técnico de la propiedad en PDF con planos, fotos y expensas exactas.
+            <h3 className="text-xl font-black text-white">Respuesta en menos de 10s</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Atiende al instante las consultas que entran desde Zonaprop, Argenprop, Instagram Ads y Google, evitando que el cliente consulte a la competencia.
             </p>
           </div>
 
           <div className="p-8 rounded-3xl bg-slate-900/80 border border-white/10 space-y-4 shadow-xl">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <Calendar className="w-6 h-6" />
+              <Users className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-white">Visitas en tu Agenda</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Coordina el día y horario de inspección presencial directamente en la agenda del asesor sin ida y vuelta de mensajes.
+            <h3 className="text-xl font-black text-white">Multi-Asesor Simultáneo</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Tus corredores pueden responder desde el mismo número oficial en cualquier momento, con asignación inteligente de leads y pausas automáticas del bot.
             </p>
           </div>
 
           <div className="p-8 rounded-3xl bg-slate-900/80 border border-white/10 space-y-4 shadow-xl">
             <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <MessageSquare className="w-6 h-6" />
+              <ShieldCheck className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-black text-white">Derivación a Asesor Humano</h3>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Cuando el prospecto está listo para realizar una oferta o negociación, Aria transfiere la conversación al WhatsApp del corredor.
+            <h3 className="text-xl font-black text-white">Infraestructura Oficial Meta</h3>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Sin emuladores QR ni soluciones no oficiales propensas a bloqueos. Conexión 100% oficial Cloud API con cifrado TLS y alta disponibilidad 24/7.
             </p>
           </div>
         </section>
 
-        {/* FAQ Section */}
+        {/* 4. FAQ Section */}
         <section className="space-y-6 max-w-4xl mx-auto pt-8 border-t border-white/10">
           <div className="text-center space-y-2">
             <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Preguntas Frecuentes</span>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Dudas comunes sobre automatización de WhatsApp
+              Dudas comunes sobre WhatsApp Oficial para Inmobiliarias
             </h2>
           </div>
 
@@ -195,7 +245,7 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
                   {openFaqIndex === idx ? <ChevronUp className="w-5 h-5 text-emerald-400 shrink-0" /> : <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />}
                 </button>
                 {openFaqIndex === idx && (
-                  <div className="p-5 pt-0 text-xs text-slate-300 leading-relaxed border-t border-white/5 bg-slate-950/40">
+                  <div className="p-5 pt-0 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-white/5 bg-slate-950/40">
                     {faq.a}
                   </div>
                 )}
@@ -204,20 +254,20 @@ export const AutomatizarWhatsAppPage: React.FC<SEOPageProps> = ({
           </div>
         </section>
 
-        {/* Bottom Banner */}
+        {/* 5. Bottom Call to Action */}
         <section className="p-8 sm:p-12 rounded-3xl bg-slate-900 border border-emerald-500/30 text-center space-y-6 shadow-2xl relative overflow-hidden">
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-            Conecta tu WhatsApp a la IA de Aria Prop
+            Empezá a responder en segundos hoy mismo
           </h2>
           <p className="text-slate-300 text-xs sm:text-sm max-w-2xl mx-auto">
-            Configuración guiada en 15 minutos sin interrumpir tus chats actuales.
+            Configurá tu asistente de WhatsApp con la API Oficial de Meta y no pierdas ni un solo interesado más.
           </p>
           <button
-            onClick={() => onRouteChange('app')}
+            onClick={() => onRouteChange('dashboard-checkout')}
             className="px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all inline-flex items-center gap-2 cursor-pointer hover:scale-105"
           >
             <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-            <span>Probar Gratis (3 Consultas) ➔</span>
+            <span>Comenzar prueba gratis de 14 días ➔</span>
           </button>
         </section>
 

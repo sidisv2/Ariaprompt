@@ -124,13 +124,13 @@ export const Footer: React.FC<FooterProps> = ({ onRouteChange }) => {
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('automatizar-whatsapp-inmobiliaria')} className="hover:text-emerald-400 transition-colors text-left">
-                  Automatizar WhatsApp Inmobiliario
+                <button onClick={() => handleNav('whatsapp-para-inmobiliarias')} className="hover:text-emerald-400 transition-colors text-left">
+                  WhatsApp para Inmobiliarias
                 </button>
               </li>
               <li>
-                <button onClick={() => handleNav('chatbot-vs-agente-ia')} className="hover:text-emerald-400 transition-colors text-left">
-                  Chatbot vs. Agente IA
+                <button onClick={() => handleNav('chatbot-inmobiliario')} className="hover:text-emerald-400 transition-colors text-left">
+                  Chatbot Inmobiliario vs. IA
                 </button>
               </li>
             </ul>

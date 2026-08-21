@@ -38,6 +38,11 @@ export interface ExtractedLeadData {
   operation_type?: string | null;
   status: 'active' | 'qualified' | 'handover' | 'human_handoff' | 'closed';
   lead_name: string | null;
+  appointment?: {
+    requested_date?: string | null;
+    property_title?: string | null;
+    notes?: string | null;
+  } | null;
 }
 
 export interface StructuredRealEstateAIResponse {
