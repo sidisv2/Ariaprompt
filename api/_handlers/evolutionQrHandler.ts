@@ -125,6 +125,44 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
     const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
     const action = body.action || (req.url?.includes('logout') || req.url?.includes('disconnect') ? 'logout' : 'create-instance');
 
+    if (action === 'sync-webhook') {
+      let activeInstance = instanceName;
+      if (supabase && userId) {
+        try {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('wa_instance_name')
+            .eq('id', userId)
+            .maybeSingle();
+          if (prof?.wa_instance_name) {
+            activeInstance = prof.wa_instance_name;
+          }
+        } catch {}
+      }
+
+      const host = req.headers.host || 'ariaprop.online';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const webhookUrl = `${protocol}://${host}/api/webhook/evolution`;
+
+      console.log(`📌 Force syncing Evolution API webhook for instance "${activeInstance}" -> ${webhookUrl}...`);
+      const syncResult = await setEvolutionWebhook(activeInstance, webhookUrl);
+
+      console.log('📌 Sync Webhook Evolution API Response:', JSON.stringify(syncResult));
+
+      if (syncResult.success) {
+        return res.status(200).json({
+          success: true,
+          message: 'Webhook sincronizado correctamente',
+          data: syncResult.data,
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: syncResult.error || 'Error al sincronizar el webhook en Evolution API.',
+        });
+      }
+    }
+
     if (action === 'disconnect' || action === 'logout' || action === 'logout-instance') {
       console.log(`📌 Logging out Evolution API instance "${instanceName}"...`);
       await logoutEvolutionInstance(instanceName);

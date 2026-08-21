@@ -237,6 +237,9 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
     }
   };
 
+  const [syncingWebhook, setSyncingWebhook] = useState<boolean>(false);
+  const autoSyncedRef = React.useRef<boolean>(false);
+
   // 4. Logout / Disconnect WhatsApp Instance
   const handleLogoutInstance = async () => {
     if (!window.confirm('¿Deseas desvincular y cerrar la sesión de WhatsApp de Aria Prop Bot?')) return;
@@ -264,6 +267,7 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
         setWaStatus('disconnected');
         setQrCodeData(null);
         setPairingCode(null);
+        autoSyncedRef.current = false;
         setSuccessMsg('Cuenta de WhatsApp desvinculada y cerrada.');
         if (onConnectionChange) onConnectionChange(false);
       }
@@ -273,6 +277,52 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
       setConnecting(false);
     }
   };
+
+  // 5. Force Sync Webhook with Evolution API
+  const handleSyncWebhook = useCallback(async (isAuto = false) => {
+    setSyncingWebhook(true);
+    if (!isAuto) {
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+    try {
+      let token = '';
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        token = sessionData.session?.access_token || '';
+      }
+
+      const res = await fetch('/api/whatsapp-qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'sync-webhook' }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg('¡Webhook sincronizado correctamente con Evolution API!');
+      } else if (!isAuto) {
+        setErrorMsg(data.error || 'No se pudo sincronizar el Webhook.');
+      }
+    } catch (err: any) {
+      if (!isAuto) {
+        setErrorMsg(err?.message || 'Error al solicitar sincronización de Webhook.');
+      }
+    } finally {
+      setSyncingWebhook(false);
+    }
+  }, []);
+
+  // Auto-sync webhook when connection is established
+  useEffect(() => {
+    if (waStatus === 'connected' && !autoSyncedRef.current) {
+      autoSyncedRef.current = true;
+      handleSyncWebhook(true);
+    }
+  }, [waStatus, handleSyncWebhook]);
 
   const copyPairingCodeToClipboard = () => {
     if (pairingCode) {
@@ -382,14 +432,26 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
                   </div>
                 </div>
 
-                <button
-                  disabled={connecting}
-                  onClick={handleLogoutInstance}
-                  className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold text-xs border border-red-500/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
-                  <span>🔴 Desvincular Cuenta de WhatsApp</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    disabled={syncingWebhook}
+                    onClick={() => handleSyncWebhook(false)}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-bold text-xs border border-emerald-500/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    title="Reconfigurar URL de webhook en Evolution API"
+                  >
+                    <RefreshCw className={`w-4 h-4 text-emerald-400 ${syncingWebhook ? 'animate-spin' : ''}`} />
+                    <span>🔄 Sincronizar Webhook</span>
+                  </button>
+
+                  <button
+                    disabled={connecting}
+                    onClick={handleLogoutInstance}
+                    className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold text-xs border border-red-500/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                    <span>🔴 Desvincular Cuenta</span>
+                  </button>
+                </div>
               </div>
 
               {/* Metrics Grid */}
