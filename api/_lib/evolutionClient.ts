@@ -197,23 +197,19 @@ export function formatRecipientForSending(rawJidOrNumber: string): string {
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2, optionally quoting incoming message
+ * Dispatches WhatsApp text message via Evolution API v2 (pure simplified payload)
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
   recipient: string,
-  text: string,
-  quotedMessageId?: string
+  text: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  // Clean spaces but keep original identifier
-  const targetNumber = (recipient || '').includes('@s.whatsapp.net')
-    ? (recipient || '').replace('@s.whatsapp.net', '').trim()
-    : (recipient || '').replace(/\D/g, '').trim();
+  const targetNumber = (recipient || '').replace('@s.whatsapp.net', '').replace(/\D/g, '').trim();
 
   if (!targetNumber) {
     return { success: false, error: 'Destino no válido' };
@@ -221,25 +217,12 @@ export async function sendEvolutionTextMessage(
 
   const url = `${baseUrl}/message/sendText/${instanceName}`;
 
-  const payload: Record<string, any> = {
+  const payload = {
     number: targetNumber,
     text: text,
-    options: {
-      delay: 0,
-      presence: 'composing',
-      linkPreview: false,
-    },
   };
 
-  if (quotedMessageId) {
-    payload.quoted = {
-      key: {
-        id: quotedMessageId,
-      },
-    };
-  }
-
-  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber}${quotedMessageId ? ` | QuotedMsgId: ${quotedMessageId}` : ''}`);
+  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber}`);
 
   try {
     const res = await fetch(url, {
