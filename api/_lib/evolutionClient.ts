@@ -189,58 +189,57 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 }
 
 /**
- * Dynamic, country-agnostic extraction of clean recipient digits for sending.
- * Strips Argentina (+54) mobile 9 prefix (e.g. 5492604014372 -> 542604014372) to match Baileys JID format.
+ * Returns recipient JID formatted for Evolution API v2:
+ * Preserves @lid intact, strips Argentina (+54) mobile 9 prefix if applicable, and appends @s.whatsapp.net.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
   if (!rawJidOrNumber) return '';
+  const trimmed = rawJidOrNumber.trim();
 
-  let cleaned = rawJidOrNumber.trim();
-
-  // Si viene con @s.whatsapp.net o @lid, extraer solo los dígitos
-  cleaned = cleaned.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
-
-  // Regla Argentina: Si empieza con 549 y tiene entre 12 y 13 dígitos, quitar el 9 móvil
-  // Ej: 5492604014372 -> 542604014372
-  if (cleaned.startsWith('549') && cleaned.length >= 12) {
-    cleaned = '54' + cleaned.slice(3);
+  // Si ya viene como LID, se envía tal cual
+  if (trimmed.endsWith('@lid')) {
+    return trimmed;
   }
 
-  return cleaned;
+  // Extraer dígitos limpios eliminando sufijos previos
+  let digits = trimmed.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+
+  // Regla Argentina (+54): remover el prefijo '9' móvil si tiene 12-13 dígitos
+  // Ej: 5492604014372 -> 542604014372
+  if (digits.startsWith('549') && digits.length >= 12) {
+    digits = '54' + digits.slice(3);
+  }
+
+  // Retornar siempre con el sufijo @s.whatsapp.net explícito
+  return `${digits}@s.whatsapp.net`;
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2, optionally attaching quoted context
+ * Dispatches WhatsApp text message via Evolution API v2 with explicit JID recipient format
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
   recipient: string,
-  text: string,
-  quoted?: any
+  text: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  const targetNumber = formatRecipientForSending(recipient);
-
-  if (!targetNumber) {
-    return { success: false, error: 'Destino no válido' };
+  const targetJid = formatRecipientForSending(recipient);
+  if (!targetJid) {
+    return { success: false, error: 'Destinatario no válido' };
   }
 
-  const url = `${baseUrl}/message/sendText/${instanceName}`;
-
-  const payload: Record<string, any> = {
-    number: targetNumber,
+  const payload = {
+    number: targetJid,
     text: text,
+    linkPreview: false,
   };
 
-  if (quoted?.key?.id) {
-    payload.quoted = quoted;
-  }
-
-  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber} | QuotedId: ${quoted?.key?.id || 'none'}`);
+  const url = `${baseUrl}/message/sendText/${instanceName}`;
+  console.log(`📡 [SEND EVOLUTION] Dispatching to: ${targetJid}`);
 
   try {
     const res = await fetch(url, {
@@ -254,7 +253,10 @@ export async function sendEvolutionTextMessage(
 
     const data = await res.json().catch(() => ({}));
     console.log(`📌 Evolution sendText Result [${res.status}]:`, JSON.stringify(data));
-    return { success: res.ok || res.status === 200 || res.status === 201, data };
+    return {
+      success: res.ok || res.status === 200 || res.status === 201,
+      data,
+    };
   } catch (err: any) {
     console.error(`❌ Exception in sendEvolutionTextMessage:`, err);
     return { success: false, error: err?.message || 'Error enviando mensaje por Evolution API' };

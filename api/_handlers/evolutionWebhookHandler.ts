@@ -105,33 +105,17 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Extract incoming key and recipient (prioritizing remoteJidAlt if recipient ends in @lid)
+    // Extract incoming key and recipient
     const incomingKey = data?.key || key || {};
-    let recipient = incomingKey?.remoteJid || data?.remoteJid || '';
-
-    if (recipient.endsWith('@lid') && incomingKey?.remoteJidAlt) {
-      recipient = incomingKey.remoteJidAlt;
-    } else if (recipient.endsWith('@lid') && data?.remoteJidAlt) {
-      recipient = data.remoteJidAlt;
-    }
-
-    // Construir un quoted limpio sin buffers binarios que rompan el JSON
-    const cleanQuoted = incomingKey?.id ? {
-      key: {
-        id: incomingKey.id,
-        remoteJid: incomingKey.remoteJid,
-        fromMe: Boolean(incomingKey.fromMe),
-        ...(incomingKey.participant ? { participant: incomingKey.participant } : {})
-      }
-    } : undefined;
+    const recipient = incomingKey?.remoteJid || data?.remoteJid || '';
 
     if (recipient.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
-    // Phone digits (with Argentina '9' stripped if applicable) for CRM lead persistence & AI prompt context
-    const clientPhone = formatRecipientForSending(recipient);
+    // Phone digits for CRM lead persistence & AI prompt context
+    const clientPhone = recipient.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
     if (!clientPhone) {
       console.log('⚠️ Ignored message with invalid or missing remoteJid');
       return res.status(200).json({ status: 'IGNORED_INVALID_JID' });
@@ -225,9 +209,9 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando recipient y cleanQuoted
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${recipient}" via instance "${instanceName}" (QuotedId: ${cleanQuoted?.key?.id || 'none'})...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, recipient, aiResponseText, cleanQuoted);
+    // Despacho inmediato por WhatsApp vía Evolution API usando recipient
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${recipient}" via instance "${instanceName}"...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, recipient, aiResponseText);
     console.log(`🚀 Mensaje enviado con éxito al cliente "${recipient}":`, JSON.stringify(sendResult));
 
     // =========================================================================
