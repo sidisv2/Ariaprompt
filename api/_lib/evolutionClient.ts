@@ -190,17 +190,12 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 
 /**
  * Normalizes destination number for outgoing text dispatch in Evolution API v2.
- * Extracts clean digits and strips Argentina 9 prefix (549... -> 54...) for Baileys routing.
+ * Preserves ALL original digits from incoming JID/sender without modifying prefixes.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
-  let digits = (rawJidOrNumber || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
-
-  // Argentina rule: Convert 549... (12+ digits) to 54... for Baileys instant delivery
-  if (digits.startsWith('549') && digits.length >= 12) {
-    digits = '54' + digits.slice(3);
-  }
-
-  return digits;
+  if (!rawJidOrNumber) return '';
+  // Solo limpiar el sufijo @s.whatsapp.net y caracteres no numéricos, conservando todos los dígitos originales
+  return rawJidOrNumber.replace('@s.whatsapp.net', '').replace(/[^0-9]/g, '');
 }
 
 /**
@@ -221,12 +216,12 @@ export async function sendEvolutionTextMessage(
     return { success: false, error: 'Destino no válido' };
   }
 
+  console.log('🚀 Despachando a destinatario original exacto:', cleanRecipient);
+
   const sendPayload = {
     number: cleanRecipient,
     text,
   };
-
-  console.log(`📌 Evolution sendText Request for "${instanceName}" to "${cleanRecipient}"...`);
 
   try {
     const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
