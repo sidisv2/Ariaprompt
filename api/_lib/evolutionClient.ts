@@ -189,11 +189,16 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 }
 
 /**
- * Dynamic, country-agnostic extraction of clean digits from incoming JID or raw recipient.
+ * Dynamic, country-agnostic extraction of clean recipient or JID for sending.
+ * Preserves exact @lid or @s.whatsapp.net domain if provided.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
   if (!rawJidOrNumber) return '';
-  return rawJidOrNumber.replace('@s.whatsapp.net', '').replace(/[^0-9]/g, '');
+  const trimmed = rawJidOrNumber.trim();
+  if (trimmed.endsWith('@lid') || trimmed.endsWith('@s.whatsapp.net')) {
+    return trimmed;
+  }
+  return trimmed.replace(/\D/g, '');
 }
 
 /**
@@ -209,7 +214,7 @@ export async function sendEvolutionTextMessage(
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  const targetNumber = (recipient || '').replace('@s.whatsapp.net', '').replace(/\D/g, '').trim();
+  const targetNumber = formatRecipientForSending(recipient);
 
   if (!targetNumber) {
     return { success: false, error: 'Destino no válido' };

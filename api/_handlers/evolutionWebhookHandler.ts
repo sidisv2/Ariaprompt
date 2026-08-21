@@ -105,22 +105,19 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Extract real JID: prioritize remoteJidAlt if remoteJid ends with @lid
-    let remoteJid = key.remoteJid || data?.remoteJid || '';
-    if (remoteJid.endsWith('@lid') && key.remoteJidAlt) {
-      console.log(`📌 [LID MODE DETECTED] Replacing @lid JID "${remoteJid}" with key.remoteJidAlt "${key.remoteJidAlt}"`);
-      remoteJid = key.remoteJidAlt;
-    } else if (remoteJid.endsWith('@lid') && data?.remoteJidAlt) {
-      console.log(`📌 [LID MODE DETECTED] Replacing @lid JID "${remoteJid}" with data.remoteJidAlt "${data.remoteJidAlt}"`);
-      remoteJid = data.remoteJidAlt;
-    }
+    // Keep exact incoming remoteJid for reply dispatch (preserving @lid or @s.whatsapp.net intact)
+    const rawRemoteJid = key.remoteJid || data?.remoteJid || '';
+    const replyTarget = rawRemoteJid;
 
-    if (remoteJid.includes('@g.us')) {
+    if (rawRemoteJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
-    const clientPhone = remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+    // Phone digits for CRM lead persistence & AI prompt context
+    const altJid = key.remoteJidAlt || data?.remoteJidAlt || '';
+    const phoneSource = altJid || rawRemoteJid;
+    const clientPhone = phoneSource.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
     if (!clientPhone) {
       console.log('⚠️ Ignored message with invalid or missing remoteJid');
       return res.status(200).json({ status: 'IGNORED_INVALID_JID' });
@@ -159,14 +156,17 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
         await supabase.from('processed_messages').insert({
           wamid,
-          organization_id: 'evolution-api',
+          user_phone: clientPhone,
+          message_text: messageText,
           created_at: new Date().toISOString(),
         });
-      } catch {}
+      } catch (dedupErr) {
+        console.warn('⚠️ Deduplication check exception:', dedupErr);
+      }
     }
 
-    // Resolve organization ID and User ID for this instance
-    let organizationId = '00000000-0000-0000-0000-000000000000';
+    // Extract organization & user context
+    let organizationId: string | null = null;
     let userId: string | null = null;
 
     if (supabase) {
@@ -186,7 +186,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       }
     }
 
-    console.log(`💬 [EVOLUTION INCOMING MESSAGE] From: +${clientPhone} | Text: "${messageText}"`);
+    console.log(`💬 [EVOLUTION INCOMING MESSAGE] From JID: "${replyTarget}" (Phone: +${clientPhone}) | Text: "${messageText}"`);
     console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
     // =========================================================================
@@ -211,8 +211,8 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API
-    const targetRecipient = remoteJid || clientPhone;
+    // Despacho inmediato por WhatsApp vía Evolution API usando el replyTarget exacto de origen
+    const targetRecipient = replyTarget || clientPhone;
     console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to "${targetRecipient}" via instance "${instanceName}"...`);
     const sendResult = await sendEvolutionTextMessage(instanceName, targetRecipient, aiResponseText);
     console.log(`🚀 Mensaje enviado con éxito al cliente "${targetRecipient}":`, JSON.stringify(sendResult));
