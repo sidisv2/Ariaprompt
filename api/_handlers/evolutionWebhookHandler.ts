@@ -7,6 +7,7 @@ import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
   const supabaseKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
     process.env.VITE_SUPABASE_ANON_KEY ||
     process.env.SUPABASE_ANON_KEY ||
@@ -146,20 +147,25 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       } catch {}
     }
 
-    // Resolve organization ID for this instance
+    // Resolve organization ID and User ID for this instance
     let organizationId = '00000000-0000-0000-0000-000000000000';
+    let userId: string | null = null;
+
     if (supabase) {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('organization_id')
+          .select('id, organization_id')
           .eq('wa_instance_name', instanceName)
           .maybeSingle();
 
-        if (profile?.organization_id) {
-          organizationId = profile.organization_id;
+        if (profile) {
+          if (profile.organization_id) organizationId = profile.organization_id;
+          if (profile.id) userId = profile.id;
         }
-      } catch {}
+      } catch (profErr) {
+        console.warn('⚠️ Profile lookup error in Evolution webhook:', profErr);
+      }
     }
 
     console.log(`💬 [EVOLUTION INCOMING MESSAGE] From: +${clientPhone} | Text: "${messageText}"`);
@@ -181,7 +187,8 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     // Register / Update Lead in Supabase CRM
     if (supabase) {
       try {
-        const leadName = extractedData?.lead_name || `Prospecto +${clientPhone}`;
+        const rawPushName = data.pushName || data.data?.pushName || data.senderName || data.name || null;
+        const clientName = extractedData?.lead_name || rawPushName || `Cliente WhatsApp +${clientPhone}`;
         const isAppointment = Boolean(extractedData?.appointment?.requested_date);
         const qualificationScore = isAppointment
           ? 90
@@ -191,29 +198,46 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           ? 75
           : 50;
 
-        await supabase.from('leads').upsert({
+        const leadPayload: Record<string, any> = {
           phone: clientPhone,
-          name: leadName,
+          name: clientName,
           last_message: messageText,
-          status: extractedData?.status || 'active',
+          status: extractedData?.status || 'nuevo',
           qualification_score: qualificationScore,
-          ...(organizationId !== '00000000-0000-0000-0000-000000000000' ? { organization_id: organizationId } : {}),
           updated_at: new Date().toISOString(),
-        }, { onConflict: 'phone' });
+        };
+
+        if (organizationId && organizationId !== '00000000-0000-0000-0000-000000000000') {
+          leadPayload.organization_id = organizationId;
+        }
+        if (userId) {
+          leadPayload.user_id = userId;
+        }
+
+        const { data: leadResult, error: leadError } = await supabase
+          .from('leads')
+          .upsert(leadPayload, { onConflict: 'phone' })
+          .select();
+
+        if (leadError) {
+          console.error('❌ Error guardando Lead en Supabase:', leadError);
+        } else {
+          console.log('✅ Lead guardado exitosamente en Supabase CRM:', leadResult);
+        }
 
         // Trigger advisor WhatsApp alert if lead requested appointment or is high-score qualified (>= 80)
         if (isAppointment || qualificationScore >= 80) {
           sendAdvisorWhatsAppAlert({
             orgId: organizationId,
             leadPhone: clientPhone,
-            leadName,
+            leadName: clientName,
             reason: isAppointment ? 'appointment' : 'qualified',
             lastMessage: messageText,
             supabaseClient: supabase,
           }).catch((alertErr) => console.warn('⚠️ Evolution advisor WhatsApp alert notice:', alertErr));
         }
       } catch (crmErr) {
-        console.warn('⚠️ Evolution Supabase lead upsert notice:', crmErr);
+        console.error('❌ Error general procesando Lead CRM:', crmErr);
       }
     }
 

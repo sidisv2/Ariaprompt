@@ -259,6 +259,15 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
       .channel('public:wa_realtime_crm')
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads' },
+        (payload: any) => {
+          console.log('⚡ Supabase Realtime leads event:', payload.eventType);
+          fetchLeads();
+          fetchMetrics();
+        }
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'wa_conversations' },
         (payload: any) => {
           console.log('⚡ Supabase Realtime wa_conversations event:', payload.eventType);
