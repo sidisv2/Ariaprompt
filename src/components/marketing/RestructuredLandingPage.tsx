@@ -92,15 +92,12 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
 
             {/* H1 Title */}
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
-              Tu inmobiliaria responde cada consulta en segundos.{' '}
-              <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 bg-clip-text text-transparent">
-                24/7.
-              </span>
+              El Agente Comercial de IA para tu Inmobiliaria
             </h1>
 
             {/* Subtitle */}
             <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-2xl font-normal">
-              Aria atiende WhatsApp, entiende texto y notas de voz, consulta tu inventario real de propiedades, califica al interesado y agenda visitas. Cuando hace falta, tu asesor toma el control.
+              Atiende WhatsApp 24/7 en segundos, entiende texto y audios, consulta tu inventario real, despacha fichas PDF y agenda visitas directamente en tu calendario.
             </p>
 
             {/* CTA Group */}
@@ -115,10 +112,17 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
               </button>
 
               <button
-                onClick={scrollToHowItWorks}
+                onClick={() => {
+                  const el = document.getElementById('demo-simulator');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    scrollToHowItWorks();
+                  }
+                }}
                 className="px-6 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-white/10 text-slate-200 font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Ver Flujo en 6 Pasos</span>
+                <span>Ver Demo en Vivo</span>
               </button>
             </div>
 
@@ -131,7 +135,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
           </div>
 
           {/* Right: Interactive Phone Simulator (5 Cols) */}
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-5" id="demo-simulator">
             <div className="relative mx-auto max-w-[360px] rounded-[40px] border-[6px] border-slate-800 bg-slate-950 p-4 shadow-2xl shadow-emerald-950/60 ring-1 ring-white/10">
               
               {/* Phone Notch & Header */}
@@ -551,32 +555,32 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
             <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
               &lt; 10s
             </div>
-            <div className="text-xs sm:text-sm font-bold text-white">Tiempo de respuesta inicial</div>
-            <p className="text-[11px] text-slate-400">Atención instantánea sin esperas</p>
+            <div className="text-xs sm:text-sm font-bold text-white">Primera respuesta instantánea</div>
+            <p className="text-[11px] text-slate-400">Atención inmediata sin esperas</p>
           </div>
 
           <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
             <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
               24/7
             </div>
-            <div className="text-xs sm:text-sm font-bold text-white">Atención ininterrumpida</div>
-            <p className="text-[11px] text-slate-400">Noches, feriados y fines de semana</p>
+            <div className="text-xs sm:text-sm font-bold text-white">Cobertura noches y fines de semana</div>
+            <p className="text-[11px] text-slate-400">Disponibilidad total ininterrumpida</p>
           </div>
 
           <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
             <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
               100%
             </div>
-            <div className="text-xs sm:text-sm font-bold text-white">Comprensión de audios y texto</div>
+            <div className="text-xs sm:text-sm font-bold text-white">Comprensión multimodal (Texto y Voz)</div>
             <p className="text-[11px] text-slate-400">Gemini 2.5 Flash Multimodal</p>
           </div>
 
           <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
             <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-              +40%
+              Todo en 1
             </div>
-            <div className="text-xs sm:text-sm font-bold text-white">Visitas coordinadas</div>
-            <p className="text-[11px] text-slate-400">Agendamiento directo en Google Calendar</p>
+            <div className="text-xs sm:text-sm font-bold text-white">WhatsApp Oficial + IA + Fichas PDF + Google Calendar</div>
+            <p className="text-[11px] text-slate-400">Infraestructura comercial completa</p>
           </div>
         </div>
       </section>
