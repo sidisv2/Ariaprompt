@@ -330,19 +330,17 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
     }
   }
 
-  // ROUTE 2: META OAUTH EMBEDDED SIGNUP (/api/whatsapp/oauth)
-  if (subRoute === 'oauth') {
-    const defaultPhone = process.env.WHATSAPP_PHONE_ID || process.env.META_PHONE_NUMBER_ID || '5491140143729';
-
+  // ROUTE 2: META OAUTH & CREDENTIALS MANAGEMENT (/api/whatsapp/oauth, /api/whatsapp/disconnect, /api/whatsapp/connect)
+  if (subRoute === 'oauth' || subRoute === 'connect' || subRoute === 'disconnect' || subRoute === 'verify') {
     if (!supabase) {
       return res.status(200).json({
         success: true,
         organization: {
           id: 'demo-org',
-          name: 'Inmobiliaria Demo',
-          wa_phone_number_id: defaultPhone,
-          wa_waba_id: 'waba-demo-id',
-          wa_connected: true,
+          name: 'Tu Inmobiliaria',
+          wa_phone_number_id: null,
+          wa_waba_id: null,
+          wa_connected: false,
           updated_at: new Date().toISOString(),
         },
       });
@@ -378,14 +376,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           .maybeSingle();
 
         if (orgData) {
+          const isConnected = Boolean(orgData.wa_connected && orgData.wa_phone_number_id);
           return res.status(200).json({
             success: true,
             organization: {
               id: orgData.id,
               name: orgData.name,
-              wa_phone_number_id: orgData.wa_phone_number_id || defaultPhone,
-              wa_waba_id: orgData.wa_waba_id || 'waba-connected-id',
-              wa_connected: orgData.wa_connected !== false,
+              wa_phone_number_id: orgData.wa_phone_number_id || null,
+              wa_waba_id: orgData.wa_waba_id || null,
+              wa_connected: isConnected,
               updated_at: orgData.updated_at,
             },
           });
@@ -395,11 +394,11 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       return res.status(200).json({
         success: true,
         organization: {
-          id: organizationId || 'demo-org',
+          id: organizationId || 'org-new',
           name: 'Tu Inmobiliaria',
-          wa_phone_number_id: defaultPhone,
-          wa_waba_id: 'waba-connected-id',
-          wa_connected: true,
+          wa_phone_number_id: null,
+          wa_waba_id: null,
+          wa_connected: false,
           updated_at: new Date().toISOString(),
         },
       });
@@ -407,10 +406,66 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
     if (req.method === 'POST') {
       const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
-      const action = body.action || 'connect';
+      const action = body.action || (subRoute === 'disconnect' ? 'disconnect' : 'connect');
       const targetOrgId = body.organizationId || organizationId;
 
-      if (action === 'disconnect') {
+      // ACTION 1: VERIFY CREDENTIALS DIRECTLY WITH META GRAPH API
+      if (action === 'verify-credentials' || subRoute === 'verify') {
+        const rawPhoneId = (body.phoneNumberId || body.phone_number_id || '').trim();
+        const rawAccessToken = (body.accessToken || body.access_token || '').trim();
+
+        if (!rawPhoneId || !/^\d{12,20}$/.test(rawPhoneId)) {
+          return res.status(400).json({
+            success: false,
+            error: 'El Phone Number ID debe ser un identificador numérico de Meta de 15 a 17 dígitos (no ingreses tu número de teléfono).',
+          });
+        }
+
+        if (!rawAccessToken || rawAccessToken.length < 20) {
+          return res.status(400).json({
+            success: false,
+            error: 'Ingresa un Access Token válido de Meta Business Manager (System User Token o Permanent Token).',
+          });
+        }
+
+        try {
+          const verifyUrl = `https://graph.facebook.com/v20.0/${rawPhoneId}?fields=verified_name,display_phone_number,quality_rating,name_status,code_verification_status`;
+          const metaRes = await fetch(verifyUrl, {
+            headers: {
+              'Authorization': `Bearer ${rawAccessToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          const metaData = await metaRes.json().catch(() => ({}));
+
+          if (!metaRes.ok || metaData.error) {
+            const errorMsg = metaData.error?.message || `Error de autenticación con Meta (HTTP ${metaRes.status})`;
+            return res.status(400).json({
+              success: false,
+              error: `Meta Graph API rechazó las credenciales: ${errorMsg}`,
+              details: metaData.error,
+            });
+          }
+
+          return res.status(200).json({
+            success: true,
+            verified: true,
+            verifiedName: metaData.verified_name || metaData.display_phone_number || 'Verificado por Meta',
+            displayPhoneNumber: metaData.display_phone_number || null,
+            qualityRating: metaData.quality_rating || 'GREEN',
+            phoneNumberId: rawPhoneId,
+          });
+        } catch (err: any) {
+          return res.status(500).json({
+            success: false,
+            error: `Excepción al conectar con Graph API de Meta: ${err.message || String(err)}`,
+          });
+        }
+      }
+
+      // ACTION 2: DISCONNECT
+      if (action === 'disconnect' || subRoute === 'disconnect') {
         if (targetOrgId) {
           try {
             await supabase
@@ -418,6 +473,8 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               .update({
                 wa_connected: false,
                 wa_access_token: null,
+                wa_phone_number_id: null,
+                wa_waba_id: null,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', targetOrgId);
@@ -426,15 +483,16 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
         return res.status(200).json({
           success: true,
-          message: 'WhatsApp Business account disconnected.',
+          message: 'Cuenta de WhatsApp Business desconectada correctamente.',
           wa_connected: false,
         });
       }
 
+      // ACTION 3: CONNECT / SAVE (MANUAL O EMBEDDED SIGNUP)
       const code = body.code;
-      let wabaId = body.wabaId || body.waba_id || process.env.META_WABA_ID || '1056979960613159';
-      let phoneNumberId = body.phoneNumberId || body.phone_number_id || process.env.WHATSAPP_PHONE_ID || process.env.META_PHONE_NUMBER_ID || '5491140143729';
-      let accessToken = process.env.META_SYSTEM_USER_TOKEN || process.env.WHATSAPP_TOKEN || '';
+      let wabaId = (body.wabaId || body.waba_id || '').trim();
+      let phoneNumberId = (body.phoneNumberId || body.phone_number_id || '').trim();
+      let accessToken = (body.accessToken || body.access_token || '').trim();
 
       const appId = (process.env.META_APP_ID || process.env.VITE_META_APP_ID || '891096146948509').trim();
       const appSecret = (process.env.META_APP_SECRET || process.env.WHATSAPP_APP_SECRET || 'cb334e158d0866dcaf9b0224cedb0493').trim();
@@ -443,7 +501,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         try {
           const tokenUrl = `https://graph.facebook.com/v20.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&code=${code}`;
           const metaRes = await fetch(tokenUrl);
-          const metaData = await metaRes.json();
+          const metaData = await metaRes.json().catch(() => ({}));
           if (metaData.error) {
             console.error('[Meta Token Exchange Error]:', metaData.error);
           }
@@ -456,13 +514,20 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         }
       }
 
+      if (!phoneNumberId || !/^\d{10,20}$/.test(phoneNumberId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Phone Number ID inválido. Debe contener únicamente dígitos numéricos proporcionados por Meta.',
+        });
+      }
+
       if (targetOrgId) {
         try {
           await supabase
             .from('organizations')
             .update({
               wa_phone_number_id: phoneNumberId,
-              wa_waba_id: wabaId,
+              wa_waba_id: wabaId || null,
               ...(accessToken ? { wa_access_token: accessToken } : {}),
               wa_connected: true,
               updated_at: new Date().toISOString(),
@@ -480,7 +545,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           id: targetOrgId || 'org-connected',
           name: 'Tu Inmobiliaria',
           wa_phone_number_id: phoneNumberId,
-          wa_waba_id: wabaId,
+          wa_waba_id: wabaId || null,
           wa_connected: true,
           updated_at: new Date().toISOString(),
         },

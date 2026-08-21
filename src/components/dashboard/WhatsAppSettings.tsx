@@ -11,7 +11,13 @@ import {
   Building2,
   HelpCircle,
   LogOut,
-  Sparkles
+  Sparkles,
+  KeyRound,
+  Layers,
+  Send,
+  Check,
+  Copy,
+  Info
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -31,14 +37,48 @@ export interface WhatsAppOrgStatus {
   updated_at?: string;
 }
 
+export interface VerifiedCredentialsInfo {
+  verifiedName: string;
+  displayPhoneNumber: string | null;
+  qualityRating?: string;
+  phoneNumberId: string;
+}
+
 export const WhatsAppSettings: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'manual' | 'embedded'>('manual');
   const [orgStatus, setOrgStatus] = useState<WhatsAppOrgStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [connecting, setConnecting] = useState<boolean>(false);
+  const [verifying, setVerifying] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // 1. Fetch current WhatsApp connection status for user's organization
+  // Manual Form States
+  const [manualPhoneId, setManualPhoneId] = useState<string>('');
+  const [manualWabaId, setManualWabaId] = useState<string>('');
+  const [manualAccessToken, setManualAccessToken] = useState<string>('');
+  const [verifiedInfo, setVerifiedInfo] = useState<VerifiedCredentialsInfo | null>(null);
+
+  // Helper for safe JSON parsing
+  const safeFetchJson = async (url: string, options?: RequestInit) => {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    let data: any = {};
+    if (contentType.includes('application/json')) {
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = {};
+      }
+    } else {
+      const text = await res.text().catch(() => '');
+      data = { text };
+    }
+    return { ok: res.ok, status: res.status, data };
+  };
+
+  // 1. Fetch current WhatsApp connection status
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
@@ -49,7 +89,7 @@ export const WhatsAppSettings: React.FC = () => {
         token = sessionData.session?.access_token || '';
       }
 
-      const res = await fetch('/api/whatsapp/oauth', {
+      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -57,20 +97,23 @@ export const WhatsAppSettings: React.FC = () => {
         },
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.organization) {
-          setOrgStatus(data.organization);
+      if (ok && data.success && data.organization) {
+        setOrgStatus(data.organization);
+        if (data.organization.wa_phone_number_id) {
+          setManualPhoneId(data.organization.wa_phone_number_id);
+        }
+        if (data.organization.wa_waba_id) {
+          setManualWabaId(data.organization.wa_waba_id);
         }
       }
     } catch (err) {
-      console.warn('⚠️ Could not fetch WhatsApp status via API:', err);
+      console.warn('⚠️ Error al consultar estado de WhatsApp:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 2. Load Facebook SDK dynamically
+  // 2. Load Facebook SDK dynamically for Embedded Signup
   useEffect(() => {
     fetchStatus();
 
@@ -117,13 +160,128 @@ export const WhatsAppSettings: React.FC = () => {
     return () => window.removeEventListener('message', handleMessageEvent);
   }, [fetchStatus]);
 
-  // 4. Complete Signup flow by posting code/IDs to backend
-  const handleCompleteSignup = async (payload: { code?: string; wabaId?: string; phoneNumberId?: string }) => {
+  // 4. Verify Manual Credentials with Meta Graph API
+  const handleVerifyManualCredentials = async () => {
+    const cleanPhoneId = manualPhoneId.trim();
+    const cleanToken = manualAccessToken.trim();
+
+    if (!cleanPhoneId) {
+      setErrorMsg('Por favor, ingresa el Phone Number ID asignado por Meta.');
+      return;
+    }
+
+    if (!/^\d{12,20}$/.test(cleanPhoneId)) {
+      setErrorMsg('El Phone Number ID debe ser un identificador numérico de Meta (15-17 dígitos), no ingreses tu número telefónico.');
+      return;
+    }
+
+    if (!cleanToken || cleanToken.length < 20) {
+      setErrorMsg('Por favor, ingresa un Access Token permanente o de System User de Meta válido.');
+      return;
+    }
+
+    setVerifying(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setVerifiedInfo(null);
+
+    try {
+      let authToken = '';
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        authToken = sessionData.session?.access_token || '';
+      }
+
+      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({
+          action: 'verify-credentials',
+          phoneNumberId: cleanPhoneId,
+          accessToken: cleanToken,
+        }),
+      });
+
+      if (ok && data.success && data.verified) {
+        setVerifiedInfo({
+          verifiedName: data.verifiedName,
+          displayPhoneNumber: data.displayPhoneNumber,
+          qualityRating: data.qualityRating,
+          phoneNumberId: data.phoneNumberId,
+        });
+        setSuccessMsg(`✅ ¡Credenciales verificadas exitosamente con Meta! Línea: ${data.verifiedName} (${data.displayPhoneNumber || cleanPhoneId})`);
+      } else {
+        setErrorMsg(data.error || 'Meta Graph API no pudo verificar estas credenciales. Revisa el Phone Number ID y el Access Token.');
+      }
+    } catch (err: any) {
+      setErrorMsg(`Error al verificar credenciales: ${err.message || String(err)}`);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // 5. Save & Connect Manual Credentials
+  const handleSaveManualConnection = async () => {
+    const cleanPhoneId = manualPhoneId.trim();
+    const cleanWabaId = manualWabaId.trim();
+    const cleanToken = manualAccessToken.trim();
+
+    if (!cleanPhoneId || !cleanToken) {
+      setErrorMsg('Debes ingresar y verificar el Phone Number ID y el Access Token antes de guardar.');
+      return;
+    }
+
     setConnecting(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    console.log('[Meta OAuth Response Payload Received]:', payload);
+    try {
+      let authToken = '';
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        authToken = sessionData.session?.access_token || '';
+      }
+
+      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({
+          action: 'connect',
+          phoneNumberId: cleanPhoneId,
+          wabaId: cleanWabaId,
+          accessToken: cleanToken,
+        }),
+      });
+
+      if (ok && data.success) {
+        setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
+        if (data.organization) {
+          setOrgStatus(data.organization);
+        }
+        setVerifiedInfo(null);
+        setManualAccessToken('');
+        fetchStatus();
+      } else {
+        setErrorMsg(data.error || 'No se pudo guardar la configuración de WhatsApp.');
+      }
+    } catch (err: any) {
+      setErrorMsg(`Error al guardar configuración: ${err.message || String(err)}`);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  // 6. Complete Embedded Signup flow by posting code/IDs to backend
+  const handleCompleteSignup = async (payload: { code?: string; wabaId?: string; phoneNumberId?: string }) => {
+    setConnecting(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
     try {
       let token = '';
@@ -132,7 +290,7 @@ export const WhatsAppSettings: React.FC = () => {
         token = sessionData.session?.access_token || '';
       }
 
-      const res = await fetch('/api/whatsapp/oauth', {
+      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,49 +302,23 @@ export const WhatsAppSettings: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setErrorMsg(null);
-        setSuccessMsg('✅ Cuenta de WhatsApp Business vinculada correctamente');
+      if (ok && data.success) {
+        setSuccessMsg('✅ Cuenta de WhatsApp Business vinculada correctamente vía Meta Login');
         if (data.organization) {
           setOrgStatus(data.organization);
-        } else {
-          setOrgStatus({
-            id: 'org-active',
-            name: 'Tu Inmobiliaria',
-            wa_phone_number_id: payload.phoneNumberId || '5491140143729',
-            wa_waba_id: payload.wabaId || 'waba-connected',
-            wa_connected: true,
-          });
         }
+        fetchStatus();
       } else {
-        // Soft fallback for demo mode / preview environments
-        setSuccessMsg('✅ Cuenta de WhatsApp Business vinculada correctamente');
-        setOrgStatus({
-          id: 'org-active',
-          name: 'Tu Inmobiliaria',
-          wa_phone_number_id: payload.phoneNumberId || '5491140143729',
-          wa_waba_id: payload.wabaId || 'waba-connected',
-          wa_connected: true,
-        });
+        setErrorMsg(data.error || 'No se pudo vincular la cuenta mediante Meta Login.');
       }
     } catch (err: any) {
-      console.error('Error completing WhatsApp OAuth:', err);
-      // Soft fallback for connection preview so user UI never blocks on network glitch
-      setSuccessMsg('✅ Cuenta de WhatsApp Business vinculada correctamente');
-      setOrgStatus({
-        id: 'org-active',
-        name: 'Tu Inmobiliaria',
-        wa_phone_number_id: payload.phoneNumberId || '5491140143729',
-        wa_waba_id: payload.wabaId || 'waba-connected',
-        wa_connected: true,
-      });
+      setErrorMsg(`Error al vincular cuenta: ${err.message || String(err)}`);
     } finally {
       setConnecting(false);
     }
   };
 
-  // 5. Trigger FB.login Embedded Signup Popup
+  // 7. Trigger FB.login Embedded Signup Popup
   const handleLaunchEmbeddedSignup = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -195,7 +327,6 @@ export const WhatsAppSettings: React.FC = () => {
     const configId = import.meta.env.VITE_META_CONFIG_ID || '';
 
     if (!window.FB) {
-      // Direct OAuth dialog URL fallback if Facebook SDK is blocked
       const redirectUri = `${window.location.origin}/api/whatsapp/oauth`;
       const oauthUrl = `https://www.facebook.com/v20.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=whatsapp_business_management,whatsapp_business_messaging,public_profile`;
       window.open(oauthUrl, 'FacebookLogin', 'width=600,height=700');
@@ -206,12 +337,10 @@ export const WhatsAppSettings: React.FC = () => {
 
     window.FB.login(
       (response: any) => {
-        console.log('[Meta OAuth Response]:', response);
         if (response.authResponse?.code) {
-          console.log('✅ Meta Authorization Code Received:', response.authResponse.code);
           handleCompleteSignup({ code: response.authResponse.code });
         } else {
-          console.warn('User cancelled Facebook Embedded Signup or closed popup.', response);
+          console.warn('Usuario canceló el inicio de sesión con Meta o cerró la ventana emergente.');
           setConnecting(false);
         }
       },
@@ -228,9 +357,9 @@ export const WhatsAppSettings: React.FC = () => {
     );
   };
 
-  // 6. Disconnect Account
+  // 8. Disconnect Account
   const handleDisconnect = async () => {
-    if (!window.confirm('¿Estás seguro de que deseas desconectar tu cuenta de WhatsApp Business? Aria dejará de responder automáticamente a los clientes.')) {
+    if (!window.confirm('¿Estás seguro de que deseas desconectar tu cuenta oficial de WhatsApp Business? Aria dejará de responder automáticamente a los clientes.')) {
       return;
     }
 
@@ -245,7 +374,7 @@ export const WhatsAppSettings: React.FC = () => {
         token = sessionData.session?.access_token || '';
       }
 
-      const res = await fetch('/api/whatsapp/oauth', {
+      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,21 +383,22 @@ export const WhatsAppSettings: React.FC = () => {
         body: JSON.stringify({ action: 'disconnect' }),
       });
 
-      const data = await res.json();
-      if (res.ok && data.success) {
+      if (ok && data.success) {
         setSuccessMsg('WhatsApp Business desconectado correctamente.');
+        setVerifiedInfo(null);
+        setManualAccessToken('');
         fetchStatus();
       } else {
         setErrorMsg(data.error || 'No se pudo desconectar la cuenta.');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al procesar la desconexión.');
+      setErrorMsg(`Error al desconectar: ${err.message || String(err)}`);
     } finally {
       setConnecting(false);
     }
   };
 
-  const isConnected = Boolean(orgStatus?.wa_connected);
+  const isConnected = Boolean(orgStatus?.wa_connected && orgStatus?.wa_phone_number_id);
 
   return (
     <div className="space-y-8 text-slate-100">
@@ -303,7 +433,7 @@ export const WhatsAppSettings: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-white text-base">WhatsApp Business Conectado</h3>
+                  <h3 className="font-bold text-white text-base">WhatsApp Cloud API Oficial</h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     ACTIVO & VERIFICADO
                   </span>
@@ -327,7 +457,7 @@ export const WhatsAppSettings: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="p-4 rounded-2xl bg-slate-950 border border-white/10 space-y-1">
               <span className="text-slate-400 font-semibold flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-emerald-400" /> Phone Number ID (Meta)
+                <Phone className="w-3.5 h-3.5 text-emerald-400" /> Phone Number ID (Meta Graph API)
               </span>
               <p className="font-mono text-white font-bold text-sm">
                 {orgStatus?.wa_phone_number_id || 'No asignado'}
@@ -339,7 +469,7 @@ export const WhatsAppSettings: React.FC = () => {
                 <Building2 className="w-3.5 h-3.5 text-emerald-400" /> WABA ID (WhatsApp Business Account)
               </span>
               <p className="font-mono text-white font-bold text-sm">
-                {orgStatus?.wa_waba_id || 'No asignado'}
+                {orgStatus?.wa_waba_id || 'Configurado'}
               </p>
             </div>
           </div>
@@ -347,73 +477,224 @@ export const WhatsAppSettings: React.FC = () => {
           <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/20 text-xs text-emerald-200 flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
             <div>
-              <p className="font-bold text-emerald-300">¡Tu bot de IA está respondiendo automáticamente!</p>
+              <p className="font-bold text-emerald-300">¡Aria Bot comercial está atendiendo en vivo!</p>
               <p className="text-emerald-400/80 mt-0.5 leading-relaxed">
-                Cada consulta enviada a tu número oficial de WhatsApp será atendida por Aria comercial, recomendando inmuebles de tu catálogo y registrando leads calificados.
+                Los mensajes entrantes a este Phone Number ID son procesados en tiempo real por Aria, consultando el catálogo de propiedades de tu inmobiliaria y registrando los leads en tu CRM.
               </p>
             </div>
           </div>
         </div>
       ) : (
-        /* DISCONNECTED / ONBOARDING STATE */
+        /* DISCONNECTED / DUAL ONBOARDING STATE */
         <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-white/10 space-y-6 backdrop-blur-xl">
           
           <div className="space-y-2">
             <h3 className="font-bold text-white text-lg flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              Conecta tu Cuenta de WhatsApp Business en 1 Clic
+              Conectar Cuenta de WhatsApp Business Oficial (Meta Cloud API)
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed max-w-2xl">
-              Utiliza el flujo oficial de Meta Embedded Signup para autorizar a Ariaprop como tu proveedor de automatización inmobiliaria. No necesitas configurar servidores ni webhooks manualmente.
+              Selecciona el método de conexión para vincular la línea de tu inmobiliaria. Aria se integrará directamente con los servidores de Meta Graph API v20.0 con máxima estabilidad y sin riesgo de bloqueos.
             </p>
           </div>
 
-          {/* Prerequisites Checklist */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <CheckCircle2 className="w-4 h-4" /> 1. Cuenta Meta
-              </div>
-              <p className="text-slate-400 text-[11px]">Acceso a Meta Business Suite o Business Manager.</p>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <CheckCircle2 className="w-4 h-4" /> 2. Número Teléfono
-              </div>
-              <p className="text-slate-400 text-[11px]">Número disponible para recibir SMS de verificación Meta.</p>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
-                <CheckCircle2 className="w-4 h-4" /> 3. Nombre Comercial
-              </div>
-              <p className="text-slate-400 text-[11px]">Nombre visible de tu inmobiliaria para WhatsApp.</p>
-            </div>
-          </div>
-
-          {/* Official Facebook Embedded Signup Button */}
-          <div className="pt-2">
+          {/* Dual Mode Switcher */}
+          <div className="flex p-1 bg-slate-950 rounded-2xl border border-white/10 w-full sm:w-fit gap-1 text-xs">
             <button
-              disabled={connecting}
-              onClick={handleLaunchEmbeddedSignup}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20 cursor-pointer disabled:opacity-50"
+              onClick={() => { setActiveTab('manual'); setErrorMsg(null); }}
+              className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'manual'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              {connecting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Conectando con Meta...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                  <span>Conectar WhatsApp Comercial (Meta Login)</span>
-                </>
-              )}
+              <KeyRound className="w-4 h-4" />
+              <span>Configuración Manual (Avanzado)</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('embedded'); setErrorMsg(null); }}
+              className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'embedded'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              <span>Meta Embedded Signup (1 Clic)</span>
             </button>
           </div>
+
+          {/* TAB 1: MANUAL CREDENTIALS FORM */}
+          {activeTab === 'manual' && (
+            <div className="space-y-6 pt-2">
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-white/5 text-xs text-slate-400 space-y-1">
+                <p className="font-semibold text-slate-200 flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-emerald-400" /> ¿Dónde obtengo estas credenciales?
+                </p>
+                <p className="leading-relaxed">
+                  En tu panel de <strong className="text-white">Meta for Developers &gt; WhatsApp &gt; Configuración de la API</strong> encontrarás tu <strong className="text-white">Identificador de número de teléfono (Phone Number ID)</strong> y tu <strong className="text-white">Identificador de la cuenta de WhatsApp Business (WABA ID)</strong>. El token se genera en tu Meta Business Manager como <em>System User Token</em>.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" /> Phone Number ID <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 1215379554999227 (15-17 dígitos)"
+                    value={manualPhoneId}
+                    onChange={(e) => { setManualPhoneId(e.target.value); setVerifiedInfo(null); }}
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-white/10 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-slate-600"
+                  />
+                  <p className="text-[11px] text-slate-500">ID numérico de la línea en Meta (no ingreses tu número telefónico).</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-emerald-400" /> WABA ID (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 1092837465987123"
+                    value={manualWabaId}
+                    onChange={(e) => setManualWabaId(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-white/10 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-slate-600"
+                  />
+                  <p className="text-[11px] text-slate-500">WhatsApp Business Account ID.</p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-emerald-400" /> Meta Access Token (System User / Permanent Token) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  placeholder="EAAG..."
+                  value={manualAccessToken}
+                  onChange={(e) => { setManualAccessToken(e.target.value); setVerifiedInfo(null); }}
+                  className="w-full px-4 py-3 rounded-2xl bg-slate-950 border border-white/10 text-white text-xs font-mono focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-slate-600"
+                />
+                <p className="text-[11px] text-slate-500">Token con permisos `whatsapp_business_messaging` y `whatsapp_business_management`.</p>
+              </div>
+
+              {/* Verified Preview Card */}
+              {verifiedInfo && (
+                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-2 animate-page-fade">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <span>Línea Verificada Exitosamente por Meta Graph API</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Nombre Verificado:</span>
+                      <p className="font-semibold text-white">{verifiedInfo.verifiedName}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[11px]">Número Visible:</span>
+                      <p className="font-semibold text-white">{verifiedInfo.displayPhoneNumber || 'Configurado'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={verifying || !manualPhoneId || !manualAccessToken}
+                  onClick={handleVerifyManualCredentials}
+                  className="px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 transition-all border border-white/10 cursor-pointer disabled:opacity-50"
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                      <span>Verificando con Meta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>1. Probar y Verificar Credenciales</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={connecting || !manualPhoneId || !manualAccessToken}
+                  onClick={handleSaveManualConnection}
+                  className="px-8 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 transition-all shadow-xl shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>Guardando conexión...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>2. Guardar y Activar WhatsApp</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: META EMBEDDED SIGNUP (POPUP) */}
+          {activeTab === 'embedded' && (
+            <div className="space-y-6 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> 1. Cuenta Meta
+                  </div>
+                  <p className="text-slate-400 text-[11px]">Acceso a Meta Business Suite o Business Manager.</p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> 2. Número Teléfono
+                  </div>
+                  <p className="text-slate-400 text-[11px]">Número disponible para recibir SMS de verificación Meta.</p>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> 3. Nombre Comercial
+                  </div>
+                  <p className="text-slate-400 text-[11px]">Nombre visible de tu inmobiliaria para WhatsApp.</p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  disabled={connecting}
+                  onClick={handleLaunchEmbeddedSignup}
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-600/20 cursor-pointer disabled:opacity-50"
+                >
+                  {connecting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Conectando con Meta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                      <span>Conectar WhatsApp Comercial (Meta Login)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
       )}
