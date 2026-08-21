@@ -89,7 +89,7 @@ export const WhatsAppSettings: React.FC = () => {
         token = sessionData.session?.access_token || '';
       }
 
-      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
+      const { ok, data } = await safeFetchJson('/api/whatsapp/connect', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -97,13 +97,17 @@ export const WhatsAppSettings: React.FC = () => {
         },
       });
 
-      if (ok && data.success && data.organization) {
-        setOrgStatus(data.organization);
-        if (data.organization.wa_phone_number_id) {
-          setManualPhoneId(data.organization.wa_phone_number_id);
-        }
-        if (data.organization.wa_waba_id) {
-          setManualWabaId(data.organization.wa_waba_id);
+      if (ok && data.success) {
+        if (data.isConnected && data.organization) {
+          setOrgStatus(data.organization);
+          if (data.organization.wa_phone_number_id) {
+            setManualPhoneId(data.organization.wa_phone_number_id);
+          }
+          if (data.organization.wa_waba_id) {
+            setManualWabaId(data.organization.wa_waba_id);
+          }
+        } else {
+          setOrgStatus(null);
         }
       }
     } catch (err) {

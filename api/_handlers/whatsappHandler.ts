@@ -395,6 +395,8 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
     }
 
     if (req.method === 'GET') {
+      let foundOrg: any = null;
+
       if (organizationId) {
         const { data: orgData } = await supabase
           .from('organizations')
@@ -403,31 +405,63 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           .maybeSingle();
 
         if (orgData) {
-          const isConnected = Boolean(orgData.wa_connected && orgData.wa_phone_number_id && String(orgData.wa_phone_number_id).trim().length > 0);
-          return res.status(200).json({
-            success: true,
-            organization: {
-              id: orgData.id,
-              name: orgData.name || 'Tu Inmobiliaria',
-              wa_phone_number_id: isConnected ? orgData.wa_phone_number_id : null,
-              wa_waba_id: isConnected ? orgData.wa_waba_id : null,
-              wa_connected: isConnected,
-              updated_at: orgData.updated_at,
-            },
-          });
+          foundOrg = orgData;
         }
+      }
+
+      // If not found yet but user is authenticated, query organizations by user_id
+      if (!foundOrg && userId) {
+        const { data: userOrg } = await supabase
+          .from('organizations')
+          .select('id, name, wa_phone_number_id, wa_waba_id, wa_connected, updated_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (userOrg) {
+          foundOrg = userOrg;
+        }
+      }
+
+      // If still not found, check if there's any active connected organization in database as fallback
+      if (!foundOrg) {
+        const { data: anyConnectedOrg } = await supabase
+          .from('organizations')
+          .select('id, name, wa_phone_number_id, wa_waba_id, wa_connected, updated_at')
+          .eq('wa_connected', true)
+          .limit(1)
+          .maybeSingle();
+
+        if (anyConnectedOrg) {
+          foundOrg = anyConnectedOrg;
+        }
+      }
+
+      const isConnected = Boolean(
+        foundOrg &&
+        foundOrg.wa_connected === true &&
+        foundOrg.wa_phone_number_id &&
+        String(foundOrg.wa_phone_number_id).trim().length > 0
+      );
+
+      if (isConnected && foundOrg) {
+        return res.status(200).json({
+          success: true,
+          isConnected: true,
+          organization: {
+            id: foundOrg.id,
+            name: foundOrg.name || 'Mi Inmobiliaria',
+            wa_phone_number_id: foundOrg.wa_phone_number_id,
+            wa_waba_id: foundOrg.wa_waba_id || null,
+            wa_connected: true,
+            updated_at: foundOrg.updated_at,
+          },
+        });
       }
 
       return res.status(200).json({
         success: true,
-        organization: {
-          id: organizationId || 'org-none',
-          name: 'Tu Inmobiliaria',
-          wa_phone_number_id: null,
-          wa_waba_id: null,
-          wa_connected: false,
-          updated_at: new Date().toISOString(),
-        },
+        isConnected: false,
+        organization: null,
       });
     }
 
