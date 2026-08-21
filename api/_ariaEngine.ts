@@ -106,6 +106,9 @@ export interface ProcessAriaMessageOptions {
   userPhone: string;
   userMessage: string;
   wamid?: string;
+  mediaUrl?: string;
+  mediaType?: 'audio' | 'voice' | 'text' | 'image';
+  transcription?: string;
 }
 
 export interface ProcessAriaMessageResult {
@@ -126,6 +129,9 @@ export async function processAriaMessage({
   userPhone,
   userMessage,
   wamid,
+  mediaUrl,
+  mediaType = 'text',
+  transcription,
 }: ProcessAriaMessageOptions): Promise<ProcessAriaMessageResult> {
   const supabase = getBackendSupabaseClient();
   let conversationId = `conv-${organizationId}-${userPhone}`;
@@ -429,11 +435,26 @@ export async function processAriaMessage({
     }
 
     try {
+      // Record incoming user message in wa_messages
+      await supabase.from('wa_messages').insert({
+        conversation_id: conversationId,
+        organization_id: organizationId,
+        wamid: wamid || undefined,
+        sender_type: 'user',
+        message_text: userMessage,
+        media_type: mediaType,
+        media_url: mediaUrl || null,
+        transcription: transcription || null,
+        created_at: new Date().toISOString(),
+      });
+
+      // Record assistant reply in wa_messages
       await supabase.from('wa_messages').insert({
         conversation_id: conversationId,
         organization_id: organizationId,
         sender_type: 'assistant',
         message_text: replyText,
+        media_type: 'text',
         created_at: new Date().toISOString(),
       });
     } catch {}
@@ -496,6 +517,9 @@ export async function processAriaMessage({
             conversation_id: conversationId,
             sender_type: 'user',
             message_text: userMessage,
+            media_type: mediaType,
+            media_url: mediaUrl || null,
+            transcription: transcription || null,
             created_at: new Date().toISOString(),
           },
           {
@@ -503,6 +527,7 @@ export async function processAriaMessage({
             conversation_id: conversationId,
             sender_type: 'assistant',
             message_text: replyText,
+            media_type: 'text',
             created_at: new Date().toISOString(),
           },
         ]);

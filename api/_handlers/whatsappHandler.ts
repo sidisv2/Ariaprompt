@@ -130,12 +130,16 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         let textBody = '';
         let isVoiceNote = false;
         let audioMediaId = incomingMsg.audio?.id || incomingMsg.voice?.id;
+        let voiceMediaUrl: string | undefined = undefined;
+        let voiceTranscription: string | undefined = undefined;
 
         if ((msgType === 'audio' || msgType === 'voice') && audioMediaId) {
           isVoiceNote = true;
           const tokenToUse = tenantAccessToken || process.env.WHATSAPP_TOKEN || process.env.META_ACCESS_TOKEN || '';
-          const transcribedText = await processIncomingVoiceMessage(audioMediaId, tokenToUse);
-          textBody = `🎙️ [Nota de voz]: ${transcribedText}`;
+          const voiceResult = await processIncomingVoiceMessage(audioMediaId, tokenToUse, organizationId);
+          voiceTranscription = voiceResult.transcription;
+          voiceMediaUrl = voiceResult.mediaUrl;
+          textBody = `🎙️ [Nota de voz]: ${voiceResult.transcription}`;
         } else if (msgType === 'text' && incomingMsg.text?.body) {
           textBody = incomingMsg.text.body;
         } else if (msgType === 'button' && incomingMsg.button?.text) {
@@ -274,6 +278,9 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                   wamid: wamid || undefined,
                   sender_type: 'user',
                   message_text: textBody,
+                  media_type: isVoiceNote ? 'audio' : 'text',
+                  media_url: voiceMediaUrl || null,
+                  transcription: voiceTranscription || null,
                   created_at: new Date().toISOString(),
                 });
               } catch {}
@@ -319,6 +326,9 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           userPhone: fromNumber,
           userMessage: textBody,
           wamid,
+          mediaUrl: voiceMediaUrl,
+          mediaType: isVoiceNote ? 'audio' : 'text',
+          transcription: voiceTranscription,
         });
 
         const sendResult = await sendWhatsAppTextMessage({

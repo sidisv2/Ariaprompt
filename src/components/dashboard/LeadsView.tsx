@@ -52,6 +52,7 @@ export interface WaMessageItem {
   sender_type: 'user' | 'assistant' | 'system';
   message_text: string;
   media_type?: string;
+  media_url?: string;
   transcription?: string;
   created_at: string;
 }
@@ -797,7 +798,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                   ) : (
                     messages.map((msg) => {
                       const isUser = msg.sender_type === 'user';
-                      const isAudio = msg.media_type === 'audio' || msg.message_text.includes('🎙️') || !!msg.transcription;
+                      const isAudio = msg.media_type === 'audio' || msg.media_type === 'voice' || msg.message_text.includes('🎙️') || !!msg.transcription || !!msg.media_url;
 
                       return (
                         <div
@@ -805,19 +806,42 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                           className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                         >
                           <div
-                            className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed ${
+                            className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed space-y-2 ${
                               isUser
                                 ? 'bg-emerald-500 text-slate-950 font-medium rounded-tr-none'
                                 : 'bg-slate-900 text-slate-200 border border-white/10 rounded-tl-none'
                             }`}
                           >
                             {isAudio && (
-                              <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider mb-1 text-slate-900">
-                                <Mic className="w-3.5 h-3.5 fill-current" />
-                                <span>Nota de Voz Transcripta</span>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-1">
+                                  <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider text-slate-900">
+                                    <Mic className="w-3.5 h-3.5 fill-current" />
+                                    <span>Mensaje de Voz</span>
+                                  </div>
+                                  {msg.transcription && (
+                                    <span className="text-[9px] bg-slate-950/10 px-1.5 py-0.5 rounded font-mono">
+                                      Whisper AI
+                                    </span>
+                                  )}
+                                </div>
+
+                                {msg.media_url && (
+                                  <div className="pt-1">
+                                    <audio
+                                      controls
+                                      src={msg.media_url}
+                                      className="w-full h-8 max-w-[240px] rounded-lg accent-emerald-600"
+                                      preload="metadata"
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
-                            <p>{msg.transcription || msg.message_text}</p>
+
+                            <p className={isAudio && isUser ? 'text-slate-900/90 font-normal italic' : ''}>
+                              {msg.transcription ? `"${msg.transcription}"` : msg.message_text}
+                            </p>
                           </div>
                           <span className="text-[9px] text-slate-500 mt-1 font-mono px-1">
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
