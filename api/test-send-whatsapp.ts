@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const data = await response.json().catch(() => ({}));
     return res.status(200).json({
-      success: response.ok || response.status === 200 || response.status === 201,
+      success: response.ok,
       httpStatus: response.status,
       targetPhone: cleanPhone,
       instanceUsed: instance,

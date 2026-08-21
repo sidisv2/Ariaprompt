@@ -1,19 +1,9 @@
 {
-  "crons": [
-    {
-      "path": "/api/crm?action=reactivate_inactive_leads",
-      "schedule": "0 14 * * *"
-    }
-  ],
-  "functions": {
-    "api/**/*.ts": {
-      "includeFiles": "src/**"
-    }
-  },
+  "version": 2,
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
       "source": "/(.*)",
