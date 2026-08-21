@@ -422,12 +422,34 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         }
       }
 
+      // Check profiles table for wa_phone_number_id if org record doesn't have it yet
+      if (!foundOrg?.wa_phone_number_id && userId) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('wa_phone_number_id, wa_status')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profileData?.wa_phone_number_id) {
+          foundOrg = {
+            id: organizationId || 'org_' + userId,
+            name: 'Mi Inmobiliaria',
+            wa_phone_number_id: profileData.wa_phone_number_id,
+            wa_waba_id: null,
+            wa_connected: profileData.wa_status === 'connected',
+            updated_at: new Date().toISOString(),
+          };
+        }
+      }
+
       const isConnected = Boolean(
         foundOrg &&
         foundOrg.wa_connected === true &&
         foundOrg.wa_phone_number_id &&
         String(foundOrg.wa_phone_number_id).trim().length > 0
       );
+
+      console.log('[WhatsApp GET Status]:', { userId, organizationId, isConnected, org: foundOrg });
 
       if (isConnected && foundOrg) {
         return res.status(200).json({
@@ -641,6 +663,10 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             updated_at: new Date().toISOString(),
           };
 
+          if (userId) {
+            updatePayload.user_id = userId;
+          }
+
           if (accessToken) {
             updatePayload.wa_access_token = accessToken;
           }
@@ -685,6 +711,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 .update({
                   wa_phone_number_id: phoneNumberId,
                   wa_status: 'connected',
+                  organization_id: saveOrgId,
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', userId);
@@ -703,6 +730,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               wa_phone_number_id: phoneNumberId,
               wa_waba_id: wabaId || null,
               ...(accessToken ? { wa_access_token: accessToken } : {}),
+              ...(userId ? { user_id: userId } : {}),
               wa_connected: true,
               wa_connected_at: new Date().toISOString(),
               created_at: new Date().toISOString(),
@@ -719,6 +747,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 name: 'Mi Inmobiliaria',
                 wa_phone_number_id: phoneNumberId,
                 wa_connected: true,
+                ...(userId ? { user_id: userId } : {}),
               })
               .select('id')
               .maybeSingle();
