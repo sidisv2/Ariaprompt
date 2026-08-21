@@ -48,6 +48,8 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
       if (mode === 'subscribe') {
         const rawEnvToken =
+          process.env.META_WEBHOOK_VERIFY_TOKEN ||
+          process.env.META_WA_VERIFY_TOKEN ||
           process.env.WHATSAPP_VERIFY_TOKEN ||
           process.env.META_VERIFY_TOKEN ||
           process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ||

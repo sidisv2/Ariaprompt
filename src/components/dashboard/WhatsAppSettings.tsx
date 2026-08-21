@@ -14,7 +14,6 @@ import {
   Sparkles
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { WhatsAppConnectView } from './WhatsAppConnectView';
 
 declare global {
   interface Window {
@@ -273,9 +272,6 @@ export const WhatsAppSettings: React.FC = () => {
 
   return (
     <div className="space-y-8 text-slate-100">
-      {/* Primary Evolution QR Code & Meta Cloud API Connection View */}
-      <WhatsAppConnectView />
-
       {/* Notifications */}
       {successMsg && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-page-fade">

@@ -17,6 +17,7 @@ export async function sendWhatsAppTextMessage(options: SendWhatsAppTextMessageOp
 
   const phoneId = (
     overridePhoneId ||
+    process.env.META_WA_PHONE_NUMBER_ID ||
     process.env.META_PHONE_NUMBER_ID ||
     process.env.WHATSAPP_PHONE_NUMBER_ID ||
     ''
@@ -24,6 +25,7 @@ export async function sendWhatsAppTextMessage(options: SendWhatsAppTextMessageOp
 
   const token = (
     overrideToken ||
+    process.env.META_WA_ACCESS_TOKEN ||
     process.env.META_SYSTEM_USER_TOKEN ||
     process.env.WHATSAPP_TOKEN ||
     process.env.META_WA_TOKEN ||
