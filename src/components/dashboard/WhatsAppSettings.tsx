@@ -47,6 +47,7 @@ export interface VerifiedCredentialsInfo {
 export const WhatsAppSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'manual' | 'embedded'>('manual');
   const [orgStatus, setOrgStatus] = useState<WhatsAppOrgStatus | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [connecting, setConnecting] = useState<boolean>(false);
   const [verifying, setVerifying] = useState<boolean>(false);
@@ -98,17 +99,20 @@ export const WhatsAppSettings: React.FC = () => {
       });
 
       if (ok && data.success) {
-        if (data.isConnected && data.organization) {
+        if ((data.isConnected || data.organization?.wa_connected) && data.organization?.wa_phone_number_id) {
+          setIsConnected(true);
           setOrgStatus(data.organization);
-          if (data.organization.wa_phone_number_id) {
-            setManualPhoneId(data.organization.wa_phone_number_id);
-          }
+          setManualPhoneId(data.organization.wa_phone_number_id);
           if (data.organization.wa_waba_id) {
             setManualWabaId(data.organization.wa_waba_id);
           }
         } else {
+          setIsConnected(false);
           setOrgStatus(null);
         }
+      } else {
+        setIsConnected(false);
+        setOrgStatus(null);
       }
     } catch (err) {
       console.warn('⚠️ Error al consultar estado de WhatsApp:', err);
@@ -273,12 +277,19 @@ export const WhatsAppSettings: React.FC = () => {
 
       if (res.ok && data.success) {
         setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
-        if (data.organization) {
-          setOrgStatus(data.organization);
-        }
+        const newOrg = {
+          id: data.organization?.id || orgStatus?.id || 'org_active',
+          name: data.organization?.name || orgStatus?.name || 'Mi Inmobiliaria',
+          wa_phone_number_id: cleanPhoneId,
+          wa_waba_id: cleanWabaId || null,
+          wa_connected: true,
+          updated_at: new Date().toISOString(),
+        };
+        setIsConnected(true);
+        setOrgStatus(newOrg);
         setVerifiedInfo(null);
         setManualAccessToken('');
-        fetchStatus();
+        await fetchStatus();
       } else {
         const errorMsg = data.error || data.message || `Error HTTP ${res.status}`;
         console.error('[WhatsApp Connect Detailed Error]:', { status: res.status, data });
@@ -305,7 +316,7 @@ export const WhatsAppSettings: React.FC = () => {
         token = sessionData.session?.access_token || '';
       }
 
-      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
+      const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -317,12 +328,15 @@ export const WhatsAppSettings: React.FC = () => {
         }),
       });
 
-      if (ok && data.success) {
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
         setSuccessMsg('✅ Cuenta de WhatsApp Business vinculada correctamente vía Meta Login');
         if (data.organization) {
+          setIsConnected(true);
           setOrgStatus(data.organization);
         }
-        fetchStatus();
+        await fetchStatus();
       } else {
         setErrorMsg(data.error || 'No se pudo vincular la cuenta mediante Meta Login.');
       }
@@ -402,12 +416,13 @@ export const WhatsAppSettings: React.FC = () => {
 
       if (res.ok && data.success) {
         setSuccessMsg('WhatsApp Business desconectado correctamente.');
+        setIsConnected(false);
         setOrgStatus(null);
         setVerifiedInfo(null);
         setManualPhoneId('');
         setManualWabaId('');
         setManualAccessToken('');
-        fetchStatus();
+        await fetchStatus();
       } else {
         setErrorMsg(data.error || 'No se pudo desconectar la cuenta.');
       }
@@ -418,7 +433,7 @@ export const WhatsAppSettings: React.FC = () => {
     }
   };
 
-  const isConnected = Boolean(orgStatus?.wa_connected && orgStatus?.wa_phone_number_id);
+  const showConnectedCard = isConnected || Boolean(orgStatus?.wa_connected && orgStatus?.wa_phone_number_id);
 
   return (
     <div className="space-y-8 text-slate-100">
@@ -443,7 +458,7 @@ export const WhatsAppSettings: React.FC = () => {
           <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
           <span>Comprobando credenciales con Meta Cloud API...</span>
         </div>
-      ) : isConnected ? (
+      ) : showConnectedCard ? (
         /* CONNECTED STATE */
         <div className="p-6 rounded-3xl bg-slate-900/90 border border-emerald-500/40 space-y-6 backdrop-blur-xl shadow-xl shadow-emerald-500/5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
@@ -480,7 +495,7 @@ export const WhatsAppSettings: React.FC = () => {
                 <Phone className="w-3.5 h-3.5 text-emerald-400" /> Phone Number ID (Meta Graph API)
               </span>
               <p className="font-mono text-white font-bold text-sm">
-                {orgStatus?.wa_phone_number_id || 'No asignado'}
+                {orgStatus?.wa_phone_number_id || manualPhoneId || 'No asignado'}
               </p>
             </div>
 
@@ -489,7 +504,7 @@ export const WhatsAppSettings: React.FC = () => {
                 <Building2 className="w-3.5 h-3.5 text-emerald-400" /> WABA ID (WhatsApp Business Account)
               </span>
               <p className="font-mono text-white font-bold text-sm">
-                {orgStatus?.wa_waba_id || 'Configurado'}
+                {orgStatus?.wa_waba_id || manualWabaId || 'No configurado'}
               </p>
             </div>
           </div>
