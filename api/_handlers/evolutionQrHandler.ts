@@ -5,6 +5,8 @@ import {
   setEvolutionWebhook,
   getEvolutionConnectQr,
   getEvolutionInstanceStatus,
+  getEvolutionPairingCode,
+  logoutEvolutionInstance,
 } from '../_lib/evolutionClient.js';
 
 function getBackendSupabaseClient() {
@@ -117,27 +119,78 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
     });
   }
 
-  // ACTION 2: POST create-instance or disconnect
+  // ACTION 2: POST create-instance, pairing-code, disconnect/logout
   if (req.method === 'POST') {
     const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
-    const action = body.action || (req.url?.includes('disconnect') ? 'disconnect' : 'create-instance');
+    const action = body.action || (req.url?.includes('logout') || req.url?.includes('disconnect') ? 'logout' : 'create-instance');
 
-    if (action === 'disconnect') {
+    if (action === 'disconnect' || action === 'logout' || action === 'logout-instance') {
+      console.log(`📌 Logging out Evolution API instance "${instanceName}"...`);
+      await logoutEvolutionInstance(instanceName);
+
       if (supabase) {
         try {
           await supabase.from('profiles').update({
             wa_status: 'disconnected',
             wa_phone: null,
+            wa_instance_name: null,
             updated_at: new Date().toISOString(),
           }).eq('id', userId);
+
+          if (organizationId) {
+            await supabase.from('organizations').update({
+              wa_connected: false,
+              updated_at: new Date().toISOString(),
+            }).eq('id', organizationId);
+          }
         } catch {}
       }
 
       return res.status(200).json({
         success: true,
-        message: 'Instancia de WhatsApp desconectada.',
+        message: 'Instancia de WhatsApp desvinculada y desconectada.',
         wa_status: 'disconnected',
       });
+    }
+
+    if (action === 'pairing-code') {
+      const phoneNumber = String(body.phoneNumber || body.phone || '5491140143729').trim();
+
+      console.log(`📌 Creating Evolution API instance "${instanceName}" for pairing code...`);
+      await createEvolutionInstance(instanceName, userId);
+
+      const host = req.headers.host || 'ariaprop.online';
+      const protocol = host.includes('localhost') ? 'http' : 'https';
+      const webhookUrl = `${protocol}://${host}/api/webhook/evolution`;
+      await setEvolutionWebhook(instanceName, webhookUrl);
+
+      console.log(`📌 Fetching Evolution API 8-digit Pairing Code for instance "${instanceName}" and phone +${phoneNumber}...`);
+      const pairResult = await getEvolutionPairingCode(instanceName, phoneNumber);
+
+      if (supabase) {
+        try {
+          await supabase.from('profiles').update({
+            wa_instance_name: instanceName,
+            wa_status: 'connecting',
+            updated_at: new Date().toISOString(),
+          }).eq('id', userId);
+        } catch {}
+      }
+
+      if (pairResult.success && pairResult.pairingCode) {
+        return res.status(200).json({
+          success: true,
+          instanceName,
+          pairingCode: pairResult.pairingCode,
+          state: 'connecting',
+          wa_status: 'connecting',
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: pairResult.error || 'No se pudo generar el código de vinculación. Intenta de nuevo.',
+        });
+      }
     }
 
     // STEP 1: Create instance in Evolution API

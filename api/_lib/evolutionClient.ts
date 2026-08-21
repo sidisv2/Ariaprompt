@@ -172,9 +172,6 @@ export async function sendEvolutionTextMessage(instanceName: string, number: str
   }
 }
 
-/**
- * Checks current connection state of Evolution API instance
- */
 export async function getEvolutionInstanceStatus(instanceName: string): Promise<{ state: 'open' | 'connecting' | 'close' | 'disconnected'; number?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
@@ -196,5 +193,84 @@ export async function getEvolutionInstanceStatus(instanceName: string): Promise<
     return { state: state === 'open' ? 'open' : state === 'connecting' ? 'connecting' : 'disconnected', number };
   } catch {
     return { state: 'disconnected' };
+  }
+}
+
+/**
+ * Requests an 8-digit Pairing Code for phone linking from Evolution API
+ */
+export async function getEvolutionPairingCode(
+  instanceName: string,
+  phoneNumber: string
+): Promise<{ success: boolean; pairingCode?: string; error?: string }> {
+  const { baseUrl, apiKey } = getEvolutionConfig();
+  if (!baseUrl) {
+    return { success: false, error: 'EVOLUTION_API_URL no configurado' };
+  }
+
+  const cleanNumber = phoneNumber.replace(/\D/g, '');
+  if (!cleanNumber) {
+    return { success: false, error: 'Número de teléfono no válido' };
+  }
+
+  try {
+    const res = await fetch(`${baseUrl}/instance/connect/${instanceName}?number=${cleanNumber}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { apikey: apiKey } : {}),
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    const pairingCode: string | null =
+      data.pairingCode ||
+      data.pairing_code ||
+      data.code ||
+      data.instance?.pairingCode ||
+      null;
+
+    if (pairingCode) {
+      return { success: true, pairingCode: String(pairingCode) };
+    }
+
+    return {
+      success: false,
+      error: data.message || data.error || 'No se obtuvo el código de vinculación de 8 dígitos.',
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Error al solicitar Pairing Code' };
+  }
+}
+
+/**
+ * Logouts and cleans up instance in Evolution API
+ */
+export async function logoutEvolutionInstance(instanceName: string): Promise<{ success: boolean }> {
+  const { baseUrl, apiKey } = getEvolutionConfig();
+  if (!baseUrl) {
+    return { success: false };
+  }
+
+  try {
+    await fetch(`${baseUrl}/instance/logout/${instanceName}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { apikey: apiKey } : {}),
+      },
+    }).catch(() => {});
+
+    await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { apikey: apiKey } : {}),
+      },
+    }).catch(() => {});
+
+    return { success: true };
+  } catch {
+    return { success: false };
   }
 }

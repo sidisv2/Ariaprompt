@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
 import { sendEvolutionTextMessage } from '../_lib/evolutionClient.js';
+import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -152,12 +153,54 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     console.log(`💬 [EVOLUTION INCOMING MESSAGE] From: +${clientPhone} | Text: "${messageText}"`);
 
     // Process message with Aria Real Estate Engine
-    const { text: aiResponseText } = await processAriaMessage({
+    const ariaResult = await processAriaMessage({
       organizationId,
       userPhone: clientPhone,
       userMessage: messageText,
       wamid,
     });
+
+    const aiResponseText = ariaResult.text;
+    const extractedData = ariaResult.extractedData;
+
+    // Register / Update Lead in Supabase CRM
+    if (supabase) {
+      try {
+        const leadName = extractedData?.lead_name || `Prospecto +${clientPhone}`;
+        const isAppointment = Boolean(extractedData?.appointment?.requested_date);
+        const qualificationScore = isAppointment
+          ? 90
+          : extractedData?.status === 'qualified'
+          ? 85
+          : extractedData?.status === 'handover'
+          ? 75
+          : 50;
+
+        await supabase.from('leads').upsert({
+          phone: clientPhone,
+          name: leadName,
+          last_message: messageText,
+          status: extractedData?.status || 'active',
+          qualification_score: qualificationScore,
+          ...(organizationId !== '00000000-0000-0000-0000-000000000000' ? { organization_id: organizationId } : {}),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'phone' });
+
+        // Trigger advisor WhatsApp alert if lead requested appointment or is high-score qualified (>= 80)
+        if (isAppointment || qualificationScore >= 80) {
+          sendAdvisorWhatsAppAlert({
+            orgId: organizationId,
+            leadPhone: clientPhone,
+            leadName,
+            reason: isAppointment ? 'appointment' : 'qualified',
+            lastMessage: messageText,
+            supabaseClient: supabase,
+          }).catch((alertErr) => console.warn('⚠️ Evolution advisor WhatsApp alert notice:', alertErr));
+        }
+      } catch (crmErr) {
+        console.warn('⚠️ Evolution Supabase lead upsert notice:', crmErr);
+      }
+    }
 
     // Dispatch AI Response back to user via Evolution API
     console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to +${clientPhone} via instance "${instanceName}"...`);
