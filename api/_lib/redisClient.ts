@@ -20,3 +20,7 @@ export function getRedisClient(): Redis {
   }
   return redisClient;
 }
+
+export function setRedisClientForTesting(mock: any): void {
+  redisClient = mock;
+}
