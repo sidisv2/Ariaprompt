@@ -124,73 +124,55 @@ export async function processIncomingVoiceMessage(
       }
     }
 
-    // Step 4: Transcribe Audio using Whisper (Groq / OpenAI) or Gemini Multimodal
+    // Step 4: Transcribe Audio using Gemini 2.5 Flash Multimodal (Google AI / OpenRouter) or Whisper
     let transcribedText = '';
 
-    // Strategy A: Groq Whisper API (whisper-large-v3)
-    const groqKey = process.env.GROQ_API_KEY || '';
-    if (groqKey && !transcribedText) {
+    // Strategy 1: Google Gemini API (gemini-2.5-flash) native multimodal
+    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || '';
+    if (geminiApiKey && base64Audio) {
       try {
-        const formData = new FormData();
-        const blob = new Blob([buffer], { type: mimeType });
-        formData.append('file', blob, `audio.${mimeType.includes('mp3') ? 'mp3' : 'ogg'}`);
-        formData.append('model', 'whisper-large-v3');
-        formData.append('language', 'es');
-        formData.append('response_format', 'json');
-
-        const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${groqKey}`,
-          },
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: mimeType,
+                      data: base64Audio,
+                    },
+                  },
+                  {
+                    text: 'Transcripción directa, literal y exacta de este mensaje de audio de WhatsApp. Devuelve ÚNICAMENTE el texto transcripto en español sin ningún prefijo, explicación ni markdown:',
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 1000,
+            },
+          }),
         });
 
-        if (groqRes.ok) {
-          const groqData: any = await groqRes.json();
-          if (groqData?.text) {
-            transcribedText = groqData.text.trim();
-            console.log(`🎙️ Groq Whisper-large-v3 Transcription: "${transcribedText}"`);
+        if (geminiRes.ok) {
+          const geminiData: any = await geminiRes.json();
+          const candidateText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (candidateText) {
+            transcribedText = candidateText;
+            console.log(`🎙️ [Google Gemini 2.5 Flash Native] Audio Transcription: "${transcribedText}"`);
           }
         }
-      } catch (groqErr) {
-        console.warn('⚠️ Groq Whisper transcription notice:', groqErr);
+      } catch (geminiEx) {
+        console.warn('⚠️ Google Gemini native API transcription notice:', geminiEx);
       }
     }
 
-    // Strategy B: OpenAI Whisper API (whisper-1)
-    const openaiKey = process.env.OPENAI_API_KEY || '';
-    if (openaiKey && !transcribedText) {
-      try {
-        const formData = new FormData();
-        const blob = new Blob([buffer], { type: mimeType });
-        formData.append('file', blob, `audio.ogg`);
-        formData.append('model', 'whisper-1');
-        formData.append('language', 'es');
-
-        const oaiRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-          },
-          body: formData,
-        });
-
-        if (oaiRes.ok) {
-          const oaiData: any = await oaiRes.json();
-          if (oaiData?.text) {
-            transcribedText = oaiData.text.trim();
-            console.log(`🎙️ OpenAI Whisper-1 Transcription: "${transcribedText}"`);
-          }
-        }
-      } catch (oaiErr) {
-        console.warn('⚠️ OpenAI Whisper transcription notice:', oaiErr);
-      }
-    }
-
-    // Strategy C: OpenRouter Multimodal Gemini 2.5 Flash
+    // Strategy 2: OpenRouter Multimodal Gemini 2.5 Flash
     const openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || '';
-    if (openrouterKey && !transcribedText && base64Audio) {
+    if (!transcribedText && openrouterKey && base64Audio) {
       try {
         const openai = new OpenAI({
           baseURL: 'https://openrouter.ai/api/v1',
@@ -228,10 +210,71 @@ export async function processIncomingVoiceMessage(
         const resText = completion.choices?.[0]?.message?.content?.trim();
         if (resText) {
           transcribedText = resText;
-          console.log(`🎙️ OpenRouter Multimodal Audio Transcription: "${transcribedText}"`);
+          console.log(`🎙️ [OpenRouter Gemini 2.5 Flash] Audio Transcription: "${transcribedText}"`);
         }
       } catch (openrouterErr) {
         console.warn('⚠️ OpenRouter Multimodal voice transcription notice:', openrouterErr);
+      }
+    }
+
+    // Strategy 3: Groq Whisper API (whisper-large-v3)
+    const groqKey = process.env.GROQ_API_KEY || '';
+    if (groqKey && !transcribedText) {
+      try {
+        const formData = new FormData();
+        const blob = new Blob([buffer], { type: mimeType });
+        formData.append('file', blob, `audio.${mimeType.includes('mp3') ? 'mp3' : 'ogg'}`);
+        formData.append('model', 'whisper-large-v3');
+        formData.append('language', 'es');
+        formData.append('response_format', 'json');
+
+        const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: formData,
+        });
+
+        if (groqRes.ok) {
+          const groqData: any = await groqRes.json();
+          if (groqData?.text) {
+            transcribedText = groqData.text.trim();
+            console.log(`🎙️ Groq Whisper-large-v3 Transcription: "${transcribedText}"`);
+          }
+        }
+      } catch (groqErr) {
+        console.warn('⚠️ Groq Whisper transcription notice:', groqErr);
+      }
+    }
+
+    // Strategy 4: OpenAI Whisper API (whisper-1)
+    const openaiKey = process.env.OPENAI_API_KEY || '';
+    if (openaiKey && !transcribedText) {
+      try {
+        const formData = new FormData();
+        const blob = new Blob([buffer], { type: mimeType });
+        formData.append('file', blob, `audio.ogg`);
+        formData.append('model', 'whisper-1');
+        formData.append('language', 'es');
+
+        const oaiRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          body: formData,
+        });
+
+        if (oaiRes.ok) {
+          const oaiData: any = await oaiRes.json();
+          if (oaiData?.text) {
+            transcribedText = oaiData.text.trim();
+            console.log(`🎙️ OpenAI Whisper-1 Transcription: "${transcribedText}"`);
+          }
+        }
+      } catch (oaiErr) {
+        console.warn('⚠️ OpenAI Whisper transcription notice:', oaiErr);
       }
     }
 
