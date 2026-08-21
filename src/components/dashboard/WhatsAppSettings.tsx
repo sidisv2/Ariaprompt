@@ -233,7 +233,7 @@ export const WhatsAppSettings: React.FC = () => {
     const cleanToken = manualAccessToken.trim();
 
     if (!cleanPhoneId || !cleanToken) {
-      setErrorMsg('Debes ingresar y verificar el Phone Number ID y el Access Token antes de guardar.');
+      setErrorMsg('Debes ingresar el Phone Number ID y el Access Token antes de guardar.');
       return;
     }
 
@@ -248,7 +248,7 @@ export const WhatsAppSettings: React.FC = () => {
         authToken = sessionData.session?.access_token || '';
       }
 
-      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
+      const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -256,13 +256,18 @@ export const WhatsAppSettings: React.FC = () => {
         },
         body: JSON.stringify({
           action: 'connect',
+          phone_number_id: cleanPhoneId,
           phoneNumberId: cleanPhoneId,
-          wabaId: cleanWabaId,
+          waba_id: cleanWabaId || undefined,
+          wabaId: cleanWabaId || undefined,
+          access_token: cleanToken,
           accessToken: cleanToken,
         }),
       });
 
-      if (ok && data.success) {
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
         setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
         if (data.organization) {
           setOrgStatus(data.organization);
@@ -271,13 +276,13 @@ export const WhatsAppSettings: React.FC = () => {
         setManualAccessToken('');
         fetchStatus();
       } else {
-        const errorDetail = data.error || (data.details ? JSON.stringify(data.details) : 'No se pudo guardar la configuración de WhatsApp.');
-        console.error('[WhatsApp Connect Error]:', data);
-        setErrorMsg(errorDetail);
+        const errorMsg = data.error || data.message || `Error HTTP ${res.status}`;
+        console.error('[WhatsApp Connect Detailed Error]:', { status: res.status, data });
+        setErrorMsg(`Error al guardar: ${errorMsg}`);
       }
     } catch (err: any) {
       console.error('[WhatsApp Connect Exception]:', err);
-      setErrorMsg(`Error al guardar configuración: ${err.message || String(err)}`);
+      setErrorMsg(`Excepción al conectar: ${err.message || 'Error de red o conexión'}`);
     } finally {
       setConnecting(false);
     }

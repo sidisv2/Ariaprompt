@@ -180,6 +180,19 @@ async function startServer() {
     }
   });
 
+  // WhatsApp Meta Cloud API Endpoints (/api/whatsapp/*, /api/whatsapp-webhook)
+  app.all(['/api/whatsapp', '/api/whatsapp/:route*', '/api/whatsapp-webhook'], async (req, res) => {
+    try {
+      const { handleWhatsAppRoute } = await import('./api/_handlers/whatsappHandler.js');
+      const routeParam = req.params?.route ? `${req.params.route}${req.params[0] || ''}` : (req.path.replace(/^\/api\/whatsapp\/?/, '') || 'webhook');
+      const cleanSubRoute = routeParam || 'webhook';
+      return handleWhatsAppRoute(req as any, res as any, cleanSubRoute);
+    } catch (err: any) {
+      console.error('❌ Express /api/whatsapp error:', err);
+      res.status(500).json({ success: false, error: 'Error calling WhatsApp handler', details: err?.message });
+    }
+  });
+
   // Embedded Widget Script generator
   app.get(['/embed/script.js', '/embed/aria-widget.js', '/aria-widget.js'], (req, res) => {
     const host = req.headers.host || 'localhost:3000';
