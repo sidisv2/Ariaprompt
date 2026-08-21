@@ -305,7 +305,8 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
       if (res.ok && data.success) {
         setSuccessMsg('¡Webhook sincronizado correctamente con Evolution API!');
       } else if (!isAuto) {
-        setErrorMsg(data.error || 'No se pudo sincronizar el Webhook.');
+        const detailMsg = data.error || data.message || (typeof data === 'string' ? data : 'No se pudo sincronizar el Webhook.');
+        setErrorMsg(detailMsg);
       }
     } catch (err: any) {
       if (!isAuto) {
