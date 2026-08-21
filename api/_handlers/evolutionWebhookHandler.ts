@@ -171,22 +171,56 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     console.log(`💬 [EVOLUTION INCOMING MESSAGE] From: +${clientPhone} | Text: "${messageText}"`);
     console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
-    // Process message with Aria Real Estate Engine
-    const ariaResult = await processAriaMessage({
-      organizationId,
-      userPhone: clientPhone,
-      userMessage: messageText,
-      wamid,
-    });
+    // =========================================================================
+    // PASO 1 (Prioritario e Inmediato): Procesar con IA y responder por WhatsApp
+    // =========================================================================
+    let aiResponseText = 'Hola, gracias por comunicarte. En un momento te atendemos.';
+    let extractedData: any = null;
 
-    const aiResponseText = ariaResult.text;
-    const extractedData = ariaResult.extractedData;
+    try {
+      const ariaResult = await processAriaMessage({
+        organizationId: '00000000-0000-0000-0000-000000000000',
+        userPhone: clientPhone,
+        userMessage: messageText,
+        wamid,
+      });
+
+      aiResponseText = ariaResult.text;
+      extractedData = ariaResult.extractedData;
+    } catch (aiErr) {
+      console.error('❌ Error al procesar mensaje con Aria engine:', aiErr);
+    }
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Register / Update Lead in Supabase CRM
-    if (supabase) {
-      try {
+    // Despacho inmediato por WhatsApp vía Evolution API
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to +${clientPhone} via instance "${instanceName}"...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, clientPhone, aiResponseText);
+    console.log(`🚀 Mensaje enviado con éxito al cliente +${clientPhone}:`, JSON.stringify(sendResult));
+
+    // =========================================================================
+    // PASO 2 (Persistencia Asíncrona Non-Blocking en try/catch independiente)
+    // =========================================================================
+    try {
+      if (supabase) {
+        let orgId: string | null = null;
+        let userId: string | null = null;
+
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, organization_id')
+            .eq('wa_instance_name', instanceName)
+            .maybeSingle();
+
+          if (profile) {
+            if (profile.id) userId = profile.id;
+            if (profile.organization_id) orgId = profile.organization_id;
+          }
+        } catch (e) {
+          console.warn('No se pudo resolver el perfil por wa_instance_name:', e);
+        }
+
         const rawPushName = data.pushName || data.data?.pushName || data.senderName || data.name || null;
         const clientName = extractedData?.lead_name || rawPushName || `Cliente WhatsApp +${clientPhone}`;
         const isAppointment = Boolean(extractedData?.appointment?.requested_date);
@@ -207,8 +241,8 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           updated_at: new Date().toISOString(),
         };
 
-        if (organizationId && organizationId !== '00000000-0000-0000-0000-000000000000') {
-          leadPayload.organization_id = organizationId;
+        if (orgId && orgId !== '00000000-0000-0000-0000-000000000000') {
+          leadPayload.organization_id = orgId;
         }
         if (userId) {
           leadPayload.user_id = userId;
@@ -225,10 +259,9 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           console.log('✅ Lead guardado exitosamente en Supabase CRM:', leadResult);
         }
 
-        // Trigger advisor WhatsApp alert if lead requested appointment or is high-score qualified (>= 80)
         if (isAppointment || qualificationScore >= 80) {
           sendAdvisorWhatsAppAlert({
-            orgId: organizationId,
+            orgId: orgId || '00000000-0000-0000-0000-000000000000',
             leadPhone: clientPhone,
             leadName: clientName,
             reason: isAppointment ? 'appointment' : 'qualified',
@@ -236,15 +269,10 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
             supabaseClient: supabase,
           }).catch((alertErr) => console.warn('⚠️ Evolution advisor WhatsApp alert notice:', alertErr));
         }
-      } catch (crmErr) {
-        console.error('❌ Error general procesando Lead CRM:', crmErr);
       }
+    } catch (crmErr) {
+      console.error('⚠️ Error guardando lead (no bloqueante):', crmErr);
     }
-
-    // Dispatch AI Response back to user via Evolution API
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to +${clientPhone} via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, clientPhone, aiResponseText);
-    console.log(`📌 sendText Result:`, JSON.stringify(sendResult));
 
     return res.status(200).json({
       status: 'MESSAGE_PROCESSED',
