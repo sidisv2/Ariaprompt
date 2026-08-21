@@ -189,7 +189,16 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API
+ * Normalizes destination number for outgoing text dispatch in Evolution API v2.
+ * Extracts clean digits from JID or raw number (e.g. "5492604014372@s.whatsapp.net" -> "5492604014372").
+ */
+export function formatRecipientForSending(rawJidOrNumber: string): string {
+  const clean = (rawJidOrNumber || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+  return clean;
+}
+
+/**
+ * Dispatches WhatsApp text message via Evolution API v2
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
@@ -201,15 +210,19 @@ export async function sendEvolutionTextMessage(
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  let targetRecipient = (number || '').trim();
-  if (!targetRecipient) {
+  const cleanRecipient = formatRecipientForSending(number);
+  if (!cleanRecipient) {
     return { success: false, error: 'Destino no válido' };
   }
 
-  // If destination is not a remoteJid with '@', normalize phone number
-  if (!targetRecipient.includes('@')) {
-    targetRecipient = normalizePhoneNumber(targetRecipient);
-  }
+  const sendPayload = {
+    number: cleanRecipient,
+    text,
+    delay: 1200,
+    linkPreview: false,
+  };
+
+  console.log(`📌 Evolution sendText Request for "${instanceName}" to "${cleanRecipient}"...`);
 
   try {
     const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
@@ -218,20 +231,42 @@ export async function sendEvolutionTextMessage(
         'Content-Type': 'application/json',
         ...(apiKey ? { apikey: apiKey } : {}),
       },
-      body: JSON.stringify({
-        number: targetRecipient,
-        text,
-        options: {
-          delay: 1000,
-          presence: 'composing',
-        },
-      }),
+      body: JSON.stringify(sendPayload),
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log(`📌 sendEvolutionTextMessage result [${res.status}] for "${targetRecipient}":`, JSON.stringify(data));
-    return { success: res.ok, data };
+    console.log(`📌 Evolution sendText Response Status:`, res.status, JSON.stringify(data));
+
+    if (res.ok || res.status === 200 || res.status === 201) {
+      return { success: true, data };
+    }
+
+    // If Argentina number with 549... fails, retry sending without 9 (54 + area + number) for Baileys routing
+    if (cleanRecipient.startsWith('549') && cleanRecipient.length >= 12) {
+      const altRecipient = '54' + cleanRecipient.slice(3);
+      console.log(`⏱️ Retrying Argentina sendText with alternative number format: "${altRecipient}"...`);
+      const resAlt = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { apikey: apiKey } : {}),
+        },
+        body: JSON.stringify({
+          ...sendPayload,
+          number: altRecipient,
+        }),
+      });
+
+      const dataAlt = await resAlt.json().catch(() => ({}));
+      console.log(`📌 Evolution sendText Alt Response Status:`, resAlt.status, JSON.stringify(dataAlt));
+      if (resAlt.ok || resAlt.status === 200 || resAlt.status === 201) {
+        return { success: true, data: dataAlt };
+      }
+    }
+
+    return { success: false, error: data?.message || data?.error || `HTTP ${res.status}`, data };
   } catch (err: any) {
+    console.error(`❌ Exception in sendEvolutionTextMessage:`, err);
     return { success: false, error: err?.message || 'Error enviando mensaje por Evolution API' };
   }
 }
