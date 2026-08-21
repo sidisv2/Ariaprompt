@@ -422,20 +422,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         }
       }
 
-      // If still not found, check if there's any active connected organization in database as fallback
-      if (!foundOrg) {
-        const { data: anyConnectedOrg } = await supabase
-          .from('organizations')
-          .select('id, name, wa_phone_number_id, wa_waba_id, wa_connected, updated_at')
-          .eq('wa_connected', true)
-          .limit(1)
-          .maybeSingle();
-
-        if (anyConnectedOrg) {
-          foundOrg = anyConnectedOrg;
-        }
-      }
-
       const isConnected = Boolean(
         foundOrg &&
         foundOrg.wa_connected === true &&
@@ -529,9 +515,11 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
       // ACTION 2: DISCONNECT
       if (action === 'disconnect' || subRoute === 'disconnect') {
-        if (targetOrgId) {
+        const orgIdToDisconnect = targetOrgId || organizationId;
+
+        if (orgIdToDisconnect) {
           try {
-            const { error: updateErr } = await supabase
+            await supabase
               .from('organizations')
               .update({
                 wa_connected: false,
@@ -540,20 +528,44 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 wa_waba_id: null,
                 updated_at: new Date().toISOString(),
               })
-              .eq('id', targetOrgId);
-
-            if (updateErr) {
-              console.warn('⚠️ Supabase disconnect error:', updateErr);
-            }
+              .eq('id', orgIdToDisconnect);
           } catch (ex: any) {
-            console.warn('⚠️ Disconnect exception:', ex);
+            console.warn('⚠️ Disconnect exception by org ID:', ex);
+          }
+        }
+
+        if (userId) {
+          try {
+            await supabase
+              .from('organizations')
+              .update({
+                wa_connected: false,
+                wa_access_token: null,
+                wa_phone_number_id: null,
+                wa_waba_id: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', userId);
+
+            await supabase
+              .from('profiles')
+              .update({
+                wa_phone_number_id: null,
+                wa_status: 'disconnected',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', userId);
+          } catch (ex: any) {
+            console.warn('⚠️ Disconnect exception by userId:', ex);
           }
         }
 
         return res.status(200).json({
           success: true,
           message: 'Cuenta de WhatsApp Business desconectada correctamente.',
+          isConnected: false,
           wa_connected: false,
+          organization: null,
         });
       }
 
