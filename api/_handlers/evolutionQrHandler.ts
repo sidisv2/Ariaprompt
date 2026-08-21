@@ -154,18 +154,18 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
     }
 
     if (action === 'pairing-code') {
-      const phoneNumber = String(body.phoneNumber || body.phone || '5491140143729').trim();
+      const cleanPhone = String(body.phoneNumber || body.phone || '5491140143729').replace(/\D/g, '');
 
-      console.log(`📌 Creating Evolution API instance "${instanceName}" for pairing code...`);
-      await createEvolutionInstance(instanceName, userId);
+      console.log(`📌 Creating Evolution API pairing instance "${instanceName}" for phone +${cleanPhone} (qrcode: false)...`);
+      await createEvolutionInstance(instanceName, userId, { qrcode: false, number: cleanPhone });
 
       const host = req.headers.host || 'ariaprop.online';
       const protocol = host.includes('localhost') ? 'http' : 'https';
       const webhookUrl = `${protocol}://${host}/api/webhook/evolution`;
       await setEvolutionWebhook(instanceName, webhookUrl);
 
-      console.log(`📌 Fetching Evolution API 8-digit Pairing Code for instance "${instanceName}" and phone +${phoneNumber}...`);
-      const pairResult = await getEvolutionPairingCode(instanceName, phoneNumber);
+      console.log(`📌 Fetching Evolution API 8-digit Pairing Code for instance "${instanceName}"...`);
+      const pairResult = await getEvolutionPairingCode(instanceName, cleanPhone);
 
       if (supabase) {
         try {
@@ -185,20 +185,10 @@ export async function handleEvolutionQrRoute(req: VercelRequest, res: VercelResp
           state: 'connecting',
           wa_status: 'connecting',
         });
-      } else if (pairResult.qr) {
-        return res.status(200).json({
-          success: true,
-          instanceName,
-          qr: pairResult.qr,
-          qrcode: pairResult.qr,
-          state: 'connecting',
-          wa_status: 'connecting',
-          warning: 'Evolution API devolvió el Código QR para esta instancia en lugar de un código de 8 dígitos.',
-        });
       } else {
         return res.status(400).json({
           success: false,
-          error: pairResult.error || 'No se pudo generar el código de vinculación. Intenta de nuevo.',
+          error: pairResult.error || 'No se pudo generar el código de vinculación de 8 dígitos. Revisa el número de teléfono.',
         });
       }
     }

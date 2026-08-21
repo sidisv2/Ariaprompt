@@ -553,7 +553,12 @@ export const WhatsAppConnectView: React.FC<WhatsAppConnectViewProps> = ({ onConn
               {/* MODE B: 8-DIGIT PAIRING CODE LINKING */}
               {linkMode === 'pairing' && (
                 <div className="space-y-6">
-                  {!pairingCode ? (
+                  {connecting && !pairingCode ? (
+                    <div className="p-8 flex flex-col items-center justify-center space-y-3 text-slate-400 text-xs border border-white/10 rounded-2xl bg-slate-950">
+                      <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+                      <span className="font-semibold text-slate-300">Generando Código de 8 Dígitos con Evolution API...</span>
+                    </div>
+                  ) : !pairingCode ? (
                     <div className="p-6 rounded-2xl bg-slate-950 border border-white/10 space-y-4 max-w-md">
                       <div className="space-y-1">
                         <h4 className="font-bold text-white text-sm flex items-center gap-2">

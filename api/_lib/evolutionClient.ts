@@ -24,11 +24,17 @@ export function getEvolutionConfig(): EvolutionConfig {
 /**
  * Creates a new WhatsApp Baileys instance in Evolution API
  */
-export async function createEvolutionInstance(instanceName: string, token: string): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function createEvolutionInstance(
+  instanceName: string,
+  token: string,
+  options?: { qrcode?: boolean; number?: string }
+): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL not configured' };
   }
+
+  const cleanNumber = options?.number ? options.number.replace(/\D/g, '') : undefined;
 
   try {
     const res = await fetch(`${baseUrl}/instance/create`, {
@@ -40,7 +46,8 @@ export async function createEvolutionInstance(instanceName: string, token: strin
       body: JSON.stringify({
         instanceName,
         token,
-        qrcode: true,
+        qrcode: options?.qrcode ?? true,
+        ...(cleanNumber ? { number: cleanNumber } : {}),
         integration: 'WHATSAPP-BAILEYS',
       }),
     });
@@ -197,13 +204,12 @@ export async function getEvolutionInstanceStatus(instanceName: string): Promise<
 }
 
 /**
- * Requests an 8-digit Pairing Code for phone linking from Evolution API.
- * Safely handles raw 2@ Baileys QR strings by converting them to QR DataURL if returned.
+ * Requests an 8-digit Pairing Code for phone linking from Evolution API with automatic retry.
  */
 export async function getEvolutionPairingCode(
   instanceName: string,
   phoneNumber: string
-): Promise<{ success: boolean; pairingCode?: string; qr?: string; error?: string }> {
+): Promise<{ success: boolean; pairingCode?: string; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
@@ -214,53 +220,55 @@ export async function getEvolutionPairingCode(
     return { success: false, error: 'Número de teléfono no válido' };
   }
 
-  try {
-    const res = await fetch(`${baseUrl}/instance/connect/${instanceName}?number=${cleanNumber}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { apikey: apiKey } : {}),
-      },
-    });
+  const fetchCode = async (): Promise<string | null> => {
+    try {
+      const res = await fetch(`${baseUrl}/instance/connect/${instanceName}?number=${cleanNumber}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { apikey: apiKey } : {}),
+        },
+      });
 
-    const data = await res.json().catch(() => ({}));
-    const rawCandidate: string | null =
-      data.pairingCode ||
-      data.pairing_code ||
-      data.code ||
-      data.instance?.pairingCode ||
-      data.qrcode?.code ||
-      null;
+      const data = await res.json().catch(() => ({}));
+      const rawCandidate: string | null =
+        data.pairingCode ||
+        data.pairing_code ||
+        data.code ||
+        data.instance?.pairingCode ||
+        null;
 
-    if (rawCandidate && typeof rawCandidate === 'string') {
-      const trimmed = rawCandidate.trim();
-
-      // If the string starts with '2@', contains '@', or is a raw QR payload (> 25 chars with non-alphanumeric separators), convert to QR image
-      if (trimmed.startsWith('2@') || trimmed.includes('@') || (trimmed.length > 25 && !/^[A-Za-z0-9-]+$/.test(trimmed))) {
-        console.log(`ℹ️ Received raw QR payload from connect endpoint for phone +${cleanNumber}. Converting to QR DataURL...`);
-        try {
-          const qrDataUrl = await QRCode.toDataURL(trimmed);
-          return {
-            success: true,
-            qr: qrDataUrl,
-            error: 'Evolution API devolvió el payload de QR crudo en lugar de un código de 8 dígitos.',
-          };
-        } catch {
-          return { success: false, error: 'Evolution API devolvió un payload de QR no válido.' };
+      if (rawCandidate && typeof rawCandidate === 'string') {
+        const trimmed = rawCandidate.trim();
+        // Ensure string is not a raw Baileys QR code payload
+        if (!trimmed.startsWith('2@') && !trimmed.includes('@') && trimmed.length <= 16) {
+          return trimmed;
         }
       }
-
-      // Valid short alphanumeric pairing code (e.g. 8 characters)
-      return { success: true, pairingCode: trimmed };
+      return null;
+    } catch {
+      return null;
     }
+  };
 
-    return {
-      success: false,
-      error: data.message || data.error || 'No se obtuvo el código de vinculación de 8 dígitos.',
-    };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Error al solicitar Pairing Code' };
+  // Attempt 1: Immediate fetch
+  let code = await fetchCode();
+
+  // Attempt 2: If code not ready, wait 1.5s and retry
+  if (!code) {
+    console.log(`⏱️ Waiting 1.5s for Evolution API pairing code generation for +${cleanNumber}...`);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    code = await fetchCode();
   }
+
+  if (code) {
+    return { success: true, pairingCode: code };
+  }
+
+  return {
+    success: false,
+    error: 'No se pudo generar el código de vinculación de 8 dígitos en Evolution API. Verifica el número de teléfono.',
+  };
 }
 
 /**
