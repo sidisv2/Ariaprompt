@@ -105,15 +105,19 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Extract exact incoming key & message of origin for Baileys LID context resolution
+    // Extract exact incoming key of origin for Baileys LID context resolution
     const incomingKey = data?.key || key || {};
     const incomingJid = incomingKey?.remoteJid || data?.remoteJid || '';
-    const incomingMessage = data?.message || data?.data?.message;
 
-    const quotedPayload = {
-      key: incomingKey,
-      ...(incomingMessage ? { message: incomingMessage } : {}),
-    };
+    // Construir un quoted limpio sin buffers binarios que rompan el JSON
+    const cleanQuoted = incomingKey?.id ? {
+      key: {
+        id: incomingKey.id,
+        remoteJid: incomingKey.remoteJid,
+        fromMe: Boolean(incomingKey.fromMe),
+        ...(incomingKey.participant ? { participant: incomingKey.participant } : {})
+      }
+    } : undefined;
 
     if (incomingJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
@@ -217,9 +221,10 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando incomingJid y context de mensaje citado
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${incomingJid}" via instance "${instanceName}" (with quoted context)...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, incomingJid, aiResponseText, quotedPayload);
+    // Despacho inmediato por WhatsApp vía Evolution API usando incomingJid y cleanQuoted sin buffers criptográficos
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${incomingJid}" via instance "${instanceName}" (QuotedId: ${cleanQuoted?.key?.id || 'none'})...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, incomingJid, aiResponseText, cleanQuoted);
+    console.log(`🚀 Mensaje enviado con éxito al cliente "${incomingJid}":`, JSON.stringify(sendResult));
     console.log(`🚀 Mensaje enviado con éxito al cliente "${incomingJid}":`, JSON.stringify(sendResult));
 
     // =========================================================================

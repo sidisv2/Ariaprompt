@@ -228,11 +228,11 @@ export async function sendEvolutionTextMessage(
     text: text,
   };
 
-  if (quoted) {
+  if (quoted?.key?.id) {
     payload.quoted = quoted;
   }
 
-  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber} | HasQuoted: ${Boolean(quoted)}`);
+  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber} | QuotedId: ${quoted?.key?.id || 'none'}`);
 
   try {
     const res = await fetch(url, {
