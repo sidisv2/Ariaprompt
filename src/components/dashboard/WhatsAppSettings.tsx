@@ -212,12 +212,15 @@ export const WhatsAppSettings: React.FC = () => {
           qualityRating: data.qualityRating,
           phoneNumberId: data.phoneNumberId,
         });
-        setSuccessMsg(`✅ ¡Credenciales verificadas exitosamente con Meta! Línea: ${data.verifiedName} (${data.displayPhoneNumber || cleanPhoneId})`);
+        setSuccessMsg(`✅ ¡Credenciales verificadas con Meta! Línea: ${data.verifiedName} (${data.displayPhoneNumber || cleanPhoneId})`);
       } else {
-        setErrorMsg(data.error || 'Meta Graph API no pudo verificar estas credenciales. Revisa el Phone Number ID y el Access Token.');
+        const errorDetail = data.error || (data.details?.message ? `Meta API: ${data.details.message}` : 'Meta Graph API no pudo verificar estas credenciales. Revisa el Phone Number ID y el Access Token.');
+        console.error('[Meta Verify Error]:', data);
+        setErrorMsg(errorDetail);
       }
     } catch (err: any) {
-      setErrorMsg(`Error al verificar credenciales: ${err.message || String(err)}`);
+      console.error('[Meta Verify Exception]:', err);
+      setErrorMsg(`Error al verificar credenciales con Meta: ${err.message || String(err)}`);
     } finally {
       setVerifying(false);
     }

@@ -472,7 +472,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         }
 
         try {
-          const verifyUrl = `https://graph.facebook.com/v20.0/${rawPhoneId}?fields=verified_name,display_phone_number,quality_rating,name_status,code_verification_status`;
+          const verifyUrl = `https://graph.facebook.com/v20.0/${rawPhoneId}?fields=id,display_phone_number,verified_name,quality_rating`;
           const metaRes = await fetch(verifyUrl, {
             headers: {
               'Authorization': `Bearer ${rawAccessToken}`,
@@ -483,21 +483,23 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           const metaData = await metaRes.json().catch(() => ({}));
 
           if (!metaRes.ok || metaData.error) {
-            const errorMsg = metaData.error?.message || `Error de autenticación con Meta (HTTP ${metaRes.status})`;
+            const errorMsg = metaData.error?.message || (metaData.error?.type ? `[${metaData.error.type}]: Error en Meta API` : `HTTP ${metaRes.status}`);
             return res.status(400).json({
               success: false,
-              error: `Meta Graph API rechazó las credenciales: ${errorMsg}`,
+              error: `Meta Graph API: ${errorMsg}`,
               details: metaData.error,
             });
           }
 
+          const lineName = metaData.verified_name || metaData.display_phone_number || 'Línea WhatsApp Business (Meta)';
+
           return res.status(200).json({
             success: true,
             verified: true,
-            verifiedName: metaData.verified_name || metaData.display_phone_number || 'Verificado por Meta',
+            verifiedName: lineName,
             displayPhoneNumber: metaData.display_phone_number || null,
             qualityRating: metaData.quality_rating || 'GREEN',
-            phoneNumberId: rawPhoneId,
+            phoneNumberId: metaData.id || rawPhoneId,
           });
         } catch (err: any) {
           return res.status(500).json({
