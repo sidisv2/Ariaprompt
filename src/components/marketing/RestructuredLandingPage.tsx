@@ -494,6 +494,45 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────── */}
+      {/* 4.5. MÉTRICAS DE IMPACTO COMERCIAL                                  */}
+      {/* ─────────────────────────────────────────────────────────────────── */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
+            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              &lt; 10s
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-white">Tiempo de respuesta inicial</div>
+            <p className="text-[11px] text-slate-400">Atención instantánea sin esperas</p>
+          </div>
+
+          <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
+            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              24/7
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-white">Atención ininterrumpida</div>
+            <p className="text-[11px] text-slate-400">Noches, feriados y fines de semana</p>
+          </div>
+
+          <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
+            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              100%
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-white">Comprensión de audios y texto</div>
+            <p className="text-[11px] text-slate-400">Gemini 2.5 Flash Multimodal</p>
+          </div>
+
+          <div className="bg-slate-900/60 p-6 rounded-3xl border border-white/10 text-center space-y-2">
+            <div className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              +40%
+            </div>
+            <div className="text-xs sm:text-sm font-bold text-white">Visitas coordinadas</div>
+            <p className="text-[11px] text-slate-400">Agendamiento directo en Google Calendar</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────────── */}
       {/* 5. PLANES Y PRECIOS TRANSPARENTES                                   */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-white/10">
@@ -503,7 +542,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
             Planes a la medida de tu inmobiliaria
           </h2>
           <p className="text-sm text-slate-400">
-            Comenzá hoy con prueba gratuita de 14 días. Sin contratos forzosos.
+            Comenzá hoy con prueba gratuita de 14 días. Sin contratos forzosos ni comisiones ocultas.
           </p>
 
           {/* Billing Cycle Toggle */}
@@ -511,7 +550,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
             <button
               onClick={() => setBillingCycle('annual')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                isAnnual ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-950 text-slate-400 border border-slate-800'
+                isAnnual ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'bg-slate-950 text-slate-400 border border-slate-800'
               }`}
             >
               Facturación Anual (-20% OFF)
@@ -519,7 +558,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
             <button
               onClick={() => setBillingCycle('monthly')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                !isAnnual ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-950 text-slate-400 border border-slate-800'
+                !isAnnual ? 'bg-emerald-500 text-slate-950 shadow-md font-black' : 'bg-slate-950 text-slate-400 border border-slate-800'
               }`}
             >
               Facturación Mensual
@@ -529,86 +568,110 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-4">
           
-          {/* Plan Solo Agent */}
+          {/* Plan 1: Solo Agent */}
           <div className="bg-slate-900/80 rounded-3xl border border-slate-800 p-6 sm:p-8 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <div>
                 <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{PLAN_LIMITS.solo.name}</span>
-                <h3 className="text-2xl font-extrabold text-white mt-1">
-                  ${isAnnual ? PLAN_LIMITS.solo.annualPriceUsd : PLAN_LIMITS.solo.monthlyPriceUsd} USD{' '}
+                <h3 className="text-3xl font-black text-white mt-1">
+                  ${isAnnual ? '29' : '35'} USD{' '}
                   <span className="text-xs font-normal text-slate-400">/mes</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-2">{PLAN_LIMITS.solo.description}</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Ideal para corredores y agentes inmobiliarios independientes.
+                </p>
               </div>
 
               <ul className="space-y-3 text-xs text-slate-300 pt-4 border-t border-slate-800">
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>1 Asistente de IA activo</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>1 Agente de IA Activo 24/7 (WhatsApp Meta + Web)</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Hasta {PLAN_LIMITS.solo.maxLeadsPerMonth} leads calificados/mes</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Hasta 100 Leads Cualificados / mes</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Hasta {PLAN_LIMITS.solo.maxProperties} propiedades en catálogo</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Transcripción y comprensión de notas de voz (Gemini 2.5 Flash)</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Comprensión de notas de voz</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Catálogo de hasta 20 Inmuebles en tiempo real</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Sincronización con Google Calendar</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Bóveda Privada de Documentos PDF</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Soporte por Email & Chat</span>
                 </li>
               </ul>
             </div>
 
             <button
               onClick={() => handleStartTrial('solo', 'dashboard-checkout')}
-              className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all cursor-pointer"
             >
-              Comenzar con Solo Agent
+              Comenzar prueba gratis de 14 días
             </button>
           </div>
 
-          {/* Plan Agency Pro */}
+          {/* Plan 2: Agency Pro */}
           <div className="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 rounded-3xl border border-emerald-500/50 p-6 sm:p-8 flex flex-col justify-between space-y-6 shadow-2xl shadow-emerald-500/10 relative">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-slate-950 text-[10px] font-extrabold uppercase tracking-wider rounded-full shadow-md">
-              RECOMENDADO PARA INMOBILIARIAS
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-wider rounded-full shadow-md">
+              MÁS ELEGIDO
             </div>
 
             <div className="space-y-4">
               <div>
                 <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{PLAN_LIMITS.pro.name}</span>
                 <h3 className="text-3xl font-black text-white mt-1">
-                  ${isAnnual ? PLAN_LIMITS.pro.annualPriceUsd : PLAN_LIMITS.pro.monthlyPriceUsd} USD{' '}
+                  ${isAnnual ? '79' : '99'} USD{' '}
                   <span className="text-xs font-normal text-slate-400">/mes</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-2">{PLAN_LIMITS.pro.description}</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  Para agencias en crecimiento con WhatsApp multi-asesor y sincronización CRM.
+                </p>
               </div>
 
               <ul className="space-y-3 text-xs text-slate-300 pt-4 border-t border-slate-800">
                 <li className="flex items-center gap-2 font-semibold text-white">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>WhatsApp Cloud API Oficial de Meta</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>5 Agentes de IA 24/7 (WhatsApp Meta + Web)</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Sincronización de Catálogo Tokko / EasyBroker</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Hasta 500 Leads Cualificados / mes</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>5 Asistentes / Asesores asignables</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Transcripción ilimitada de notas de voz con IA</span>
+                </li>
+                <li className="flex items-center gap-2 font-semibold text-emerald-300">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Integración Tokko Broker & EasyBroker</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Hasta {PLAN_LIMITS.pro.maxLeadsPerMonth} leads calificados/mes</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Catálogo de hasta 100 Inmuebles</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Hasta {PLAN_LIMITS.pro.maxProperties} propiedades en catálogo</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>CRM con Inbox de chats en vivo e intervención humana</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Transcripción de audios con Gemini 2.5 Flash</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Evaluador de Rentabilidad & Cap Rate</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Soporte Prioritario VIP 24/7</span>
                 </li>
               </ul>
             </div>
@@ -617,46 +680,52 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
               onClick={() => handleStartTrial('pro', 'dashboard-checkout')}
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs transition-all shadow-lg shadow-emerald-500/25 cursor-pointer"
             >
-              Comenzar Prueba Agency Pro
+              Comenzar prueba gratis de 14 días
             </button>
           </div>
 
-          {/* Plan Enterprise */}
+          {/* Plan 3: Desarrolladores / Enterprise */}
           <div className="bg-slate-900/80 rounded-3xl border border-slate-800 p-6 sm:p-8 flex flex-col justify-between space-y-6">
             <div className="space-y-4">
               <div>
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">{PLAN_LIMITS.desarrolladores.name}</span>
-                <h3 className="text-2xl font-extrabold text-white mt-1">A Medida</h3>
-                <p className="text-xs text-slate-400 mt-2">{PLAN_LIMITS.desarrolladores.description}</p>
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Desarrolladores / Enterprise</span>
+                <h3 className="text-3xl font-black text-white mt-1">A Medida</h3>
+                <p className="text-xs text-slate-400 mt-2">
+                  Para desarrolladoras, promotoras y redes inmobiliarias.
+                </p>
               </div>
 
               <ul className="space-y-3 text-xs text-slate-300 pt-4 border-t border-slate-800">
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Múltiples sucursales y números de WhatsApp</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Agentes & Sucursales Ilimitadas</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Catálogo y leads sin límites</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Infraestructura RAG Dedicada</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Integraciones personalizadas con ERP/CRM propio</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Sincronización Multi-CRM & Webhooks</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>SLA dedicado 24/7 y Onboarding presencial</span>
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Acceso API para Apps Propias & CRM Local</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Gerente de Cuenta Dedicado & SLA 99.9%</span>
                 </li>
               </ul>
             </div>
 
             <a
-              href="https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20de%20AriaProp."
+              href="https://wa.me/5492604014372?text=Hola!%20Me%20interesa%20el%20plan%20Enterprise%20/%20Desarrolladores%20de%20AriaProp."
               target="_blank"
               rel="noreferrer"
-              className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all cursor-pointer text-center block"
+              className="w-full py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all cursor-pointer text-center block"
             >
-              Consultar Plan Enterprise
+              Contactar con Ventas
             </a>
           </div>
 
