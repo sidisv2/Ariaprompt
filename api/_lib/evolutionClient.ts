@@ -190,12 +190,12 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 
 /**
  * Dynamic, country-agnostic extraction of clean recipient or JID for sending.
- * Preserves exact @lid or @s.whatsapp.net domain if provided.
+ * Preserves exact @lid, @s.whatsapp.net or any JID containing @ as-is.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
   if (!rawJidOrNumber) return '';
   const trimmed = rawJidOrNumber.trim();
-  if (trimmed.endsWith('@lid') || trimmed.endsWith('@s.whatsapp.net')) {
+  if (trimmed.includes('@')) {
     return trimmed;
   }
   return trimmed.replace(/\D/g, '');

@@ -105,18 +105,17 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Keep exact incoming remoteJid for reply dispatch (preserving @lid or @s.whatsapp.net intact)
-    const rawRemoteJid = key.remoteJid || data?.remoteJid || '';
-    const replyTarget = rawRemoteJid;
+    // Extract exact incoming JID of origin (preserving @lid or @s.whatsapp.net as-is)
+    const incomingJid = key.remoteJid || data?.key?.remoteJid || data?.remoteJid || '';
 
-    if (rawRemoteJid.includes('@g.us')) {
+    if (incomingJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
     // Phone digits for CRM lead persistence & AI prompt context
-    const altJid = key.remoteJidAlt || data?.remoteJidAlt || '';
-    const phoneSource = altJid || rawRemoteJid;
+    const altJid = key.remoteJidAlt || data?.key?.remoteJidAlt || data?.remoteJidAlt || '';
+    const phoneSource = altJid || incomingJid;
     const clientPhone = phoneSource.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
     if (!clientPhone) {
       console.log('⚠️ Ignored message with invalid or missing remoteJid');
@@ -186,7 +185,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       }
     }
 
-    console.log(`💬 [EVOLUTION INCOMING MESSAGE] From JID: "${replyTarget}" (Phone: +${clientPhone}) | Text: "${messageText}"`);
+    console.log(`💬 [EVOLUTION INCOMING MESSAGE] From JID: "${incomingJid}" (Phone: +${clientPhone}) | Text: "${messageText}"`);
     console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
     // =========================================================================
@@ -211,11 +210,10 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando el replyTarget exacto de origen
-    const targetRecipient = replyTarget || clientPhone;
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to "${targetRecipient}" via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, targetRecipient, aiResponseText);
-    console.log(`🚀 Mensaje enviado con éxito al cliente "${targetRecipient}":`, JSON.stringify(sendResult));
+    // Despacho inmediato por WhatsApp vía Evolution API usando incomingJid exacto de origen
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${incomingJid}" via instance "${instanceName}"...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, incomingJid, aiResponseText);
+    console.log(`🚀 Mensaje enviado con éxito al cliente "${incomingJid}":`, JSON.stringify(sendResult));
 
     // =========================================================================
     // PASO 2 (Persistencia Asíncrona Non-Blocking en try/catch independiente)
