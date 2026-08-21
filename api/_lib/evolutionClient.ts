@@ -191,15 +191,24 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 /**
  * Dispatches WhatsApp text message via Evolution API
  */
-export async function sendEvolutionTextMessage(instanceName: string, number: string, text: string): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function sendEvolutionTextMessage(
+  instanceName: string,
+  number: string,
+  text: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
-    return { success: false, error: 'EVOLUTION_API_URL not configured' };
+    return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  const cleanNumber = number.replace(/\D/g, '');
-  if (!cleanNumber) {
-    return { success: false, error: 'Invalid destination phone number' };
+  let targetRecipient = (number || '').trim();
+  if (!targetRecipient) {
+    return { success: false, error: 'Destino no válido' };
+  }
+
+  // If destination is not a remoteJid with '@', normalize phone number
+  if (!targetRecipient.includes('@')) {
+    targetRecipient = normalizePhoneNumber(targetRecipient);
   }
 
   try {
@@ -210,16 +219,20 @@ export async function sendEvolutionTextMessage(instanceName: string, number: str
         ...(apiKey ? { apikey: apiKey } : {}),
       },
       body: JSON.stringify({
-        number: cleanNumber,
+        number: targetRecipient,
         text,
+        options: {
+          delay: 1000,
+          presence: 'composing',
+        },
       }),
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log(`📌 sendEvolutionTextMessage result [${res.status}]:`, JSON.stringify(data));
+    console.log(`📌 sendEvolutionTextMessage result [${res.status}] for "${targetRecipient}":`, JSON.stringify(data));
     return { success: res.ok, data };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Error sending Evolution text message' };
+    return { success: false, error: err?.message || 'Error enviando mensaje por Evolution API' };
   }
 }
 

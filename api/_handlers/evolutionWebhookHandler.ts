@@ -193,10 +193,11 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to +${clientPhone} via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, clientPhone, aiResponseText);
-    console.log(`🚀 Mensaje enviado con éxito al cliente +${clientPhone}:`, JSON.stringify(sendResult));
+    // Despacho inmediato por WhatsApp vía Evolution API usando remoteJid directo o clientPhone
+    const targetRecipient = remoteJid || clientPhone;
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to "${targetRecipient}" via instance "${instanceName}"...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, targetRecipient, aiResponseText);
+    console.log(`🚀 Mensaje enviado con éxito al cliente "${targetRecipient}":`, JSON.stringify(sendResult));
 
     // =========================================================================
     // PASO 2 (Persistencia Asíncrona Non-Blocking en try/catch independiente)
@@ -232,61 +233,42 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           ? 75
           : 50;
 
-        const leadPayload: Record<string, any> = {
+        const baseLead: Record<string, any> = {
           phone: clientPhone,
           name: clientName,
           last_message: messageText,
           status: extractedData?.status || 'nuevo',
-          qualification_score: qualificationScore,
-          score: qualificationScore,
           updated_at: new Date().toISOString(),
         };
 
         if (orgId && orgId !== '00000000-0000-0000-0000-000000000000') {
-          leadPayload.organization_id = orgId;
+          baseLead.organization_id = orgId;
         }
         if (userId) {
-          leadPayload.user_id = userId;
+          baseLead.user_id = userId;
         }
+
+        // Try upserting full lead payload with score fields first
+        const fullLeadPayload = {
+          ...baseLead,
+          qualification_score: qualificationScore,
+          score: qualificationScore,
+        };
 
         let { data: leadResult, error: leadError } = await supabase
           .from('leads')
-          .upsert(leadPayload, { onConflict: 'phone' })
+          .upsert(fullLeadPayload, { onConflict: 'phone' })
           .select();
 
         if (leadError && (leadError.code === 'PGRST204' || leadError.message?.includes('qualification_score') || leadError.message?.includes('score'))) {
-          console.warn('⚠️ qualification_score column mismatch in schema cache. Retrying fallback without qualification_score...');
-          const retryPayload = { ...leadPayload };
-          delete retryPayload.qualification_score;
-
-          const retryRes = await supabase
+          console.warn('⚠️ Score column missing or schema mismatch (PGRST204). Retrying with baseLead payload...');
+          const baseRes = await supabase
             .from('leads')
-            .upsert(retryPayload, { onConflict: 'phone' })
+            .upsert(baseLead, { onConflict: 'phone' })
             .select();
 
-          if (retryRes.error) {
-            console.warn('⚠️ score column mismatch as well. Retrying with minimal essential lead fields...');
-            const minPayload = {
-              phone: clientPhone,
-              name: clientName,
-              last_message: messageText,
-              status: extractedData?.status || 'nuevo',
-              updated_at: new Date().toISOString(),
-              ...(orgId && orgId !== '00000000-0000-0000-0000-000000000000' ? { organization_id: orgId } : {}),
-              ...(userId ? { user_id: userId } : {}),
-            };
-
-            const minRes = await supabase
-              .from('leads')
-              .upsert(minPayload, { onConflict: 'phone' })
-              .select();
-
-            leadResult = minRes.data;
-            leadError = minRes.error;
-          } else {
-            leadResult = retryRes.data;
-            leadError = null;
-          }
+          leadResult = baseRes.data;
+          leadError = baseRes.error;
         }
 
         if (leadError) {
