@@ -45,14 +45,14 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
   console.log("--> WEBHOOK ENTRANTE:", JSON.stringify(body, null, 2));
 
-  const eventType = body.event || body.type || 'MESSAGES_UPSERT';
+  const rawEvent = (body.event || body.type || body.event_type || '').toUpperCase().replace(/\./g, '_');
   const instanceName = body.instance || body.instanceName || 'default';
-  const data = body.data || body;
+  const data = Array.isArray(body.data) ? body.data[0] : (body.data || body);
 
-  console.log(`📌 [EVOLUTION WEBHOOK] Event: "${eventType}" | Instance: "${instanceName}"`);
+  console.log(`📌 [EVOLUTION WEBHOOK] RawEvent: "${rawEvent}" | Instance: "${instanceName}"`);
 
   // EVENT 1: CONNECTION_UPDATE
-  if (eventType === 'CONNECTION_UPDATE' || eventType === 'connection.update') {
+  if (rawEvent === 'CONNECTION_UPDATE' || rawEvent.includes('CONNECTION_UPDATE')) {
     const connectionState = data.state || data.status || (data.open ? 'open' : 'connecting');
     const ownerNumber = (data.owner || data.number || data.key?.remoteJid || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
 
@@ -86,18 +86,35 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     return res.status(200).json({ status: 'CONNECTION_UPDATE_PROCESSED', connectionState });
   }
 
-  // EVENT 2: MESSAGES_UPSERT
-  if (eventType === 'MESSAGES_UPSERT' || eventType === 'messages.upsert' || data.key) {
-    const key = data.key || data.data?.key || {};
-    const messageObj = data.message || data.data?.message || {};
-    const fromMe = Boolean(key.fromMe || data.fromMe);
+  // EVENT 2: MESSAGES_UPSERT, MESSAGES_UPDATE, CHATS_UPSERT, or direct data.message
+  if (
+    rawEvent === 'MESSAGES_UPSERT' ||
+    rawEvent === 'MESSAGES_UPDATE' ||
+    rawEvent === 'CHATS_UPSERT' ||
+    rawEvent.includes('MESSAGES_') ||
+    rawEvent.includes('CHATS_') ||
+    data?.message ||
+    data?.key
+  ) {
+    const key = data?.key || data?.data?.key || {};
+    const messageObj = data?.message || data?.data?.message || {};
+    const fromMe = Boolean(key.fromMe || data?.fromMe);
 
     if (fromMe) {
-      console.log('ℹ️ Bypassing outgoing message (fromMe: true)');
-      return res.status(200).json({ status: 'BYPASSED_OUTGOING_MESSAGE' });
+      console.log('ℹ️ Ignorando mensaje saliente generado por el bot (fromMe: true)');
+      return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    const remoteJid = key.remoteJid || data.remoteJid || '';
+    // Extract real JID: prioritize remoteJidAlt if remoteJid ends with @lid
+    let remoteJid = key.remoteJid || data?.remoteJid || '';
+    if (remoteJid.endsWith('@lid') && key.remoteJidAlt) {
+      console.log(`📌 [LID MODE DETECTED] Replacing @lid JID "${remoteJid}" with key.remoteJidAlt "${key.remoteJidAlt}"`);
+      remoteJid = key.remoteJidAlt;
+    } else if (remoteJid.endsWith('@lid') && data?.remoteJidAlt) {
+      console.log(`📌 [LID MODE DETECTED] Replacing @lid JID "${remoteJid}" with data.remoteJidAlt "${data.remoteJidAlt}"`);
+      remoteJid = data.remoteJidAlt;
+    }
+
     if (remoteJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
@@ -112,6 +129,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     const messageText = (
       messageObj.conversation ||
       messageObj.extendedTextMessage?.text ||
+      messageObj.messageContextInfo?.conversation ||
       data.messageText ||
       messageObj.imageMessage?.caption ||
       messageObj.videoMessage?.caption ||
