@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
 import { sendEvolutionTextMessage } from '../_lib/evolutionClient.js';
 import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.js';
+import { getRedisClient } from '../_lib/redisClient.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -24,6 +25,27 @@ function getBackendSupabaseClient() {
     });
   } catch {
     return null;
+  }
+}
+
+const DEDUP_TTL_SECONDS = 60;
+
+/**
+ * Devuelve true si el messageId ya fue visto en los últimos DEDUP_TTL_SECONDS.
+ * Usa key.id porque es el único identificador estable entre los dos eventos
+ * duplicados que emite Evolution API para sesiones en modo LID (remoteJid
+ * cambia entre ambos eventos, key.id no).
+ */
+async function isDuplicateMessage(messageId: string | undefined): Promise<boolean> {
+  if (!messageId) return false;
+  try {
+    const redis = getRedisClient();
+    const key = `evo:dedup:${messageId}`;
+    const result = await redis.set(key, '1', 'EX', DEDUP_TTL_SECONDS, 'NX');
+    return result === null;
+  } catch (err) {
+    console.error('[evolutionWebhookHandler] Redis no disponible para dedup, continuando sin bloquear:', err);
+    return false;
   }
 }
 
@@ -192,6 +214,18 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_or_empty' });
     }
 
+    const rawMessageId = messageContext.wamid || data?.key?.id;
+
+    // Guard de deduplicación Redis
+    if (await isDuplicateMessage(rawMessageId)) {
+      console.log('[evolutionWebhookHandler] Evento duplicado ignorado', {
+        messageId: rawMessageId,
+        primaryJid: messageContext.primaryJid,
+        remoteJid: data?.key?.remoteJid,
+      });
+      return res.status(200).json({ ok: true, deduped: true });
+    }
+
     if (messageContext.primaryJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
@@ -208,7 +242,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     const messageText = messageContext.text;
     const wamid = messageContext.wamid;
 
-    // Deduplication check
+    // Deduplication check fallback in Supabase
     if (supabase && wamid) {
       try {
         const { data: existingProc } = await supabase
@@ -218,7 +252,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           .maybeSingle();
 
         if (existingProc) {
-          console.log(`ℹ️ [EVOLUTION DEDUPLICATION] wamid "${wamid}" already processed.`);
+          console.log(`ℹ️ [EVOLUTION DEDUPLICATION] wamid "${wamid}" already processed in Supabase.`);
           return res.status(200).json({ status: 'EVENT_RECEIVED', duplicate: true });
         }
 
@@ -229,7 +263,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           created_at: new Date().toISOString(),
         });
       } catch (dedupErr) {
-        console.warn('⚠️ Deduplication check exception:', dedupErr);
+        console.warn('⚠️ Deduplication check exception in Supabase:', dedupErr);
       }
     }
 
