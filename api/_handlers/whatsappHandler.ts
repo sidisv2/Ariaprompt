@@ -41,27 +41,31 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
   if (subRoute === 'webhook' || subRoute === 'whatsapp-webhook') {
     // GET: Meta Webhook Handshake
     if (req.method === 'GET') {
-      const rawEnvToken =
-        process.env.WHATSAPP_VERIFY_TOKEN ||
-        process.env.META_VERIFY_TOKEN ||
-        process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ||
-        process.env.WEBHOOK_VERIFY_TOKEN ||
-        'aria_prop_whatsapp_webhook_secret_verify_token_2026';
-      const expectedToken = (rawEnvToken || '').replace(/^["']|["']$/g, '').trim();
-
       const mode = Array.isArray(req.query['hub.mode']) ? req.query['hub.mode'][0] : req.query['hub.mode'];
       const rawQueryToken = Array.isArray(req.query['hub.verify_token']) ? req.query['hub.verify_token'][0] : req.query['hub.verify_token'];
       const token = (typeof rawQueryToken === 'string' ? rawQueryToken : '').replace(/^["']|["']$/g, '').trim();
       const challenge = Array.isArray(req.query['hub.challenge']) ? req.query['hub.challenge'][0] : req.query['hub.challenge'];
 
-      if (mode === 'subscribe' && token && expectedToken && token === expectedToken) {
-        console.log('✅ Meta Webhook Verification Handshake Successful!');
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        return res.status(200).send(challenge || '');
-      } else {
-        console.error(`❌ Token Mismatch. Esperado: "${expectedToken}", Recibido: "${token}"`);
-        return res.status(403).send('Forbidden');
+      if (mode === 'subscribe') {
+        const rawEnvToken =
+          process.env.WHATSAPP_VERIFY_TOKEN ||
+          process.env.META_VERIFY_TOKEN ||
+          process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN ||
+          process.env.WEBHOOK_VERIFY_TOKEN ||
+          'aria_prop_whatsapp_webhook_secret_verify_token_2026';
+        const expectedToken = (rawEnvToken || '').replace(/^["']|["']$/g, '').trim();
+
+        if (token && expectedToken && token === expectedToken) {
+          console.log('✅ Meta Webhook Verification Handshake Successful!');
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          return res.status(200).send(challenge || '');
+        } else {
+          console.error(`❌ Meta Webhook Verification Failed: Token Mismatch. Esperado: "${expectedToken}", Recibido: "${token}"`);
+          return res.status(403).send('Forbidden');
+        }
       }
+
+      return res.status(200).json({ status: 'ok', service: 'whatsapp-webhook' });
     }
 
     // POST: Incoming WhatsApp Event

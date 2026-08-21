@@ -36,7 +36,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
   }
 
   if (req.method === 'GET') {
-    return res.status(200).json({ status: 'EVOLUTION_WEBHOOK_ONLINE' });
+    return res.status(200).json({ status: 'ok', service: 'evolution-webhook' });
   }
 
   const supabase = getBackendSupabaseClient();
@@ -163,6 +163,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     }
 
     console.log(`💬 [EVOLUTION INCOMING MESSAGE] From: +${clientPhone} | Text: "${messageText}"`);
+    console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
     // Process message with Aria Real Estate Engine
     const ariaResult = await processAriaMessage({
@@ -174,6 +175,8 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     const aiResponseText = ariaResult.text;
     const extractedData = ariaResult.extractedData;
+
+    console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
     // Register / Update Lead in Supabase CRM
     if (supabase) {
