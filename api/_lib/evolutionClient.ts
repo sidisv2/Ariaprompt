@@ -267,17 +267,23 @@ export async function sendEvolutionTextMessage(
   }
 
   const doSend = async (jid: string) => {
+    const payload = {
+      number: jid,
+      text,
+      options: {
+        delay: 0,
+        presence: 'composing',
+        linkPreview: false,
+      },
+    };
+
     const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(apiKey ? { apikey: apiKey } : {}),
       },
-      body: JSON.stringify({
-        number: jid,
-        text,
-        linkPreview: false,
-      }),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json().catch(() => ({}));
