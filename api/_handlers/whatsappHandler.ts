@@ -7,8 +7,20 @@ import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.
 import { processIncomingVoiceMessage } from '../../lib/whatsapp/audioProcessor.js';
 
 function getBackendSupabaseClient() {
-  const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
-  const supabaseKey = (process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '').trim();
+  const supabaseUrl = (
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    ''
+  ).trim();
+
+  const supabaseKey = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    ''
+  ).trim();
+
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseUrl.includes('your-supabase')) {
     return null;
   }
@@ -348,20 +360,51 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    // 1. Resolve active user and organization
+    let userId: string | null = null;
     let organizationId: string | null = (req.query.organization_id as string) || null;
 
     if (token) {
       try {
-        const { data: userData } = await supabase.auth.getUser(token);
+        const { data: userData, error: userAuthErr } = await supabase.auth.getUser(token);
         if (userData?.user) {
+          userId = userData.user.id;
           const { data: profile } = await supabase
             .from('profiles')
             .select('organization_id')
             .eq('id', userData.user.id)
-            .single();
+            .maybeSingle();
 
           if (profile?.organization_id) {
             organizationId = profile.organization_id;
+          }
+        }
+      } catch (authEx) {
+        console.warn('⚠️ Token auth resolution notice:', authEx);
+      }
+    }
+
+    // Fallback: if no organizationId but we have users/organizations in DB, fetch first
+    if (!organizationId) {
+      try {
+        if (userId) {
+          const { data: userOrg } = await supabase
+            .from('organizations')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (userOrg?.id) {
+            organizationId = userOrg.id;
+          }
+        }
+        if (!organizationId) {
+          const { data: firstOrg } = await supabase
+            .from('organizations')
+            .select('id')
+            .limit(1)
+            .maybeSingle();
+          if (firstOrg?.id) {
+            organizationId = firstOrg.id;
           }
         }
       } catch {}
@@ -394,7 +437,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       return res.status(200).json({
         success: true,
         organization: {
-          id: organizationId || 'org-new',
+          id: organizationId || 'org-default',
           name: 'Tu Inmobiliaria',
           wa_phone_number_id: null,
           wa_waba_id: null,
@@ -468,7 +511,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       if (action === 'disconnect' || subRoute === 'disconnect') {
         if (targetOrgId) {
           try {
-            await supabase
+            const { error: updateErr } = await supabase
               .from('organizations')
               .update({
                 wa_connected: false,
@@ -478,7 +521,13 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 updated_at: new Date().toISOString(),
               })
               .eq('id', targetOrgId);
-          } catch {}
+
+            if (updateErr) {
+              console.warn('⚠️ Supabase disconnect error:', updateErr);
+            }
+          } catch (ex: any) {
+            console.warn('⚠️ Disconnect exception:', ex);
+          }
         }
 
         return res.status(200).json({
@@ -517,24 +566,104 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       if (!phoneNumberId || !/^\d{10,20}$/.test(phoneNumberId)) {
         return res.status(400).json({
           success: false,
-          error: 'Phone Number ID inválido. Debe contener únicamente dígitos numéricos proporcionados por Meta.',
+          error: 'Phone Number ID inválido. Debe contener únicamente dígitos numéricos proporcionados por Meta (15 a 17 dígitos).',
         });
       }
 
-      if (targetOrgId) {
+      let saveOrgId = targetOrgId;
+
+      if (saveOrgId) {
         try {
-          await supabase
+          const updatePayload: Record<string, any> = {
+            wa_phone_number_id: phoneNumberId,
+            wa_waba_id: wabaId || null,
+            wa_connected: true,
+            updated_at: new Date().toISOString(),
+          };
+
+          if (accessToken) {
+            updatePayload.wa_access_token = accessToken;
+          }
+
+          const { error: orgUpdateErr } = await supabase
             .from('organizations')
-            .update({
+            .update(updatePayload)
+            .eq('id', saveOrgId);
+
+          if (orgUpdateErr) {
+            console.error('❌ Error actualizando organizaciones en Supabase:', orgUpdateErr);
+            return res.status(400).json({
+              success: false,
+              error: `Error al guardar en Supabase (organizations): ${orgUpdateErr.message}`,
+              details: orgUpdateErr,
+            });
+          }
+
+          // Also update profile if user is known
+          if (userId) {
+            try {
+              await supabase
+                .from('profiles')
+                .update({
+                  wa_phone_number_id: phoneNumberId,
+                  wa_status: 'connected',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId);
+            } catch {}
+          }
+        } catch (dbErr: any) {
+          console.error('❌ Exception actualizando Supabase:', dbErr);
+          return res.status(500).json({
+            success: false,
+            error: `Error interno al actualizar base de datos: ${dbErr.message || String(dbErr)}`,
+          });
+        }
+      } else {
+        // Create new organization if none existed
+        try {
+          const { data: newOrg, error: createOrgErr } = await supabase
+            .from('organizations')
+            .insert({
+              name: 'Mi Inmobiliaria',
               wa_phone_number_id: phoneNumberId,
               wa_waba_id: wabaId || null,
               ...(accessToken ? { wa_access_token: accessToken } : {}),
               wa_connected: true,
+              created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
-            .eq('id', targetOrgId);
-        } catch (dbErr) {
-          console.warn('⚠️ Supabase organization update warning:', dbErr);
+            .select('id')
+            .single();
+
+          if (createOrgErr) {
+            console.error('❌ Error creando organización en Supabase:', createOrgErr);
+            return res.status(400).json({
+              success: false,
+              error: `Error al crear organización en Supabase: ${createOrgErr.message}`,
+            });
+          }
+
+          saveOrgId = newOrg?.id;
+
+          if (userId && saveOrgId) {
+            try {
+              await supabase
+                .from('profiles')
+                .update({
+                  organization_id: saveOrgId,
+                  wa_phone_number_id: phoneNumberId,
+                  wa_status: 'connected',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId);
+            } catch {}
+          }
+        } catch (createEx: any) {
+          return res.status(500).json({
+            success: false,
+            error: `Excepción al crear organización: ${createEx.message || String(createEx)}`,
+          });
         }
       }
 
@@ -542,7 +671,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         success: true,
         message: 'Cuenta de WhatsApp Business vinculada exitosamente',
         organization: {
-          id: targetOrgId || 'org-connected',
+          id: saveOrgId || 'org-connected',
           name: 'Tu Inmobiliaria',
           wa_phone_number_id: phoneNumberId,
           wa_waba_id: wabaId || null,

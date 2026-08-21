@@ -268,9 +268,12 @@ export const WhatsAppSettings: React.FC = () => {
         setManualAccessToken('');
         fetchStatus();
       } else {
-        setErrorMsg(data.error || 'No se pudo guardar la configuración de WhatsApp.');
+        const errorDetail = data.error || (data.details ? JSON.stringify(data.details) : 'No se pudo guardar la configuración de WhatsApp.');
+        console.error('[WhatsApp Connect Error]:', data);
+        setErrorMsg(errorDetail);
       }
     } catch (err: any) {
+      console.error('[WhatsApp Connect Exception]:', err);
       setErrorMsg(`Error al guardar configuración: ${err.message || String(err)}`);
     } finally {
       setConnecting(false);
