@@ -192,25 +192,23 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
  * Returns recipient JID formatted for Evolution API v2:
  * Preserves @lid intact, strips Argentina (+54) mobile 9 prefix if applicable, and appends @s.whatsapp.net.
  */
-export function formatRecipientForSending(rawJidOrNumber: string): string {
-  if (!rawJidOrNumber) return '';
-  const trimmed = rawJidOrNumber.trim();
+export function formatRecipientForSending(rawJid: string): string {
+  if (!rawJid) return '';
+  const trimmed = rawJid.trim();
 
-  // Si ya viene como LID, se envía tal cual
+  // Si es LID, va intacto
   if (trimmed.endsWith('@lid')) {
     return trimmed;
   }
 
-  // Extraer dígitos limpios eliminando sufijos previos
+  // Limpiar todo excepto dígitos
   let digits = trimmed.replace('@s.whatsapp.net', '').replace(/\D/g, '');
 
-  // Regla Argentina (+54): remover el prefijo '9' móvil si tiene 12-13 dígitos
-  // Ej: 5492604014372 -> 542604014372
+  // Argentina (+54): remover el 9 móvil obligatoriamente
   if (digits.startsWith('549') && digits.length >= 12) {
     digits = '54' + digits.slice(3);
   }
 
-  // Retornar siempre con el sufijo @s.whatsapp.net explícito
   return `${digits}@s.whatsapp.net`;
 }
 

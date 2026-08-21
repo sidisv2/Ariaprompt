@@ -105,18 +105,40 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Extract incoming key and strictly preserve incoming targetRecipient
-    const incomingKey = data?.key || key || {};
-    // Si vino por @lid, usar estrictamente ese @lid como target
-    const targetRecipient = incomingKey.remoteJid || data?.remoteJid || '';
+    // Prioritize @lid JID if present in any of rawData items
+    const rawData = Array.isArray(body?.data) ? body.data : [body?.data || body];
+    let targetJid = '';
 
-    if (targetRecipient.includes('@g.us')) {
+    // Buscar primero si existe algún JID con @lid
+    for (const item of rawData) {
+      const jid = item?.key?.remoteJid || item?.remoteJid || '';
+      if (jid.endsWith('@lid')) {
+        targetJid = jid;
+        break;
+      }
+    }
+
+    // Si no hubo @lid, tomar el primer JID disponible
+    if (!targetJid) {
+      const first = rawData[0];
+      targetJid = first?.key?.remoteJid || first?.remoteJid || '';
+    }
+
+    if (targetJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
-    // Phone digits for CRM lead persistence & AI prompt context (prioritize remoteJidAlt if available)
-    const altPhoneJid = incomingKey?.remoteJidAlt || data?.remoteJidAlt || targetRecipient;
+    // Phone digits for CRM lead persistence & AI prompt context
+    let altPhoneJid = '';
+    for (const item of rawData) {
+      const alt = item?.key?.remoteJidAlt || item?.remoteJidAlt;
+      if (alt) {
+        altPhoneJid = alt;
+        break;
+      }
+    }
+    if (!altPhoneJid) altPhoneJid = targetJid;
     const clientPhone = altPhoneJid.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
     if (!clientPhone) {
       console.log('⚠️ Ignored message with invalid or missing remoteJid');
@@ -186,7 +208,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       }
     }
 
-    console.log(`💬 [EVOLUTION INCOMING MESSAGE] Target Recipient: "${targetRecipient}" (Clean Phone: +${clientPhone}) | Text: "${messageText}"`);
+    console.log(`💬 [EVOLUTION INCOMING MESSAGE] Target JID: "${targetJid}" (Clean Phone: +${clientPhone}) | Text: "${messageText}"`);
     console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
     // =========================================================================
@@ -211,10 +233,10 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando targetRecipient
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${targetRecipient}" via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, targetRecipient, aiResponseText);
-    console.log(`🚀 Mensaje enviado con éxito al cliente "${targetRecipient}":`, JSON.stringify(sendResult));
+    // Despacho inmediato por WhatsApp vía Evolution API usando targetJid
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${targetJid}" via instance "${instanceName}"...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, targetJid, aiResponseText);
+    console.log(`🚀 Mensaje enviado con éxito al cliente "${targetJid}":`, JSON.stringify(sendResult));
 
     // =========================================================================
     // PASO 2 (Persistencia Asíncrona Non-Blocking en try/catch independiente)
