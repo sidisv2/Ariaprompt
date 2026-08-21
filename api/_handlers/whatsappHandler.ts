@@ -589,6 +589,33 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           if (metaData.access_token) {
             accessToken = metaData.access_token;
             console.log('✅ Meta System User Access Token Exchanged Successfully');
+
+            // If phone_number_id or waba_id are missing, fetch shared WABA accounts via Graph API
+            if (!phoneNumberId || !wabaId) {
+              try {
+                // Fetch debug_token or shared accounts to resolve WABA ID
+                const debugRes = await fetch(`https://graph.facebook.com/v20.0/debug_token?input_token=${accessToken}&access_token=${appId}|${appSecret}`);
+                const debugData = await debugRes.json().catch(() => ({}));
+                const granularScopes = debugData.data?.granular_scopes || [];
+                const wabaScope = granularScopes.find((s: any) => s.scope === 'whatsapp_business_management');
+                const targetWabaId = wabaScope?.target_ids?.[0] || wabaId;
+
+                if (targetWabaId) {
+                  wabaId = targetWabaId;
+                  // Fetch phone numbers registered under this WABA
+                  const phoneListRes = await fetch(`https://graph.facebook.com/v20.0/${targetWabaId}/phone_numbers`, {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                  });
+                  const phoneListData = await phoneListRes.json().catch(() => ({}));
+                  if (Array.isArray(phoneListData.data) && phoneListData.data.length > 0) {
+                    phoneNumberId = phoneListData.data[0].id;
+                    console.log(`✅ Auto-discovered Meta Phone Number ID: ${phoneNumberId}`);
+                  }
+                }
+              } catch (autoFetchEx) {
+                console.warn('⚠️ Auto-discovery notice:', autoFetchEx);
+              }
+            }
           }
         } catch (err) {
           console.error('[Meta Token Exchange Exception]:', err);
