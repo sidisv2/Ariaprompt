@@ -180,10 +180,11 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
                 <select
                   value={operationType}
                   onChange={(e) => setOperationType(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-medium"
+                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-emerald-500"
                 >
                   <option value="sale">🏷️ Venta</option>
-                  <option value="rent">🔑 Alquiler</option>
+                  <option value="rent">🔑 Alquiler Tradicional</option>
+                  <option value="temporary_rent">🏖️ Alquiler Temporal</option>
                 </select>
               </div>
 

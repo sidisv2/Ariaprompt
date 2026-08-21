@@ -28,6 +28,9 @@ export interface DemoMessage {
     location: string;
     details: string;
     imageUrl: string;
+    pdfBrochure?: boolean;
+    googleMapsUrl?: string;
+    tour360Url?: string;
   };
 }
 
@@ -35,12 +38,13 @@ const INITIAL_MESSAGES: DemoMessage[] = [
   {
     id: 'msg-1',
     sender: 'bot',
-    text: '👋 ¡Hola! Soy Aria, la Asistente Comercial IA 24/7 de Ariaprop. ¿Qué tipo de propiedad estás buscando hoy?',
+    text: '👋 ¡Hola! Soy Aria, la Asistente Comercial IA 24/7 de Ariaprop. ¿Qué tipo de propiedad, desarrollo o lote estás buscando hoy?',
     timestamp: '09:41',
   },
 ];
 
 const SUGGESTIONS = [
+  { label: '🌲 Lote 1.000 m² c/ Costa de Río (Entrega + Cuotas)', key: 'lote' },
   { label: '🏢 Alquiler 2 amb en Palermo ($600 USD)', key: 'palermo' },
   { label: '🏡 Comprar Casa en Nordelta ($350,000 USD)', key: 'nordelta' },
   { label: '📅 Coordinar visita con asesor', key: 'visita' },
@@ -80,7 +84,24 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
       let botResponse: DemoMessage;
       const lowerText = userMsgText.toLowerCase();
 
-      if (lowerText.includes('palermo') || lowerText.includes('alquiler')) {
+      if (lowerText.includes('lote') || lowerText.includes('terreno') || lowerText.includes('rio') || lowerText.includes('desarrollo')) {
+        botResponse = {
+          id: `bot-${Date.now()}`,
+          sender: 'bot',
+          text: '🌿 ¡Excelente oportunidad de desarrollo! Disponemos de lotes premium en primera línea náutica con plan de financiación directa:',
+          timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+          propertyCard: {
+            title: 'Lote 1.000 m² con Costa de Río · Barrio Náutico',
+            price: 'USD 45.000 (Anticipo 30% + 36 cuotas fijas)',
+            location: 'Ribera del Delta / Zona Náutica',
+            details: '1.000 m² • Escritura inmediata • Servicios subterráneos • Amarra propia',
+            imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80',
+            pdfBrochure: true,
+            googleMapsUrl: 'https://maps.google.com',
+            tour360Url: 'https://ariaprop.online',
+          },
+        };
+      } else if (lowerText.includes('palermo') || lowerText.includes('alquiler')) {
         botResponse = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
@@ -92,6 +113,8 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             location: 'Palermo Soho, CABA',
             details: '2 amb • 65 m² • Balcón Terraza • Edificio c/ Amenities',
             imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
+            pdfBrochure: true,
+            googleMapsUrl: 'https://maps.google.com',
           },
         };
       } else if (lowerText.includes('nordelta') || lowerText.includes('comprar') || lowerText.includes('casa')) {
@@ -106,6 +129,9 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             location: 'Barrio Castores, Nordelta',
             details: '4 amb • 240 m² • Piscina Climatizada • Amarra',
             imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
+            pdfBrochure: true,
+            googleMapsUrl: 'https://maps.google.com',
+            tour360Url: 'https://ariaprop.online',
           },
         };
       } else if (lowerText.includes('visita') || lowerText.includes('asesor') || lowerText.includes('coordinar')) {
@@ -134,6 +160,8 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             location: 'Zona Exclusiva',
             details: '3 amb • 110 m² • Cochera Fija • Vigilancia 24hs',
             imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
+            pdfBrochure: true,
+            googleMapsUrl: 'https://maps.google.com',
           },
         };
       }
@@ -282,6 +310,25 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
                           <p className="text-[10px] text-slate-300 font-mono pt-1 border-t border-white/5">
                             {msg.propertyCard.details}
                           </p>
+
+                          {/* Quick Actions (PDF, Maps, Tour 360) */}
+                          <div className="pt-2 flex flex-wrap items-center gap-1.5 border-t border-white/5">
+                            {msg.propertyCard.pdfBrochure && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[9px] font-bold border border-rose-500/30">
+                                📄 Ficha PDF lista
+                              </span>
+                            )}
+                            {msg.propertyCard.googleMapsUrl && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[9px] font-bold border border-emerald-500/30">
+                                📍 Google Maps
+                              </span>
+                            )}
+                            {msg.propertyCard.tour360Url && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[9px] font-bold border border-sky-500/30">
+                                🔄 Tour 360°
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}

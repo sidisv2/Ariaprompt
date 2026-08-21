@@ -166,7 +166,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
                   {/* Client Text Message */}
                   <div className="flex justify-end">
                     <div className="bg-emerald-600 text-slate-950 font-medium rounded-2xl rounded-tr-none px-3.5 py-2.5 max-w-[90%] shadow-md">
-                      <p className="leading-snug">Hola, busco un departamento de 2 ambientes en Palermo hasta USD 110.000 con cochera</p>
+                      <p className="leading-snug">Hola, busco loteos o terrenos con financiación. ¿Tienen lotes con costa de río o en barrio cerrado?</p>
                       <span className="text-[9px] text-slate-950/70 block text-right mt-1 font-mono">14:32</span>
                     </div>
                   </div>
@@ -175,31 +175,47 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
                   <div className="flex justify-start">
                     <div className="bg-slate-900 border border-white/10 text-slate-200 rounded-2xl rounded-tl-none p-3 max-w-[95%] shadow-md space-y-2.5">
                       <p className="leading-relaxed">
-                        ¡Hola! Encontré 3 propiedades que coinciden con tu búsqueda:
+                        ¡Hola! Encontré el desarrollo ideal: <strong>Lote de 1.000 m² con costa de río</strong> · Entrega 30% + cuotas fijas:
                       </p>
 
                       {/* Property Card Interactive Mockup */}
                       <div className="rounded-xl bg-slate-950 border border-emerald-500/30 overflow-hidden">
-                        <div className="h-24 bg-gradient-to-br from-slate-800 to-slate-900 relative flex items-center justify-center p-3">
+                        <div className="h-24 bg-gradient-to-br from-emerald-950/50 via-slate-900 to-slate-950 relative flex items-center justify-center p-3">
                           <Building2 className="w-10 h-10 text-emerald-500/40" />
                           <span className="absolute top-2 right-2 bg-emerald-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full">
-                            USD 105.000
+                            USD 45.000 · Cuotas
                           </span>
                           <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white bg-slate-950/80 px-2 py-0.5 rounded">
-                            2 Amb · 52m² · Palermo Soho
+                            Lote 1.000m² · Costa Náutica
                           </span>
                         </div>
-                        <div className="p-2.5 flex items-center justify-between gap-2">
-                          <span className="text-[10px] text-emerald-400 font-semibold">✓ Cochera fija incluida</span>
-                          <button
-                            onClick={() => {
-                              if (onOpenPrompt) onOpenPrompt('Quiero ver la ficha del departamento en Palermo Soho de USD 105.000');
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-[10px] hover:bg-emerald-400 transition-colors flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>Ver ficha</span>
-                            <ExternalLink className="w-2.5 h-2.5" />
-                          </button>
+                        
+                        {/* Dispatch badges: PDF, Fotos, Maps, Tour 360 */}
+                        <div className="p-2.5 space-y-2">
+                          <div className="flex flex-wrap gap-1">
+                            <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold text-[9px] border border-rose-500/30">
+                              📄 Ficha PDF
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[9px] border border-emerald-500/30">
+                              📍 Ubicación Maps
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold text-[9px] border border-sky-500/30">
+                              🔄 Tour 360°
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                            <span className="text-[10px] text-emerald-400 font-semibold">✓ Escritura & Posesión</span>
+                            <button
+                              onClick={() => {
+                                if (onOpenPrompt) onOpenPrompt('Quiero recibir la ficha PDF del lote de 1.000 m² con costa de río');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-[10px] hover:bg-emerald-400 transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>Ver lote</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
 
@@ -228,7 +244,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
                         </div>
                       </div>
                       <div className="bg-slate-950/10 rounded-lg p-1.5 text-[10px] italic border border-black/5">
-                        🎙️ "Perfecto, ¿se puede visitar este viernes a las 16 hs?"
+                        🎙️ "Excelente, ¿me pasás la ubicación exacta en Maps y coordinamos para ir a verlo este sábado?"
                       </div>
                     </div>
                   </div>
@@ -241,7 +257,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
                         <span>Voz transcripta con Gemini 2.5 Flash</span>
                       </div>
                       <p className="leading-snug">
-                        ¡Coordinado! Te agendé para el <strong>Viernes a las 16:00 hs</strong>. Tu asesor asignado te esperará en el departamento.
+                        ¡Listo! Te envié el link de <strong>Google Maps</strong> y te agendé para el <strong>Sábado a las 11:00 hs</strong> con el asesor del desarrollo en el showroom del loteo.
                       </p>
                       <span className="text-[9px] text-slate-500 block text-right font-mono">14:33 · Visita Agendada</span>
                     </div>
@@ -257,7 +273,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
                     value="Escribe una consulta o envía un audio..."
                     className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-slate-500 text-[11px] cursor-pointer"
                     onClick={() => {
-                      if (onOpenPrompt) onOpenPrompt('¿Tienen departamentos en Recoleta con balcón terraza?');
+                      if (onOpenPrompt) onOpenPrompt('¿Tienen lotes financiados o departamentos en pozo?');
                     }}
                   />
                   <div className="p-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs">
