@@ -238,6 +238,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           last_message: messageText,
           status: extractedData?.status || 'nuevo',
           qualification_score: qualificationScore,
+          score: qualificationScore,
           updated_at: new Date().toISOString(),
         };
 
@@ -248,10 +249,45 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
           leadPayload.user_id = userId;
         }
 
-        const { data: leadResult, error: leadError } = await supabase
+        let { data: leadResult, error: leadError } = await supabase
           .from('leads')
           .upsert(leadPayload, { onConflict: 'phone' })
           .select();
+
+        if (leadError && (leadError.code === 'PGRST204' || leadError.message?.includes('qualification_score') || leadError.message?.includes('score'))) {
+          console.warn('⚠️ qualification_score column mismatch in schema cache. Retrying fallback without qualification_score...');
+          const retryPayload = { ...leadPayload };
+          delete retryPayload.qualification_score;
+
+          const retryRes = await supabase
+            .from('leads')
+            .upsert(retryPayload, { onConflict: 'phone' })
+            .select();
+
+          if (retryRes.error) {
+            console.warn('⚠️ score column mismatch as well. Retrying with minimal essential lead fields...');
+            const minPayload = {
+              phone: clientPhone,
+              name: clientName,
+              last_message: messageText,
+              status: extractedData?.status || 'nuevo',
+              updated_at: new Date().toISOString(),
+              ...(orgId && orgId !== '00000000-0000-0000-0000-000000000000' ? { organization_id: orgId } : {}),
+              ...(userId ? { user_id: userId } : {}),
+            };
+
+            const minRes = await supabase
+              .from('leads')
+              .upsert(minPayload, { onConflict: 'phone' })
+              .select();
+
+            leadResult = minRes.data;
+            leadError = minRes.error;
+          } else {
+            leadResult = retryRes.data;
+            leadError = null;
+          }
+        }
 
         if (leadError) {
           console.error('❌ Error guardando Lead en Supabase:', leadError);
