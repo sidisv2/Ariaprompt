@@ -42,6 +42,8 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
   const supabase = getBackendSupabaseClient();
   const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
 
+  console.log("--> WEBHOOK ENTRANTE:", JSON.stringify(body, null, 2));
+
   const eventType = body.event || body.type || 'MESSAGES_UPSERT';
   const instanceName = body.instance || body.instanceName || 'default';
   const data = body.data || body;
@@ -87,28 +89,38 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
   if (eventType === 'MESSAGES_UPSERT' || eventType === 'messages.upsert' || data.key) {
     const key = data.key || data.data?.key || {};
     const messageObj = data.message || data.data?.message || {};
-    const fromMe = Boolean(key.fromMe);
+    const fromMe = Boolean(key.fromMe || data.fromMe);
 
     if (fromMe) {
+      console.log('ℹ️ Bypassing outgoing message (fromMe: true)');
       return res.status(200).json({ status: 'BYPASSED_OUTGOING_MESSAGE' });
     }
 
     const remoteJid = key.remoteJid || data.remoteJid || '';
     if (remoteJid.includes('@g.us')) {
+      console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
     const clientPhone = remoteJid.replace('@s.whatsapp.net', '').replace(/\D/g, '');
     if (!clientPhone) {
+      console.log('⚠️ Ignored message with invalid or missing remoteJid');
       return res.status(200).json({ status: 'IGNORED_INVALID_JID' });
     }
 
-    const messageText =
+    const messageText = (
       messageObj.conversation ||
       messageObj.extendedTextMessage?.text ||
+      data.messageText ||
       messageObj.imageMessage?.caption ||
       messageObj.videoMessage?.caption ||
-      'Hola';
+      ''
+    ).trim();
+
+    if (!messageText) {
+      console.log('ℹ️ Empty message text, ending webhook execution with 200 OK');
+      return res.status(200).json({ status: 'EMPTY_MESSAGE_TEXT' });
+    }
 
     const wamid = key.id || `evo_${Date.now()}`;
 
@@ -205,6 +217,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     // Dispatch AI Response back to user via Evolution API
     console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to +${clientPhone} via instance "${instanceName}"...`);
     const sendResult = await sendEvolutionTextMessage(instanceName, clientPhone, aiResponseText);
+    console.log(`📌 sendText Result:`, JSON.stringify(sendResult));
 
     return res.status(200).json({
       status: 'MESSAGE_PROCESSED',

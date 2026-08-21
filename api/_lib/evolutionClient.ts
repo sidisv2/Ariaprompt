@@ -63,7 +63,7 @@ export async function createEvolutionInstance(
 }
 
 /**
- * Sets up instance webhooks for MESSAGES_UPSERT and CONNECTION_UPDATE
+ * Sets up instance webhooks for MESSAGES_UPSERT, CONNECTION_UPDATE and SEND_MESSAGE
  */
 export async function setEvolutionWebhook(instanceName: string, webhookUrl: string): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
@@ -81,12 +81,13 @@ export async function setEvolutionWebhook(instanceName: string, webhookUrl: stri
       body: JSON.stringify({
         url: webhookUrl,
         enabled: true,
-        webhook_by_events: true,
-        events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+        webhook_by_events: false,
+        events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'SEND_MESSAGE'],
       }),
     });
 
     const data = await res.json().catch(() => ({}));
+    console.log(`📌 setEvolutionWebhook response for "${instanceName}":`, JSON.stringify(data));
     return { success: res.ok, data };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Error setting Evolution webhook' };
@@ -173,6 +174,7 @@ export async function sendEvolutionTextMessage(instanceName: string, number: str
     });
 
     const data = await res.json().catch(() => ({}));
+    console.log(`📌 sendEvolutionTextMessage result [${res.status}]:`, JSON.stringify(data));
     return { success: res.ok, data };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Error sending Evolution text message' };
