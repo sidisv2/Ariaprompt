@@ -385,7 +385,7 @@ export const WhatsAppSettings: React.FC = () => {
         token = sessionData.session?.access_token || '';
       }
 
-      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
+      const res = await fetch('/api/whatsapp/disconnect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -394,9 +394,14 @@ export const WhatsAppSettings: React.FC = () => {
         body: JSON.stringify({ action: 'disconnect' }),
       });
 
-      if (ok && data.success) {
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
         setSuccessMsg('WhatsApp Business desconectado correctamente.');
+        setOrgStatus(null);
         setVerifiedInfo(null);
+        setManualPhoneId('');
+        setManualWabaId('');
         setManualAccessToken('');
         fetchStatus();
       } else {

@@ -366,7 +366,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
     if (token) {
       try {
-        const { data: userData, error: userAuthErr } = await supabase.auth.getUser(token);
+        const { data: userData } = await supabase.auth.getUser(token);
         if (userData?.user) {
           userId = userData.user.id;
           const { data: profile } = await supabase
@@ -377,37 +377,21 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
           if (profile?.organization_id) {
             organizationId = profile.organization_id;
+          } else {
+            // Check if organization exists by user_id
+            const { data: userOrg } = await supabase
+              .from('organizations')
+              .select('id')
+              .eq('user_id', userData.user.id)
+              .maybeSingle();
+            if (userOrg?.id) {
+              organizationId = userOrg.id;
+            }
           }
         }
       } catch (authEx) {
         console.warn('⚠️ Token auth resolution notice:', authEx);
       }
-    }
-
-    // Fallback: if no organizationId but we have users/organizations in DB, fetch first
-    if (!organizationId) {
-      try {
-        if (userId) {
-          const { data: userOrg } = await supabase
-            .from('organizations')
-            .select('id')
-            .eq('user_id', userId)
-            .maybeSingle();
-          if (userOrg?.id) {
-            organizationId = userOrg.id;
-          }
-        }
-        if (!organizationId) {
-          const { data: firstOrg } = await supabase
-            .from('organizations')
-            .select('id')
-            .limit(1)
-            .maybeSingle();
-          if (firstOrg?.id) {
-            organizationId = firstOrg.id;
-          }
-        }
-      } catch {}
     }
 
     if (req.method === 'GET') {
@@ -419,14 +403,14 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           .maybeSingle();
 
         if (orgData) {
-          const isConnected = Boolean(orgData.wa_connected && orgData.wa_phone_number_id);
+          const isConnected = Boolean(orgData.wa_connected && orgData.wa_phone_number_id && String(orgData.wa_phone_number_id).trim().length > 0);
           return res.status(200).json({
             success: true,
             organization: {
               id: orgData.id,
-              name: orgData.name,
-              wa_phone_number_id: orgData.wa_phone_number_id || null,
-              wa_waba_id: orgData.wa_waba_id || null,
+              name: orgData.name || 'Tu Inmobiliaria',
+              wa_phone_number_id: isConnected ? orgData.wa_phone_number_id : null,
+              wa_waba_id: isConnected ? orgData.wa_waba_id : null,
               wa_connected: isConnected,
               updated_at: orgData.updated_at,
             },
@@ -437,7 +421,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       return res.status(200).json({
         success: true,
         organization: {
-          id: organizationId || 'org-default',
+          id: organizationId || 'org-none',
           name: 'Tu Inmobiliaria',
           wa_phone_number_id: null,
           wa_waba_id: null,
