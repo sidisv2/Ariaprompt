@@ -197,11 +197,11 @@ export function formatRecipientForSending(rawJidOrNumber: string): string {
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2 using dynamic recipient formatting
+ * Dispatches WhatsApp text message via Evolution API v2
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
-  number: string,
+  recipient: string,
   text: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
@@ -209,31 +209,41 @@ export async function sendEvolutionTextMessage(
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  const cleanRecipient = formatRecipientForSending(number);
-  if (!cleanRecipient) {
+  // Clean spaces but keep original identifier
+  const targetNumber = (recipient || '').includes('@s.whatsapp.net')
+    ? (recipient || '').replace('@s.whatsapp.net', '').trim()
+    : (recipient || '').replace(/\D/g, '').trim();
+
+  if (!targetNumber) {
     return { success: false, error: 'Destino no válido' };
   }
 
-  console.log(`🚀 [DISPATCH DINÁMICO] Enviando a +${cleanRecipient} vía ${instanceName}`);
+  const url = `${baseUrl}/message/sendText/${instanceName}`;
 
-  const sendPayload = {
-    number: cleanRecipient,
-    text,
+  const payload = {
+    number: targetNumber,
+    text: text,
+    options: {
+      delay: 0,
+      presence: 'composing',
+      linkPreview: false,
+    },
   };
 
+  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber}`);
+
   try {
-    const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(apiKey ? { apikey: apiKey } : {}),
       },
-      body: JSON.stringify(sendPayload),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log(`📌 Evolution sendText Response Status:`, res.status, JSON.stringify(data));
-
+    console.log(`📌 Evolution sendText Result [${res.status}]:`, JSON.stringify(data));
     return { success: res.ok || res.status === 200 || res.status === 201, data };
   } catch (err: any) {
     console.error(`❌ Exception in sendEvolutionTextMessage:`, err);
