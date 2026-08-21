@@ -202,12 +202,13 @@ export function formatRecipientForSending(rawJidOrNumber: string): string {
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2 (pure simplified payload)
+ * Dispatches WhatsApp text message via Evolution API v2, optionally attaching quoted context
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
   recipient: string,
-  text: string
+  text: string,
+  quoted?: any
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
@@ -222,12 +223,16 @@ export async function sendEvolutionTextMessage(
 
   const url = `${baseUrl}/message/sendText/${instanceName}`;
 
-  const payload = {
+  const payload: Record<string, any> = {
     number: targetNumber,
     text: text,
   };
 
-  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber}`);
+  if (quoted) {
+    payload.quoted = quoted;
+  }
+
+  console.log(`📡 [SEND EVOLUTION] URL: ${url} | Target: ${targetNumber} | HasQuoted: ${Boolean(quoted)}`);
 
   try {
     const res = await fetch(url, {

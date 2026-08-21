@@ -105,8 +105,15 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Extract exact incoming JID of origin (preserving @lid or @s.whatsapp.net as-is)
-    const incomingJid = key.remoteJid || data?.key?.remoteJid || data?.remoteJid || '';
+    // Extract exact incoming key & message of origin for Baileys LID context resolution
+    const incomingKey = data?.key || key || {};
+    const incomingJid = incomingKey?.remoteJid || data?.remoteJid || '';
+    const incomingMessage = data?.message || data?.data?.message;
+
+    const quotedPayload = {
+      key: incomingKey,
+      ...(incomingMessage ? { message: incomingMessage } : {}),
+    };
 
     if (incomingJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
@@ -210,9 +217,9 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando incomingJid exacto de origen
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${incomingJid}" via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, incomingJid, aiResponseText);
+    // Despacho inmediato por WhatsApp vía Evolution API usando incomingJid y context de mensaje citado
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${incomingJid}" via instance "${instanceName}" (with quoted context)...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, incomingJid, aiResponseText, quotedPayload);
     console.log(`🚀 Mensaje enviado con éxito al cliente "${incomingJid}":`, JSON.stringify(sendResult));
 
     // =========================================================================
