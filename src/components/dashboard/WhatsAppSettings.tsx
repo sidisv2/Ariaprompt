@@ -106,13 +106,7 @@ export const WhatsAppSettings: React.FC = () => {
           if (data.organization.wa_waba_id) {
             setManualWabaId(data.organization.wa_waba_id);
           }
-        } else {
-          setIsConnected(false);
-          setOrgStatus(null);
         }
-      } else {
-        setIsConnected(false);
-        setOrgStatus(null);
       }
     } catch (err) {
       console.warn('⚠️ Error al consultar estado de WhatsApp:', err);
