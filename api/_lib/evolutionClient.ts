@@ -189,17 +189,15 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 }
 
 /**
- * Normalizes destination number for outgoing text dispatch in Evolution API v2.
- * Preserves ALL original digits from incoming JID/sender without modifying prefixes.
+ * Dynamic, country-agnostic extraction of clean digits from incoming JID or raw recipient.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
   if (!rawJidOrNumber) return '';
-  // Solo limpiar el sufijo @s.whatsapp.net y caracteres no numéricos, conservando todos los dígitos originales
   return rawJidOrNumber.replace('@s.whatsapp.net', '').replace(/[^0-9]/g, '');
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2 immediately
+ * Dispatches WhatsApp text message via Evolution API v2 using dynamic recipient formatting
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
@@ -216,7 +214,7 @@ export async function sendEvolutionTextMessage(
     return { success: false, error: 'Destino no válido' };
   }
 
-  console.log('🚀 Despachando a destinatario original exacto:', cleanRecipient);
+  console.log(`🚀 [DISPATCH DINÁMICO] Enviando a +${cleanRecipient} vía ${instanceName}`);
 
   const sendPayload = {
     number: cleanRecipient,
