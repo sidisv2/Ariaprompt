@@ -188,75 +188,127 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
   }
 }
 
+export interface RecipientInfo {
+  primaryJid: string;      // key.remoteJid tal cual llegó (puede ser @lid o @s.whatsapp.net)
+  altJid?: string;         // key.remoteJidAlt si existe
+  addressingMode?: string; // "lid" | undefined
+}
+
 /**
  * Returns recipient JID formatted for Evolution API v2:
  * Preserves @lid intact, strips Argentina (+54) mobile 9 prefix if applicable, and appends @s.whatsapp.net.
  */
-export function formatRecipientForSending(rawJid: string): string {
-  if (!rawJid) return '';
-  const trimmed = rawJid.trim();
+export function formatRecipientForSending(recipient: RecipientInfo | string): string {
+  if (!recipient) return '';
 
-  // Si es LID, va intacto
-  if (trimmed.endsWith('@lid')) {
-    return trimmed;
+  if (typeof recipient === 'string') {
+    const trimmed = recipient.trim();
+    if (trimmed.endsWith('@lid')) {
+      return trimmed;
+    }
+    return normalizeArgentineJid(trimmed);
   }
 
-  // Limpiar todo excepto dígitos
-  let digits = trimmed.replace('@s.whatsapp.net', '').replace(/\D/g, '');
+  const { primaryJid, addressingMode } = recipient;
+  if (!primaryJid) return '';
 
-  // Argentina (+54): remover el 9 móvil obligatoriamente
-  if (digits.startsWith('549') && digits.length >= 12) {
-    digits = '54' + digits.slice(3);
+  // Caso 1: sesión LID activa -> NUNCA reformatear, enviar tal cual.
+  if (addressingMode === 'lid' || primaryJid?.endsWith('@lid')) {
+    return primaryJid.trim();
   }
 
-  return `${digits}@s.whatsapp.net`;
+  // Caso 2: JID tradicional -> normalizar número argentino.
+  return normalizeArgentineJid(primaryJid.trim());
+}
+
+function normalizeArgentineJid(jid: string): string {
+  const [numberPart, domain] = jid.split('@');
+  const digits = (numberPart || '').replace(/\D/g, '');
+
+  // Argentina: 54 9 XXX XXXXXXX (13 dígitos) -> remover el "9" móvil -> 54 XXX XXXXXXX
+  if (digits.startsWith('549') && digits.length === 13) {
+    const withoutMobilePrefix = '54' + digits.slice(3);
+    return `${withoutMobilePrefix}@${domain || 's.whatsapp.net'}`;
+  }
+
+  return digits ? `${digits}@${domain || 's.whatsapp.net'}` : jid; // otros países, sin cambios
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2 with explicit JID recipient format
+ * Dispatches WhatsApp text message via Evolution API v2 with explicit JID recipient format and fallback
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
-  recipient: string,
+  recipient: RecipientInfo | string,
   text: string
 ): Promise<{ success: boolean; data?: any; error?: string }> {
+  const recipientObj: RecipientInfo =
+    typeof recipient === 'string'
+      ? { primaryJid: recipient }
+      : recipient;
+
+  const resolvedJid = formatRecipientForSending(recipientObj);
+
+  console.log('[evolutionClient] Enviando mensaje', {
+    instanceName,
+    resolvedJid,
+    addressingMode: recipientObj.addressingMode,
+    primaryJid: recipientObj.primaryJid,
+    altJid: recipientObj.altJid,
+  });
+
   const { baseUrl, apiKey } = getEvolutionConfig();
   if (!baseUrl) {
     return { success: false, error: 'EVOLUTION_API_URL no configurado' };
   }
 
-  const targetJid = formatRecipientForSending(recipient);
-  if (!targetJid) {
+  if (!resolvedJid) {
     return { success: false, error: 'Destinatario no válido' };
   }
 
-  const payload = {
-    number: targetJid,
-    text: text,
-    linkPreview: false,
-  };
-
-  const url = `${baseUrl}/message/sendText/${instanceName}`;
-  console.log(`📡 [SEND EVOLUTION] Dispatching to: ${targetJid}`);
-
-  try {
-    const res = await fetch(url, {
+  const doSend = async (jid: string) => {
+    const res = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(apiKey ? { apikey: apiKey } : {}),
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        number: jid,
+        text,
+        linkPreview: false,
+      }),
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log(`📌 Evolution sendText Result [${res.status}]:`, JSON.stringify(data));
-    return {
-      success: res.ok || res.status === 200 || res.status === 201,
-      data,
-    };
+    if (!res.ok) {
+      throw new Error(`Evolution API respondió ${res.status}: ${JSON.stringify(data)}`);
+    }
+
+    return data;
+  };
+
+  try {
+    const result = await doSend(resolvedJid);
+    console.log('[evolutionClient] Resultado envío', result?.key ?? result);
+    return { success: true, data: result };
   } catch (err: any) {
-    console.error(`❌ Exception in sendEvolutionTextMessage:`, err);
+    console.error('[evolutionClient] Falló envío a JID primario', resolvedJid, err);
+
+    // Fallback: si había un altJid distinto, reintentar una sola vez.
+    if (recipientObj.altJid && recipientObj.altJid !== resolvedJid) {
+      console.warn('[evolutionClient] Reintentando con altJid', recipientObj.altJid);
+      try {
+        const altResolved = formatRecipientForSending(recipientObj.altJid);
+        const altResult = await doSend(altResolved);
+        console.log('[evolutionClient] Resultado fallback altJid', altResult?.key ?? altResult);
+        return { success: true, data: altResult };
+      } catch (altErr: any) {
+        console.error('[evolutionClient] Falló reintento con altJid', recipientObj.altJid, altErr);
+        return { success: false, error: altErr?.message || 'Error en reintento con altJid' };
+      }
+    }
+
     return { success: false, error: err?.message || 'Error enviando mensaje por Evolution API' };
   }
 }

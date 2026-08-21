@@ -27,6 +27,89 @@ function getBackendSupabaseClient() {
   }
 }
 
+export interface IncomingMessageContext {
+  primaryJid: string;
+  altJid?: string;
+  addressingMode?: string;
+  pushName?: string;
+  text: string;
+  wamid: string;
+}
+
+function extractMessageContext(body: any): IncomingMessageContext | null {
+  const rawData = Array.isArray(body?.data) ? body.data : [body?.data || body];
+
+  // Buscar primer item válido que no sea fromMe, priorizando aquel con @lid
+  let selectedItem: any = null;
+  for (const item of rawData) {
+    const k = item?.key || item?.data?.key;
+    if (k && !k.fromMe) {
+      if (k.remoteJid?.endsWith('@lid') || item.remoteJid?.endsWith('@lid')) {
+        selectedItem = item;
+        break;
+      }
+      if (!selectedItem) {
+        selectedItem = item;
+      }
+    }
+  }
+
+  if (!selectedItem) {
+    selectedItem = rawData[0];
+  }
+
+  const key = selectedItem?.key || selectedItem?.data?.key || {};
+  if (key.fromMe || selectedItem?.fromMe) return null;
+
+  // Si hay varios items en rawData, buscar si alguno tiene remoteJidAlt
+  let altJid = key.remoteJidAlt || selectedItem?.remoteJidAlt;
+  if (!altJid) {
+    for (const item of rawData) {
+      const k = item?.key || item?.data?.key;
+      const alt = k?.remoteJidAlt || item?.remoteJidAlt;
+      if (alt) {
+        altJid = alt;
+        break;
+      }
+    }
+  }
+
+  let primaryJid = key.remoteJid || selectedItem?.remoteJid;
+  // Si encontramos un item con @lid en rawData, priorizarlo como primaryJid
+  for (const item of rawData) {
+    const k = item?.key || item?.data?.key;
+    const jid = k?.remoteJid || item?.remoteJid || '';
+    if (jid.endsWith('@lid')) {
+      primaryJid = jid;
+      break;
+    }
+  }
+
+  if (!primaryJid) return null;
+
+  const messageObj = selectedItem?.message || selectedItem?.data?.message || {};
+  const text = (
+    messageObj.conversation ||
+    messageObj.extendedTextMessage?.text ||
+    messageObj.messageContextInfo?.conversation ||
+    selectedItem?.messageText ||
+    messageObj.imageMessage?.caption ||
+    messageObj.videoMessage?.caption ||
+    ''
+  ).trim();
+
+  if (!text) return null;
+
+  return {
+    primaryJid,
+    altJid,
+    addressingMode: key.addressingMode || selectedItem?.addressingMode,
+    pushName: selectedItem?.pushName,
+    text,
+    wamid: key.id || selectedItem?.id || `evo_${Date.now()}`,
+  };
+}
+
 export async function handleEvolutionWebhookRoute(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -43,13 +126,20 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
   const supabase = getBackendSupabaseClient();
   const body = (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) || {};
 
-  console.log("--> WEBHOOK ENTRANTE:", JSON.stringify(body, null, 2));
-
   const rawEvent = (body.event || body.type || body.event_type || '').toUpperCase().replace(/\./g, '_');
   const instanceName = body.instance || body.instanceName || 'default';
   const data = Array.isArray(body.data) ? body.data[0] : (body.data || body);
+  const rawKeyData = data?.key || data?.data?.key || {};
 
-  console.log(`📌 [EVOLUTION WEBHOOK] RawEvent: "${rawEvent}" | Instance: "${instanceName}"`);
+  console.log('🔍 [AUDIT] Evolution Webhook Raw Key Context:', {
+    remoteJid: rawKeyData.remoteJid || data?.remoteJid,
+    remoteJidAlt: rawKeyData.remoteJidAlt || data?.remoteJidAlt,
+    addressingMode: rawKeyData.addressingMode || data?.addressingMode,
+    fromMe: Boolean(rawKeyData.fromMe || data?.fromMe),
+    pushName: data?.pushName,
+    instanceName,
+    rawEvent,
+  });
 
   // EVENT 1: CONNECTION_UPDATE
   if (rawEvent === 'CONNECTION_UPDATE' || rawEvent.includes('CONNECTION_UPDATE')) {
@@ -96,71 +186,27 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
     data?.message ||
     data?.key
   ) {
-    const key = data?.key || data?.data?.key || {};
-    const messageObj = data?.message || data?.data?.message || {};
-    const fromMe = Boolean(key.fromMe || data?.fromMe);
-
-    if (fromMe) {
-      console.log('ℹ️ Ignorando mensaje saliente generado por el bot (fromMe: true)');
-      return res.status(200).json({ status: 'ignored_from_me' });
+    const messageContext = extractMessageContext(body);
+    if (!messageContext) {
+      console.log('ℹ️ Ignorando evento sin mensaje o fromMe=true');
+      return res.status(200).json({ status: 'ignored_or_empty' });
     }
 
-    // Prioritize @lid JID if present in any of rawData items
-    const rawData = Array.isArray(body?.data) ? body.data : [body?.data || body];
-    let targetJid = '';
-
-    // Buscar primero si existe algún JID con @lid
-    for (const item of rawData) {
-      const jid = item?.key?.remoteJid || item?.remoteJid || '';
-      if (jid.endsWith('@lid')) {
-        targetJid = jid;
-        break;
-      }
-    }
-
-    // Si no hubo @lid, tomar el primer JID disponible
-    if (!targetJid) {
-      const first = rawData[0];
-      targetJid = first?.key?.remoteJid || first?.remoteJid || '';
-    }
-
-    if (targetJid.includes('@g.us')) {
+    if (messageContext.primaryJid.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
-    // Phone digits for CRM lead persistence & AI prompt context
-    let altPhoneJid = '';
-    for (const item of rawData) {
-      const alt = item?.key?.remoteJidAlt || item?.remoteJidAlt;
-      if (alt) {
-        altPhoneJid = alt;
-        break;
-      }
-    }
-    if (!altPhoneJid) altPhoneJid = targetJid;
-    const clientPhone = altPhoneJid.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
+    // Phone digits for CRM lead persistence & AI prompt context (consistent real phone key)
+    const businessPhoneSource = messageContext.altJid || messageContext.primaryJid;
+    const clientPhone = businessPhoneSource.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
     if (!clientPhone) {
       console.log('⚠️ Ignored message with invalid or missing remoteJid');
       return res.status(200).json({ status: 'IGNORED_INVALID_JID' });
     }
 
-    const messageText = (
-      messageObj.conversation ||
-      messageObj.extendedTextMessage?.text ||
-      messageObj.messageContextInfo?.conversation ||
-      data.messageText ||
-      messageObj.imageMessage?.caption ||
-      messageObj.videoMessage?.caption ||
-      ''
-    ).trim();
-
-    if (!messageText) {
-      console.log('ℹ️ Empty message text, ending webhook execution with 200 OK');
-      return res.status(200).json({ status: 'EMPTY_MESSAGE_TEXT' });
-    }
-
-    const wamid = key.id || `evo_${Date.now()}`;
+    const messageText = messageContext.text;
+    const wamid = messageContext.wamid;
 
     // Deduplication check
     if (supabase && wamid) {
@@ -208,7 +254,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       }
     }
 
-    console.log(`💬 [EVOLUTION INCOMING MESSAGE] Target JID: "${targetJid}" (Clean Phone: +${clientPhone}) | Text: "${messageText}"`);
+    console.log(`💬 [EVOLUTION INCOMING MESSAGE] Primary JID: "${messageContext.primaryJid}" (Alt: "${messageContext.altJid || 'none'}", Clean Phone: +${clientPhone}) | Text: "${messageText}"`);
     console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
     // =========================================================================
@@ -233,10 +279,18 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando targetJid
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${targetJid}" via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, targetJid, aiResponseText);
-    console.log(`🚀 Mensaje enviado con éxito al cliente "${targetJid}":`, JSON.stringify(sendResult));
+    // Despacho inmediato por WhatsApp vía Evolution API propagando RecipientInfo completo
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending response to primaryJid="${messageContext.primaryJid}" (altJid="${messageContext.altJid || 'none'}", addressingMode="${messageContext.addressingMode || 'none'}") via instance "${instanceName}"...`);
+    const sendResult = await sendEvolutionTextMessage(
+      instanceName,
+      {
+        primaryJid: messageContext.primaryJid,
+        altJid: messageContext.altJid,
+        addressingMode: messageContext.addressingMode,
+      },
+      aiResponseText
+    );
+    console.log(`🚀 Mensaje enviado con éxito al cliente:`, JSON.stringify(sendResult));
 
     // =========================================================================
     // PASO 2 (Persistencia Asíncrona Non-Blocking en try/catch independiente)
