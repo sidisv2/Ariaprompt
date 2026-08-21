@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
-import { sendEvolutionTextMessage } from '../_lib/evolutionClient.js';
+import { sendEvolutionTextMessage, formatRecipientForSending } from '../_lib/evolutionClient.js';
 import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.js';
 
 function getBackendSupabaseClient() {
@@ -105,9 +105,15 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       return res.status(200).json({ status: 'ignored_from_me' });
     }
 
-    // Extract exact incoming key of origin for Baileys LID context resolution
+    // Extract incoming key and recipient (prioritizing remoteJidAlt if recipient ends in @lid)
     const incomingKey = data?.key || key || {};
-    const incomingJid = incomingKey?.remoteJid || data?.remoteJid || '';
+    let recipient = incomingKey?.remoteJid || data?.remoteJid || '';
+
+    if (recipient.endsWith('@lid') && incomingKey?.remoteJidAlt) {
+      recipient = incomingKey.remoteJidAlt;
+    } else if (recipient.endsWith('@lid') && data?.remoteJidAlt) {
+      recipient = data.remoteJidAlt;
+    }
 
     // Construir un quoted limpio sin buffers binarios que rompan el JSON
     const cleanQuoted = incomingKey?.id ? {
@@ -119,15 +125,13 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       }
     } : undefined;
 
-    if (incomingJid.includes('@g.us')) {
+    if (recipient.includes('@g.us')) {
       console.log('ℹ️ Bypassing group message');
       return res.status(200).json({ status: 'BYPASSED_GROUP_MESSAGE' });
     }
 
-    // Phone digits for CRM lead persistence & AI prompt context
-    const altJid = key.remoteJidAlt || data?.key?.remoteJidAlt || data?.remoteJidAlt || '';
-    const phoneSource = altJid || incomingJid;
-    const clientPhone = phoneSource.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
+    // Phone digits (with Argentina '9' stripped if applicable) for CRM lead persistence & AI prompt context
+    const clientPhone = formatRecipientForSending(recipient);
     if (!clientPhone) {
       console.log('⚠️ Ignored message with invalid or missing remoteJid');
       return res.status(200).json({ status: 'IGNORED_INVALID_JID' });
@@ -196,7 +200,7 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
       }
     }
 
-    console.log(`💬 [EVOLUTION INCOMING MESSAGE] From JID: "${incomingJid}" (Phone: +${clientPhone}) | Text: "${messageText}"`);
+    console.log(`💬 [EVOLUTION INCOMING MESSAGE] From Recipient: "${recipient}" (CleanPhone: +${clientPhone}) | Text: "${messageText}"`);
     console.log('🤖 Procesando mensaje con Aria para el cliente:', clientPhone);
 
     // =========================================================================
@@ -221,11 +225,10 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando incomingJid y cleanQuoted sin buffers criptográficos
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${incomingJid}" via instance "${instanceName}" (QuotedId: ${cleanQuoted?.key?.id || 'none'})...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, incomingJid, aiResponseText, cleanQuoted);
-    console.log(`🚀 Mensaje enviado con éxito al cliente "${incomingJid}":`, JSON.stringify(sendResult));
-    console.log(`🚀 Mensaje enviado con éxito al cliente "${incomingJid}":`, JSON.stringify(sendResult));
+    // Despacho inmediato por WhatsApp vía Evolution API usando recipient y cleanQuoted
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response directly to "${recipient}" via instance "${instanceName}" (QuotedId: ${cleanQuoted?.key?.id || 'none'})...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, recipient, aiResponseText, cleanQuoted);
+    console.log(`🚀 Mensaje enviado con éxito al cliente "${recipient}":`, JSON.stringify(sendResult));
 
     // =========================================================================
     // PASO 2 (Persistencia Asíncrona Non-Blocking en try/catch independiente)

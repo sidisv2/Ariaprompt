@@ -189,16 +189,24 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 }
 
 /**
- * Dynamic, country-agnostic extraction of clean recipient or JID for sending.
- * Preserves exact @lid, @s.whatsapp.net or any JID containing @ as-is.
+ * Dynamic, country-agnostic extraction of clean recipient digits for sending.
+ * Strips Argentina (+54) mobile 9 prefix (e.g. 5492604014372 -> 542604014372) to match Baileys JID format.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
   if (!rawJidOrNumber) return '';
-  const trimmed = rawJidOrNumber.trim();
-  if (trimmed.includes('@')) {
-    return trimmed;
+
+  let cleaned = rawJidOrNumber.trim();
+
+  // Si viene con @s.whatsapp.net o @lid, extraer solo los dígitos
+  cleaned = cleaned.replace('@s.whatsapp.net', '').replace('@lid', '').replace(/\D/g, '');
+
+  // Regla Argentina: Si empieza con 549 y tiene entre 12 y 13 dígitos, quitar el 9 móvil
+  // Ej: 5492604014372 -> 542604014372
+  if (cleaned.startsWith('549') && cleaned.length >= 12) {
+    cleaned = '54' + cleaned.slice(3);
   }
-  return trimmed.replace(/\D/g, '');
+
+  return cleaned;
 }
 
 /**
