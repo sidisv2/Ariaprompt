@@ -193,10 +193,11 @@ export async function handleEvolutionWebhookRoute(req: VercelRequest, res: Verce
 
     console.log('📤 Respuesta generada por Aria:', aiResponseText);
 
-    // Despacho inmediato por WhatsApp vía Evolution API usando remoteJid directo o clientPhone
+    // Despacho inmediato por WhatsApp vía Evolution API citando el mensaje entrante para resolver sockets LID en Baileys
     const targetRecipient = remoteJid || clientPhone;
-    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to "${targetRecipient}" via instance "${instanceName}"...`);
-    const sendResult = await sendEvolutionTextMessage(instanceName, targetRecipient, aiResponseText);
+    const incomingMessageId = key?.id || data.key?.id || data.id || undefined;
+    console.log(`🚀 [EVOLUTION DISPATCH] Sending text response to "${targetRecipient}" via instance "${instanceName}" (Quoted: ${incomingMessageId || 'none'})...`);
+    const sendResult = await sendEvolutionTextMessage(instanceName, targetRecipient, aiResponseText, incomingMessageId);
     console.log(`🚀 Mensaje enviado con éxito al cliente "${targetRecipient}":`, JSON.stringify(sendResult));
 
     // =========================================================================
