@@ -64,7 +64,7 @@ export async function createEvolutionInstance(
 
 /**
  * Sets up instance webhooks for MESSAGES_UPSERT, CONNECTION_UPDATE and SEND_MESSAGE.
- * Supports Evolution API v2 endpoints and logs exact Railway response status/body.
+ * Formatted strictly for Evolution API v2 requiring nested "webhook" object wrapper.
  */
 export async function setEvolutionWebhook(
   instanceName: string,
@@ -81,19 +81,25 @@ export async function setEvolutionWebhook(
   }
 
   const payload = {
-    enabled: true,
-    url: webhookUrl,
-    webhookByEvents: false,
-    webhook_by_events: false,
-    events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'SEND_MESSAGE'],
+    webhook: {
+      enabled: true,
+      url: webhookUrl,
+      byEvents: false,
+      base64: false,
+      events: [
+        'MESSAGES_UPSERT',
+        'CONNECTION_UPDATE',
+        'SEND_MESSAGE',
+      ],
+    },
   };
 
-  const primaryUrl = `${baseUrl}/webhook/set/${cleanInstance}`;
-  console.log(`📌 [EVOLUTION WEBHOOK SET] Calling Primary URL: "${primaryUrl}"...`);
-  console.log(`📌 [EVOLUTION WEBHOOK SET] Payload:`, JSON.stringify(payload));
+  const targetUrl = `${baseUrl}/webhook/set/${cleanInstance}`;
+  console.log(`📌 [EVOLUTION WEBHOOK SET] Calling URL: "${targetUrl}"...`);
+  console.log(`📌 [EVOLUTION WEBHOOK SET] Payload:`, JSON.stringify(payload, null, 2));
 
   try {
-    const res = await fetch(primaryUrl, {
+    const res = await fetch(targetUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -103,51 +109,27 @@ export async function setEvolutionWebhook(
     });
 
     const data = await res.json().catch(() => ({}));
-    console.log(`📌 [EVOLUTION WEBHOOK SET] Primary Response Status [${res.status}]:`, JSON.stringify(data));
+    console.log(`📌 [EVOLUTION WEBHOOK SET] Response Status [${res.status}]:`, JSON.stringify(data));
 
-    if (res.ok || res.status === 200 || res.status === 201 || data.status === 'SUCCESS' || data.status === 200) {
+    const isSuccess =
+      res.ok ||
+      res.status === 200 ||
+      res.status === 201 ||
+      data.status === 'SUCCESS' ||
+      data.status === 200 ||
+      Boolean(data.webhook);
+
+    if (isSuccess) {
       return { success: true, data };
     }
 
-    // Try fallback v2 route: POST /webhook/set
-    const fallbackUrl = `${baseUrl}/webhook/set`;
-    console.log(`⏱️ Primary webhook route returned HTTP ${res.status}. Trying Fallback URL: "${fallbackUrl}"...`);
-
-    const fallbackPayload = {
-      instance: cleanInstance,
-      webhook: {
-        url: webhookUrl,
-        enabled: true,
-        webhookByEvents: false,
-        webhook_by_events: false,
-        events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE', 'SEND_MESSAGE'],
-      },
-    };
-
-    const resFallback = await fetch(fallbackUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKey ? { apikey: apiKey } : {}),
-      },
-      body: JSON.stringify(fallbackPayload),
-    });
-
-    const dataFallback = await resFallback.json().catch(() => ({}));
-    console.log(`📌 [EVOLUTION WEBHOOK SET] Fallback Response Status [${resFallback.status}]:`, JSON.stringify(dataFallback));
-
-    if (resFallback.ok || resFallback.status === 200 || resFallback.status === 201) {
-      return { success: true, data: dataFallback };
-    }
-
     const errorMsg =
-      dataFallback?.message ||
-      dataFallback?.error ||
       data?.message ||
       data?.error ||
-      `HTTP ${res.status}: ${JSON.stringify(data)}`;
+      (Array.isArray(data?.response?.message) ? data.response.message.join(', ') : data?.response?.message) ||
+      `HTTP ${res.status}: Bad Request`;
 
-    return { success: false, error: String(errorMsg), data: dataFallback || data };
+    return { success: false, error: String(errorMsg), data };
   } catch (err: any) {
     console.error(`❌ Exception setting Evolution Webhook:`, err);
     return { success: false, error: err?.message || 'Error de comunicación al configurar webhook en Evolution API' };
