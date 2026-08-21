@@ -10,14 +10,7 @@
       "includeFiles": "src/**"
     }
   },
-    {
-      "source": "/api/test-send-whatsapp",
-      "destination": "/api/test-send-whatsapp"
-    },
-    {
-      "source": "/api/test-evolution-status",
-      "destination": "/api/test-evolution-status"
-    },
+  "rewrites": [
     {
       "source": "/api/whatsapp-webhook",
       "destination": "/api/whatsapp-webhook"
