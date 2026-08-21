@@ -6,6 +6,7 @@ import {
 } from './_lib/openrouterService.js';
 import { notifyAgentLeadQualified, sendHandoverEmailNotification } from './_lib/notificationService.js';
 import { sendAdvisorWhatsAppAlert } from '../lib/notifications/advisorAlerts.js';
+import { createGoogleCalendarEvent } from './_lib/googleCalendarClient.js';
 
 export interface PropertyItem {
   id: string;
@@ -144,6 +145,7 @@ export async function processAriaMessage({
   let customInstructions = '';
   let faqKnowledge: Array<{ question: string; answer: string }> = [];
   let calendarBookingUrl = '';
+  let googleCalendarToken: string | null = null;
 
   if (supabase) {
     try {
@@ -220,7 +222,7 @@ export async function processAriaMessage({
       try {
         const { data: orgConfig } = await supabase
           .from('organizations')
-          .select('name, bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url')
+          .select('name, bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, google_calendar_token')
           .eq('id', organizationId)
           .single();
 
@@ -228,6 +230,7 @@ export async function processAriaMessage({
           if (orgConfig.name) agencyName = orgConfig.name;
           if (orgConfig.bot_name) botName = orgConfig.bot_name;
           if (orgConfig.calendar_booking_url) calendarBookingUrl = orgConfig.calendar_booking_url;
+          if (orgConfig.google_calendar_token) googleCalendarToken = orgConfig.google_calendar_token;
           if (['friendly', 'formal', 'luxury', 'direct'].includes(orgConfig.bot_tone)) {
             botTone = orgConfig.bot_tone;
           }
@@ -302,6 +305,7 @@ export async function processAriaMessage({
           if (advisor?.id) assignedAdvisorId = advisor.id;
         } catch {}
 
+        // 1. Insert into property_appointments table
         await supabase.from('property_appointments').insert({
           organization_id: organizationId,
           conversation_id: conversationId,
@@ -316,7 +320,7 @@ export async function processAriaMessage({
           created_at: new Date().toISOString(),
         });
 
-        // Also insert into appointments / turnos table fallback if exists
+        // 2. Also insert into appointments / visits table fallback
         try {
           await supabase.from('appointments').insert({
             organization_id: organizationId,
@@ -331,6 +335,20 @@ export async function processAriaMessage({
             created_at: new Date().toISOString(),
           });
         } catch {}
+
+        // 3. Trigger Google Calendar sync if organization has token configured
+        try {
+          await createGoogleCalendarEvent({
+            summary: `Visita Inmobiliaria: ${propertyTitle} - ${extractedData?.lead_name || userPhone}`,
+            description: `Visita coordinada automáticamente por Aria Prop.\nCliente: ${extractedData?.lead_name || 'Prospecto'}\nTeléfono: ${userPhone}\nNotas: ${extractedData?.appointment?.notes || userMessage}`,
+            location: extractedData?.preferred_zone || 'Ubicación de propiedad',
+            startIso: requestedDateISO,
+            attendeePhone: userPhone,
+            accessToken: googleCalendarToken || undefined,
+          });
+        } catch (calErr) {
+          console.warn('⚠️ Google Calendar appointment sync notice:', calErr);
+        }
       } catch (appErr) {
         console.warn('⚠️ Property appointment scheduling notice:', appErr);
       }

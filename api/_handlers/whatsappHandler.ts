@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { processAriaMessage } from '../_ariaEngine.js';
-import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
+import { sendWhatsAppTextMessage, sendWhatsAppDocumentMessage } from '../_lib/whatsappClient.js';
 import { sendHandoverEmailNotification } from '../../lib/notifications/email.js';
 import { sendAdvisorWhatsAppAlert } from '../../lib/notifications/advisorAlerts.js';
 import { processIncomingVoiceMessage } from '../../lib/whatsapp/audioProcessor.js';
@@ -321,7 +321,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           }
         }
 
-        const { text: aiResponseText, conversationId } = await processAriaMessage({
+        const { text: aiResponseText, conversationId, extractedData } = await processAriaMessage({
           organizationId,
           userPhone: fromNumber,
           userMessage: textBody,
@@ -337,6 +337,43 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           phoneNumberId,
           accessToken: tenantAccessToken,
         });
+
+        // If user requested PDF / Brochure and a property ID or title was identified, send official PDF
+        if (extractedData?.requested_pdf_property_id || extractedData?.requested_pdf_property_title) {
+          try {
+            let targetPropertyId = extractedData.requested_pdf_property_id;
+            let propertyTitle = extractedData.requested_pdf_property_title || 'Propiedad';
+
+            if (supabase && (!targetPropertyId || !propertyTitle)) {
+              const { data: foundProp } = await supabase
+                .from('properties')
+                .select('id, title, pdf_url')
+                .eq('organization_id', organizationId)
+                .ilike('title', `%${extractedData.requested_pdf_property_title || ''}%`)
+                .limit(1)
+                .maybeSingle();
+
+              if (foundProp) {
+                targetPropertyId = foundProp.id;
+                propertyTitle = foundProp.title;
+              }
+            }
+
+            if (targetPropertyId) {
+              const pdfUrl = `https://ariaprop.online/api/properties/${targetPropertyId}/pdf`;
+              await sendWhatsAppDocumentMessage({
+                to: fromNumber,
+                documentUrl: pdfUrl,
+                filename: `Ficha-${propertyTitle.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+                caption: `📄 Ficha técnica oficial: ${propertyTitle}`,
+                phoneNumberId,
+                accessToken: tenantAccessToken,
+              });
+            }
+          } catch (pdfErr) {
+            console.warn('⚠️ Notice sending WhatsApp PDF document:', pdfErr);
+          }
+        }
 
         return res.status(200).json({
           status: 'EVENT_PROCESSED',

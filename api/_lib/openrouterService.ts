@@ -38,6 +38,8 @@ export interface ExtractedLeadData {
   operation_type?: string | null;
   status: 'active' | 'qualified' | 'handover' | 'human_handoff' | 'closed';
   lead_name: string | null;
+  requested_pdf_property_id?: string | null;
+  requested_pdf_property_title?: string | null;
   appointment?: {
     requested_date?: string | null;
     property_title?: string | null;
@@ -346,6 +348,8 @@ REGLAS DE ACTUACIÓN COMERCIAL:
 2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Tipo de operación e inmueble, y (d) Nombre del lead si lo menciona.
 3. DETECCIÓN Y GESTIÓN DE VISITAS:
    - Si el cliente solicita agendar una visita/cita (Lunes a Viernes 9 a 18 hs, Sábados 9 a 13 hs), propone o confirma la fecha hábil.
+4. DETECCIÓN DE SOLICITUD DE FICHA / BROCHURE / PDF:
+   - Si el cliente solicita la ficha técnica, brochure, PDF o más información detallada de una propiedad identificada del catálogo, extrae el ID de la propiedad o su título para enviarle el archivo adjunto.
 
 ## REGLAS DE NEGOCIO E INSTRUCCIONES ESPECIALES DE LA INMOBILIARIA:
 ${customInstructions ? customInstructions : 'No hay reglas de negocio especiales especificadas.'}
@@ -362,6 +366,8 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
     "property_type": string | null,
     "status": "active" | "qualified" | "handover" | "closed",
     "lead_name": string | null,
+    "requested_pdf_property_id": string | null,
+    "requested_pdf_property_title": string | null,
     "appointment": {
       "requested_date": string | null,
       "property_title": string | null,
@@ -374,6 +380,8 @@ REGLAS DE EXTRACCIÓN:
 - budget_max_usd: presupuesto numérico en USD si el usuario lo menciona o null.
 - preferred_zone: zona o barrio especificado o null.
 - property_type: tipo de inmueble y operación o null.
+- requested_pdf_property_id: ID exacto de la propiedad en el catálogo si el usuario pide ficha, PDF o brochure (o null).
+- requested_pdf_property_title: Título de la propiedad si se solicita ficha (o null).
 - status:
   * "handover": SI EL USUARIO PIDE EXPLÍCITAMENTE "hablar con una persona", "un asesor humano", "un agente", "hablar con alguien" o atencion humana.
   * "qualified": si ya se identificó al menos la zona, el tipo de inmueble y el presupuesto estimado.
@@ -418,6 +426,8 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
       property_type: typeof parsed.extractedData?.property_type === 'string' ? parsed.extractedData.property_type : null,
       status: ['active', 'qualified', 'handover', 'closed'].includes(parsed.extractedData?.status) ? parsed.extractedData.status : 'active',
       lead_name: typeof parsed.extractedData?.lead_name === 'string' ? parsed.extractedData.lead_name : null,
+      requested_pdf_property_id: typeof parsed.extractedData?.requested_pdf_property_id === 'string' ? parsed.extractedData.requested_pdf_property_id : null,
+      requested_pdf_property_title: typeof parsed.extractedData?.requested_pdf_property_title === 'string' ? parsed.extractedData.requested_pdf_property_title : null,
       appointment: apptRaw ? {
         requested_date: typeof apptRaw.requested_date === 'string' ? apptRaw.requested_date : null,
         property_title: typeof apptRaw.property_title === 'string' ? apptRaw.property_title : null,
@@ -437,6 +447,8 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
         property_type: null,
         status: 'active',
         lead_name: null,
+        requested_pdf_property_id: null,
+        requested_pdf_property_title: null,
         appointment: null,
       },
     };
