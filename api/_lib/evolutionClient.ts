@@ -190,15 +190,21 @@ export async function getEvolutionConnectQr(instanceName: string): Promise<{ suc
 
 /**
  * Normalizes destination number for outgoing text dispatch in Evolution API v2.
- * Extracts clean digits from JID or raw number (e.g. "5492604014372@s.whatsapp.net" -> "5492604014372").
+ * Extracts clean digits and strips Argentina 9 prefix (549... -> 54...) for Baileys routing.
  */
 export function formatRecipientForSending(rawJidOrNumber: string): string {
-  const clean = (rawJidOrNumber || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
-  return clean;
+  let digits = (rawJidOrNumber || '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+
+  // Argentina rule: Convert 549... (12+ digits) to 54... for Baileys instant delivery
+  if (digits.startsWith('549') && digits.length >= 12) {
+    digits = '54' + digits.slice(3);
+  }
+
+  return digits;
 }
 
 /**
- * Dispatches WhatsApp text message via Evolution API v2
+ * Dispatches WhatsApp text message via Evolution API v2 immediately
  */
 export async function sendEvolutionTextMessage(
   instanceName: string,
@@ -218,8 +224,6 @@ export async function sendEvolutionTextMessage(
   const sendPayload = {
     number: cleanRecipient,
     text,
-    delay: 1200,
-    linkPreview: false,
   };
 
   console.log(`📌 Evolution sendText Request for "${instanceName}" to "${cleanRecipient}"...`);
@@ -237,34 +241,7 @@ export async function sendEvolutionTextMessage(
     const data = await res.json().catch(() => ({}));
     console.log(`📌 Evolution sendText Response Status:`, res.status, JSON.stringify(data));
 
-    if (res.ok || res.status === 200 || res.status === 201) {
-      return { success: true, data };
-    }
-
-    // If Argentina number with 549... fails, retry sending without 9 (54 + area + number) for Baileys routing
-    if (cleanRecipient.startsWith('549') && cleanRecipient.length >= 12) {
-      const altRecipient = '54' + cleanRecipient.slice(3);
-      console.log(`⏱️ Retrying Argentina sendText with alternative number format: "${altRecipient}"...`);
-      const resAlt = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { apikey: apiKey } : {}),
-        },
-        body: JSON.stringify({
-          ...sendPayload,
-          number: altRecipient,
-        }),
-      });
-
-      const dataAlt = await resAlt.json().catch(() => ({}));
-      console.log(`📌 Evolution sendText Alt Response Status:`, resAlt.status, JSON.stringify(dataAlt));
-      if (resAlt.ok || resAlt.status === 200 || resAlt.status === 201) {
-        return { success: true, data: dataAlt };
-      }
-    }
-
-    return { success: false, error: data?.message || data?.error || `HTTP ${res.status}`, data };
+    return { success: res.ok || res.status === 200 || res.status === 201, data };
   } catch (err: any) {
     console.error(`❌ Exception in sendEvolutionTextMessage:`, err);
     return { success: false, error: err?.message || 'Error enviando mensaje por Evolution API' };
