@@ -9,7 +9,6 @@ export const StandaloneChatWidget: React.FC = () => {
   const [welcomeMessage, setWelcomeMessage] = useState<string>(
     '¡Hola! Soy tu asistente inmobiliaria 24/7. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar?'
   );
-  const [primaryColor, setPrimaryColor] = useState<string>('#10b981');
   const [calendarUrl, setCalendarUrl] = useState<string>('');
   const [advisorPhone, setAdvisorPhone] = useState<string>('');
 
@@ -34,7 +33,7 @@ export const StandaloneChatWidget: React.FC = () => {
       if (!targetId || !supabase) return;
 
       try {
-        // 1. Intentar buscar en profiles por id o user_id
+        // 1. Buscar en profiles
         const { data: profile } = await supabase
           .from('profiles')
           .select('*, organizations(*)')
@@ -53,7 +52,7 @@ export const StandaloneChatWidget: React.FC = () => {
           if (profile.advisor_alert_phone || profile.phone) setAdvisorPhone(profile.advisor_alert_phone || profile.phone);
         }
 
-        // 2. Intentar buscar directamente en organizations
+        // 2. Buscar en organizations
         const { data: org } = await supabase
           .from('organizations')
           .select('*')
@@ -165,12 +164,10 @@ export const StandaloneChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="w-full h-screen bg-[#0b141a] text-slate-100 flex flex-col font-sans select-none overflow-hidden">
+    <div className="w-full h-screen bg-slate-950 text-slate-100 flex flex-col justify-between overflow-hidden font-sans select-none">
       
       {/* Standalone Header */}
-      <div
-        className="p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950 border-b border-white/10 text-white flex items-center justify-between shadow-md"
-      >
+      <div className="p-3.5 bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950 border-b border-white/10 text-white flex items-center justify-between shadow-md shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black shadow-inner">
@@ -237,7 +234,7 @@ export const StandaloneChatWidget: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <form onSubmit={handleSendMessage} className="p-3 bg-slate-950 border-t border-white/10 flex items-center gap-2">
+      <form onSubmit={handleSendMessage} className="p-3 bg-slate-950 border-t border-white/10 flex items-center gap-2 shrink-0">
         <input
           type="text"
           value={inputVal}
@@ -256,7 +253,7 @@ export const StandaloneChatWidget: React.FC = () => {
       </form>
 
       {/* Tiny Brand Footer */}
-      <div className="py-1 px-3 bg-slate-950/90 text-center border-t border-white/5">
+      <div className="py-1 px-3 bg-slate-950/90 text-center border-t border-white/5 shrink-0">
         <span className="text-[9px] text-slate-500 tracking-wider">
           Powered by <strong className="text-slate-400 font-bold">AriaProp.online</strong> • Asistente IA Inmobiliario
         </span>

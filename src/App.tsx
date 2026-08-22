@@ -449,6 +449,15 @@ function AppInner() {
 }
 
 export default function App() {
+  // Detectar si la URL actual corresponde al widget embebido antes de montar cualquier layout
+  const pathname = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
+  const isEmbedRoute = pathname.startsWith('/embed/chat') || pathname.startsWith('/embed-chat');
+
+  if (isEmbedRoute) {
+    // Retornar ÚNICAMENTE el widget de chat aislado sin Navbar, sin Footer y sin Layouts de Landing
+    return <StandaloneChatWidget />;
+  }
+
   return (
     <LanguageProvider>
       <AuthProvider>
