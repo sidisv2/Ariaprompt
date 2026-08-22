@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { AppRoute, Property, Lead, BotConfig } from './types';
 import { INITIAL_PROPERTIES, INITIAL_LEADS, INITIAL_BOT_CONFIG } from './data/mockData';
 import { useAuth, AuthProvider } from './context/AuthContext';
@@ -10,6 +10,7 @@ import { MobileView } from './components/mobile/MobileView';
 import { DeviceSwitcherBadge } from './components/common/DeviceSwitcherBadge';
 import { ChatSlideOver } from './components/chat/ChatSlideOver';
 import { WhatsAppFloatingButton } from './components/common/BetaBanner';
+import { StandaloneChatWidget } from './components/embed/StandaloneChatWidget';
 
 const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
@@ -41,6 +42,7 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('dashboard/files')) return 'dashboard-files';
   if (path.includes('dashboard/roles')) return 'dashboard-roles';
   if (path.includes('vault') || path.includes('user/')) return 'dashboard-vault';
+  if (path.includes('embed/chat') || path.includes('embed-chat')) return 'embed-chat';
   if (path.includes('embed-preview')) return 'embed-preview';
   return 'marketing';
 };
@@ -75,6 +77,7 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'dashboard-files': return '/dashboard/files';
     case 'dashboard-roles': return '/dashboard/roles';
     case 'dashboard-vault': return '/user/vault';
+    case 'embed-chat': return '/embed/chat';
     case 'embed-preview': return '/embed-preview';
     case 'property-detail': return window.location.pathname.startsWith('/properties/') ? window.location.pathname : '/properties/detail';
     default: return '/';

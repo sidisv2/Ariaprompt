@@ -1,4 +1,4 @@
-// Re-export PlanTier so components can import from a single place
+﻿// Re-export PlanTier so components can import from a single place
 export type { PlanTier } from '../lib/planLimits';
 
 export type LeadTemperature = 'hot' | 'warm' | 'cold';
@@ -146,6 +146,7 @@ export type AppRoute =
   | 'dashboard-vault'
   | 'dashboard-integrations'
   | 'embed-preview'
+  | 'embed-chat'
   | 'property-detail'
   | 'catalog'
   | 'explorar'
