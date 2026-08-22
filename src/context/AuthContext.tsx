@@ -39,7 +39,9 @@ interface AuthContextType {
   modalTab: 'login' | 'signup';
   pendingPlan: string | null;
   pendingRoute: AppRoute | null;
-  signUp: (data: { email: string; password: string; nombre: string }) => Promise<{ success: boolean; error?: string }>;
+  signUp: (data: { email: string; password: string; nombre: string }) => Promise<{ success: boolean; requiresOtp?: boolean; error?: string }>;
+  verifyOtp: (data: { email: string; token: string; type?: 'signup' | 'email' }) => Promise<{ success: boolean; error?: string }>;
+  resendOtp: (email: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (data: { email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
   signInAsDemoUser: () => Promise<{ success: boolean; error?: string }>;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
@@ -282,6 +284,12 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
           return { success: false, error: error.message };
         }
 
+        // If email confirmation is required, Supabase returns a user but session is null (or user.identities is empty/unconfirmed)
+        if (data.user && !data.session) {
+          setLoading(false);
+          return { success: true, requiresOtp: true };
+        }
+
         if (data.user) {
           await mapSupabaseUserToAppUser(data.user);
         }
@@ -313,6 +321,88 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
       setAuthModalOpen(false);
       handlePostAuthAction();
       setLoading(false);
+      return { success: true };
+    }
+  };
+
+  // Verify OTP / Email Confirmation Token
+  const verifyOtp = async ({ email, token, type = 'signup' }: { email: string; token: string; type?: 'signup' | 'email' }) => {
+    setLoading(true);
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          email: email.trim(),
+          token: token.trim(),
+          type: type as any,
+        });
+
+        if (error) {
+          // If signup verification failed, try with type 'email'
+          if (type === 'signup') {
+            const fallbackRes = await supabase.auth.verifyOtp({
+              email: email.trim(),
+              token: token.trim(),
+              type: 'email',
+            });
+            if (fallbackRes.error) {
+              setLoading(false);
+              return { success: false, error: fallbackRes.error.message };
+            }
+            if (fallbackRes.data.user) {
+              await mapSupabaseUserToAppUser(fallbackRes.data.user);
+            }
+            setAuthModalOpen(false);
+            handlePostAuthAction();
+            setLoading(false);
+            return { success: true };
+          }
+          setLoading(false);
+          return { success: false, error: error.message };
+        }
+
+        if (data.user) {
+          await mapSupabaseUserToAppUser(data.user);
+        }
+
+        setAuthModalOpen(false);
+        handlePostAuthAction();
+        setLoading(false);
+        return { success: true };
+      } catch (err: any) {
+        setLoading(false);
+        return { success: false, error: err.message || 'Error al verificar el código' };
+      }
+    } else {
+      // Mock flow
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (token.length >= 6) {
+        setAuthModalOpen(false);
+        handlePostAuthAction();
+        setLoading(false);
+        return { success: true };
+      }
+      setLoading(false);
+      return { success: false, error: 'Código de verificación inválido' };
+    }
+  };
+
+  // Resend Verification OTP
+  const resendOtp = async (email: string) => {
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: email.trim(),
+        });
+        if (error) {
+          return { success: false, error: error.message };
+        }
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Error al reenviar el código' };
+      }
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 300));
       return { success: true };
     }
   };
@@ -662,6 +752,8 @@ export const AuthProvider: React.FC<{ children: ReactNode; onRouteChange?: (rout
         pendingPlan,
         pendingRoute,
         signUp,
+        verifyOtp,
+        resendOtp,
         signIn,
         signInAsDemoUser,
         signInWithGoogle,
