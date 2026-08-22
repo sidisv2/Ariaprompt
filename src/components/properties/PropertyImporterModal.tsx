@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import Papa from 'papaparse';
 import {
   Upload,
@@ -65,11 +65,11 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
 
   if (!isOpen) return null;
 
-  const planTier = ((user as any)?.subscriptionTier || (user as any)?.tier || 'starter').toLowerCase();
+  const planTier = ((user as any)?.subscriptionTier || (user as any)?.tier || (user as any)?.plan || (user as any)?.estado_cuenta || 'pro').toLowerCase();
   const limits = getPlanLimits(planTier);
-  const maxProperties = limits.maxProperties;
-  const currentCount = existingPropertiesCount;
-  const isQuotaFull = currentCount >= maxProperties;
+  const maxProperties = limits?.maxProperties ?? 100;
+  const currentCount = existingPropertiesCount ?? 0;
+  const isQuotaFull = maxProperties > 0 && currentCount >= maxProperties;
 
   // Parser robusto con PapaParse para CSV respetando comas y encabezados exactos
   const parseCsvText = (csvString: string) => {
