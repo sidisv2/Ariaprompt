@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import Papa from 'papaparse';
 import {
   Upload,
@@ -71,14 +71,14 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
   const currentCount = existingPropertiesCount;
   const isQuotaFull = currentCount >= maxProperties;
 
-  // 1. Parser robusto con PapaParse para CSV
+  // Parser robusto con PapaParse para CSV respetando comas y encabezados exactos
   const parseCsvText = (csvString: string) => {
     setErrorMessage(null);
 
     Papa.parse(csvString, {
       header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase().replace(/[\s_-]+/g, ''),
+      skipEmptyLines: 'greedy',
+      transformHeader: (header) => header.trim().toLowerCase().replace(/[\s_-]+/g, ''),
       complete: (results) => {
         if (!results.data || results.data.length === 0) {
           setErrorMessage('El archivo CSV está vacío o no contiene filas válidas.');
@@ -88,25 +88,68 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
         const items: ImportedPropertyItem[] = [];
 
         results.data.forEach((row: any, idx: number) => {
-          // Extraer y normalizar campos
-          const title = (row.title || row.titulo || row.propiedad || row.nombre || `Propiedad Importada #${idx + 1}`).trim();
-          
+          // 1. Título
+          const title = (
+            row.title ||
+            row.titulo ||
+            row.propiedad ||
+            row.nombre ||
+            `Propiedad Importada #${idx + 1}`
+          ).trim();
+
+          // 2. Precio
           const rawPrice = String(row.price || row.precio || row.valor || '0').replace(/[^0-9.]/g, '');
           const price = Number(rawPrice) || 150000;
 
+          // 3. Moneda
           const rawCurrency = String(row.currency || row.moneda || 'USD').toUpperCase();
-          const currency: 'USD' | 'ARS' = rawCurrency.includes('ARS') || rawCurrency.includes('$') && !rawCurrency.includes('USD') ? 'ARS' : 'USD';
+          const currency: 'USD' | 'ARS' =
+            rawCurrency.includes('ARS') || (rawCurrency.includes('$') && !rawCurrency.includes('USD'))
+              ? 'ARS'
+              : 'USD';
 
-          const address = (row.address || row.direccion || row.ubicacion || row.barrio || row.zona || 'Ubicación sin especificar').trim();
+          // 4. Dirección exacta (evitar que tome números de m2 o ambientes)
+          const address = (
+            row.address ||
+            row.direccion ||
+            row.calle ||
+            row.ubicacion ||
+            row.barrio ||
+            row.zona ||
+            'Palermo, Buenos Aires'
+          ).trim();
 
-          const rooms = Number(row.rooms || row.ambientes || row.habitaciones || row.dormitorios || 2) || 2;
-          const bathrooms = Number(row.bathrooms || row.banos || row.baños || 1) || 1;
-          const area_sqm = Number(row.areasqm || row.area_sqm || row.superficie || row.m2 || row.superficietotal || 65) || 65;
+          // 5. Ambientes / Habitaciones (rooms)
+          const rawRooms = row.rooms ?? row.ambientes ?? row.habitaciones ?? row.dormitorios ?? row.habs;
+          const rooms = Number(String(rawRooms || '2').replace(/[^0-9]/g, '')) || 2;
 
-          const description = (row.description || row.descripcion || row.detalle || 'Excelente inmueble en ubicación estratégica.').trim();
+          // 6. Baños (bathrooms)
+          const rawBathrooms = row.bathrooms ?? row.banos ?? row.baños ?? row.toilettes;
+          const bathrooms = Number(String(rawBathrooms || '1').replace(/[^0-9]/g, '')) || 1;
 
-          // Normalizar tipo de operación ('sale' | 'rent' | 'temporary_rent')
-          const rawOp = String(row.operationtype || row.operation_type || row.operacion || row.tipooperacion || '').toLowerCase();
+          // 7. Superficie m2 (area_sqm) - Distinguir de rooms
+          const rawArea = row.areasqm ?? row.area_sqm ?? row.superficie ?? row.m2 ?? row.superficietotal ?? row.metros;
+          const area_sqm = Number(String(rawArea || '65').replace(/[^0-9.]/g, '')) || 65;
+
+          // 8. Descripción
+          const description = (
+            row.description ||
+            row.descripcion ||
+            row.detalle ||
+            row.resumen ||
+            'Excelente propiedad en ubicación destacada.'
+          ).trim();
+
+          // 9. Tipo de Operación (operation_type: 'sale' | 'rent' | 'temporary_rent')
+          const rawOp = String(
+            row.operationtype ||
+            row.operation_type ||
+            row.operacion ||
+            row.tipooperacion ||
+            row.tipo_operacion ||
+            ''
+          ).toLowerCase();
+
           let operation_type: 'sale' | 'rent' | 'temporary_rent' = 'sale';
           if (rawOp.includes('temp') || rawOp.includes('vacac')) {
             operation_type = 'temporary_rent';
@@ -116,14 +159,19 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
             operation_type = 'sale';
           }
 
-          // Normalizar estado
-          const rawStatus = String(row.status || row.estado || '').toLowerCase();
+          // 10. Estado (status: 'available' | 'reserved' | 'sold')
+          const rawStatus = String(row.status || row.estado || row.disponibilidad || '').toLowerCase();
           let status: 'available' | 'reserved' | 'sold' = 'available';
-          if (rawStatus.includes('reserv')) status = 'reserved';
-          else if (rawStatus.includes('vend') || rawStatus.includes('alquil')) status = 'sold';
+          if (rawStatus.includes('reserv')) {
+            status = 'reserved';
+          } else if (rawStatus.includes('vend') || rawStatus.includes('alquil') || rawStatus.includes('sold')) {
+            status = 'sold';
+          }
 
-          // Normalizar visibilidad
-          const rawPublic = String(row.ispublic || row.is_public || row.publico || row.visible || 'true').toLowerCase();
+          // 11. Visibilidad (is_public)
+          const rawPublic = String(
+            row.ispublic ?? row.is_public ?? row.publico ?? row.visible ?? 'true'
+          ).toLowerCase();
           const is_public = rawPublic !== 'false' && rawPublic !== '0' && rawPublic !== 'no';
 
           const listing_url = (row.listingurl || row.listing_url || row.url || row.link || '').trim();
@@ -147,7 +195,7 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
         });
 
         if (items.length === 0) {
-          setErrorMessage('No se pudieron extraer propiedades del archivo CSV. Revisa el formato de encabezados.');
+          setErrorMessage('No se pudieron extraer propiedades del archivo CSV. Revisa los nombres de las columnas.');
         } else {
           setParsedItems(items);
         }
@@ -201,7 +249,7 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
         title: 'Propiedad Extraída de Portal Web',
         price: isRent ? 850 : 210000,
         currency: 'USD',
-        address: 'Av. Libertador 2400, Palermo',
+        address: 'Av. del Libertador 2400, Palermo',
         rooms: 3,
         bathrooms: 2,
         area_sqm: 85,
@@ -313,7 +361,7 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
 
         {importSuccess && (
           <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>¡Propiedades importadas y sincronizadas exitosamente en el CRM y el motor de IA!</span>
           </div>
         )}
@@ -458,6 +506,7 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
                       <th className="p-2.5">Operación</th>
                       <th className="p-2.5">Precio</th>
                       <th className="p-2.5">Dirección / Zona</th>
+                      <th className="p-2.5">Ambientes</th>
                       <th className="p-2.5">m²</th>
                       <th className="p-2.5 text-center">Acción</th>
                     </tr>
@@ -465,7 +514,7 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
                   <tbody className="divide-y divide-white/5">
                     {parsedItems.map((item, idx) => (
                       <tr key={idx} className="hover:bg-white/5">
-                        <td className="p-2.5 font-bold text-white max-w-[200px] truncate">
+                        <td className="p-2.5 font-bold text-white max-w-[180px] truncate">
                           {item.title}
                         </td>
                         <td className="p-2.5">
@@ -479,13 +528,16 @@ export const PropertyImporterModal: React.FC<PropertyImporterModalProps> = ({
                             {item.operation_type === 'sale' ? 'Venta' : item.operation_type === 'rent' ? 'Alquiler' : 'Temporal'}
                           </span>
                         </td>
-                        <td className="p-2.5 font-mono font-bold text-emerald-400">
+                        <td className="p-2.5 font-mono font-bold text-emerald-400 whitespace-nowrap">
                           {item.currency} ${item.price.toLocaleString()}
                         </td>
                         <td className="p-2.5 truncate max-w-[150px]">
                           {item.address}
                         </td>
-                        <td className="p-2.5 font-mono">
+                        <td className="p-2.5 font-semibold text-slate-200">
+                          {item.rooms} amb ({item.bathrooms} bñ)
+                        </td>
+                        <td className="p-2.5 font-mono font-bold text-emerald-300 whitespace-nowrap">
                           {item.area_sqm} m²
                         </td>
                         <td className="p-2.5 text-center">
