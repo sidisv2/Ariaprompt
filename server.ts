@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
@@ -181,7 +181,7 @@ async function startServer() {
   });
 
   // WhatsApp Meta Cloud API Endpoints (/api/whatsapp/*, /api/whatsapp-webhook)
-  app.all(['/api/whatsapp', '/api/whatsapp/:route*', '/api/whatsapp-webhook'], async (req, res) => {
+  app.all(['/api/whatsapp', '/api/whatsapp/:route*', '/api/whatsapp-webhook', '/api/webhook/whatsapp', '/api/webhook/whatsapp/:route*'], async (req, res) => {
     try {
       const { handleWhatsAppRoute } = await import('./api/_handlers/whatsappHandler.js');
       const routeParam = req.params?.route ? `${req.params.route}${req.params[0] || ''}` : (req.path.replace(/^\/api\/whatsapp\/?/, '') || 'webhook');
