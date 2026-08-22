@@ -52,10 +52,12 @@ export const AuthModal: React.FC<{
         onAuthSuccess?.();
         onClose();
       } else {
-        setErrorMsg(res.error || 'Hubo un problema al ingresar con la cuenta demo. Intenta de nuevo.');
+        const errString = typeof res.error === 'string' ? res.error : 'Hubo un problema al ingresar con la cuenta demo. Intenta de nuevo.';
+        setErrorMsg(errString);
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Hubo un problema al iniciar la demostración. Intenta de nuevo.');
+      const errString = err?.message || (typeof err === 'string' ? err : 'Hubo un problema al iniciar la demostración. Intenta de nuevo.');
+      setErrorMsg(errString);
     } finally {
       setLoading(false);
     }
@@ -102,11 +104,15 @@ export const AuthModal: React.FC<{
     try {
       if (tab === 'login') {
         const res = await signIn({ email: inputVal, password });
-        if (!res.success) throw new Error(res.error || t('auth.invalidCredentials'));
+        if (!res.success) {
+          const errString = typeof res.error === 'string' ? res.error : (t('auth.invalidCredentials') || 'Credenciales inválidas');
+          setErrorMsg(errString);
+          return;
+        }
         onAuthSuccess?.();
         onClose();
       } else {
-        // Ejecución de signUp con supabase
+        // Ejecución de signUp con supabase y logging detallado
         const { data, error } = await supabase.auth.signUp({
           email: inputVal,
           password,
@@ -118,8 +124,13 @@ export const AuthModal: React.FC<{
           },
         });
 
+        console.log("SignUp response:", { data, error });
+
         if (error) {
-          throw new Error(error.message || 'Error al crear la cuenta. Intenta de nuevo.');
+          console.error("Supabase SignUp Error:", error);
+          const errString = error.message || (typeof error === 'string' ? error : 'Ocurrió un error al registrar la cuenta.');
+          setErrorMsg(errString);
+          return;
         }
 
         // Si ya devuelve sesión activa directa (caso confirmación desactivada)
@@ -132,13 +143,20 @@ export const AuthModal: React.FC<{
           return;
         }
 
-        // Flujo OTP requerido
-        setPendingEmail(inputVal);
-        setOtpCode('');
-        setStep('verify_otp');
+        if (data?.user) {
+          setPendingEmail(inputVal);
+          setOtpCode('');
+          setStep('verify_otp');
+        } else {
+          setPendingEmail(inputVal);
+          setOtpCode('');
+          setStep('verify_otp');
+        }
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || t('auth.invalidCredentials'));
+      console.error("SignUp Unexpected Catch:", err);
+      const errString = err?.message || (typeof err === 'string' ? err : 'Error de conexión. Reintentá nuevamente.');
+      setErrorMsg(errString);
     } finally {
       setLoading(false);
     }
@@ -162,15 +180,22 @@ export const AuthModal: React.FC<{
         type: 'signup',
       });
 
+      console.log("VerifyOtp response:", { data, error });
+
       if (error) {
+        console.warn("VerifyOtp signup type failed, trying fallback type 'email':", error);
         // Fallback de tipo 'email'
         const fallback = await supabase.auth.verifyOtp({
           email: pendingEmail.trim(),
           token,
           type: 'email',
         });
+        console.log("VerifyOtp fallback response:", fallback);
+
         if (fallback.error) {
-          throw new Error(fallback.error.message || 'Código de verificación inválido o expirado');
+          const fallbackErr: any = fallback.error; const errString = fallbackErr?.message || (typeof fallbackErr === 'string' ? fallbackErr : 'Código de verificación inválido o expirado');
+          setErrorMsg(errString);
+          return;
         }
         if (fallback.data?.session || fallback.data?.user) {
           onAuthSuccess?.();
@@ -202,7 +227,9 @@ export const AuthModal: React.FC<{
         }
       }
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Código de verificación incorrecto');
+      console.error("VerifyOtp Unexpected Catch:", err);
+      const errString = err?.message || (typeof err === 'string' ? err : 'Código de verificación incorrecto');
+      setErrorMsg(errString);
     } finally {
       setLoading(false);
     }
@@ -219,11 +246,18 @@ export const AuthModal: React.FC<{
         type: 'signup',
         email: pendingEmail.trim(),
       });
-      if (error) throw error;
+      console.log("Resend response:", { error });
+      if (error) {
+        const errString = error.message || (typeof error === 'string' ? error : 'No se pudo reenviar el código.');
+        setErrorMsg(errString);
+        return;
+      }
       setResendSuccess(true);
       setTimeout(() => setResendSuccess(false), 5000);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'No se pudo reenviar el código. Intenta en unos instantes.');
+      console.error("Resend Unexpected Catch:", err);
+      const errString = err?.message || (typeof err === 'string' ? err : 'No se pudo reenviar el código. Intenta en unos instantes.');
+      setErrorMsg(errString);
     } finally {
       setResending(false);
     }
@@ -234,11 +268,17 @@ export const AuthModal: React.FC<{
     setErrorMsg(null);
     try {
       const res = await signInWithGoogle();
-      if (!res.success) throw new Error(res.error || 'Error con Google OAuth');
+      if (!res.success) {
+        const errString = typeof res.error === 'string' ? res.error : 'Error con Google OAuth';
+        setErrorMsg(errString);
+        return;
+      }
       onAuthSuccess?.();
       onClose();
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Error con Google OAuth');
+      console.error("Google OAuth Catch:", err);
+      const errString = err?.message || (typeof err === 'string' ? err : 'Error con Google OAuth');
+      setErrorMsg(errString);
     } finally {
       setLoading(false);
     }
@@ -277,7 +317,7 @@ export const AuthModal: React.FC<{
 
             {errorMsg && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium text-center">
-                {errorMsg}
+                {typeof errorMsg === 'string' ? errorMsg : 'Ocurrió un error inesperado'}
               </div>
             )}
 
@@ -482,7 +522,7 @@ export const AuthModal: React.FC<{
 
               {errorMsg && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium">
-                  {errorMsg}
+                  {typeof errorMsg === 'string' ? errorMsg : 'Ocurrió un error al procesar la solicitud'}
                 </div>
               )}
 
@@ -522,3 +562,5 @@ export const AuthModal: React.FC<{
 };
 
 export default AuthModal;
+
+
