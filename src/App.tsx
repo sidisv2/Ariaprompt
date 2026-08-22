@@ -9,7 +9,7 @@ import { DesktopView } from './components/desktop/DesktopView';
 import { MobileView } from './components/mobile/MobileView';
 import { DeviceSwitcherBadge } from './components/common/DeviceSwitcherBadge';
 import { ChatSlideOver } from './components/chat/ChatSlideOver';
-import { BetaBanner, WhatsAppFloatingButton } from './components/common/BetaBanner';
+import { WhatsAppFloatingButton } from './components/common/BetaBanner';
 
 const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
@@ -394,8 +394,6 @@ function AppInner() {
 
   return (
     <>
-      {/* Beta testing banner — shown every new session */}
-      <BetaBanner />
       {/* WhatsApp floating button — persistent across all pages */}
       <WhatsAppFloatingButton />
       {effectiveDevice === 'mobile' ? (

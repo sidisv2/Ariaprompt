@@ -65,7 +65,7 @@ export const UpgradePromptBanner: React.FC<UpgradePromptBannerProps> = ({
             <p className="text-xs text-slate-400 mt-0.5 leading-snug">{copy.description}</p>
             <p className="text-[11px] text-slate-500 mt-1">
               Disponible desde el plan <span className="text-emerald-400 font-semibold">{planName}</span>.
-              La donación es completamente voluntaria — si querés apoyar el proyecto podés mejorar tu plan.
+              Mejorá tu plan para desbloquear integraciones avanzadas y mayor capacidad operativa.
             </p>
           </div>
           {onDismiss && (
@@ -109,7 +109,7 @@ export const UpgradePromptBanner: React.FC<UpgradePromptBannerProps> = ({
         <p className="text-xs text-slate-400 leading-relaxed">{copy.description}</p>
         <p className="text-[11px] text-slate-500 leading-relaxed">
           Disponible desde <span className="text-emerald-400 font-semibold">{planName}</span>.
-          La donación es completamente voluntaria — mejorá tu plan si querés apoyar el proyecto y acceder a más funciones.
+          Mejorá tu plan para acceder a integraciones directas, mayor cupo de leads y soporte prioritario.
         </p>
         <button
           onClick={onUpgrade}
