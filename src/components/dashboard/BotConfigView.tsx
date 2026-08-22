@@ -42,6 +42,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   const { user } = useAuth();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [orgId, setOrgId] = useState<string>(user?.id || botConfig.agentId || '');
   const [agentName, setAgentName] = useState(botConfig.agentName || 'JULIO');
   const [agencyName, setAgencyName] = useState(botConfig.agencyName || 'Inmobiliaria');
   const [welcomeMsg, setWelcomeMsg] = useState(botConfig.welcomeMessage || '¡Hola! Soy tu asesor virtual 24/7. ¿Qué tipo de propiedad estás buscando?');
@@ -166,7 +167,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
     loadOrgConfig();
   }, [user]);
 
-  const activeAgencyId = user?.id || botConfig.agentId || 'agency-default';
+  const activeAgencyId = orgId || user?.id || botConfig.agentId || 'agency-default';
   const embedScript = `<script src="https://ariaprop.online/embed/chat.js" data-agency-id="${activeAgencyId}"></script>`;
 
   const handleCopyScript = () => {

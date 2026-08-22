@@ -18,7 +18,7 @@ export const StandaloneChatWidget: React.FC = () => {
   const [agencyId, setAgencyId] = useState<string>('');
   const [botName, setBotName] = useState<string>('JULIO');
   const [agencyName, setAgencyName] = useState<string>('Inmobiliaria');
-  const [welcomeMessage, setWelcomeMessage] = useState<string>('¡Hola! ¿En qué puedo ayudarte hoy?');
+  const [welcomeMessage, setWelcomeMessage] = useState<string>('¡Hola! ¿En qué puedo ayudarte?');
   const [customRules, setCustomRules] = useState<string>('');
   const [faqList, setFaqList] = useState<FaqItem[]>([]);
   const [bookingUrl, setBookingUrl] = useState<string>('');
@@ -29,27 +29,59 @@ export const StandaloneChatWidget: React.FC = () => {
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. CARGA DE CONFIGURACIÓN REAL DESDE SUPABASE CON PRIORIDAD EN ORGANIZATIONS
+  // 1. CARGA DE CONFIGURACIÓN REAL DESDE SUPABASE
   useEffect(() => {
     const loadAgencyBotConfig = async () => {
+      if (!supabase) return;
+
       const params = new URLSearchParams(window.location.search);
-      let targetId = params.get('agencyId') || params.get('agency_id') || params.get('agentId') || agencyId;
+      let targetId = params.get('agencyId') || params.get('agency_id') || params.get('id') || params.get('agentId') || agencyId;
 
       if (!targetId && window.location.pathname.includes('/embed/chat/')) {
         const parts = window.location.pathname.split('/embed/chat/');
         if (parts[1]) targetId = parts[1].replace('/', '');
       }
 
-      if (!targetId || !supabase) return;
+      if (!targetId) return;
       setAgencyId(targetId);
 
       try {
-        // 1. Consultar organizations primero (or: id === targetId OR user_id === targetId)
-        const { data: org } = await supabase
+        // 1. Consultar organizations primero por id o user_id
+        const { data: orgData } = await supabase
           .from('organizations')
           .select('*')
           .or(`id.eq.${targetId},user_id.eq.${targetId}`)
           .maybeSingle();
+
+        if (orgData) {
+          const loadedBotName = orgData.bot_name || 'Asistente IA';
+          const loadedAgencyName = orgData.name || 'Inmobiliaria';
+          const loadedWelcome = orgData.welcome_message || `¡Hola! Soy ${loadedBotName}, tu asesor inmobiliario. ¿En qué puedo ayudarte?`;
+          const loadedRules = orgData.custom_prompt_instructions || orgData.system_prompt || '';
+          
+          let loadedFaqs: FaqItem[] = [];
+          if (orgData.faq_knowledge) {
+            try {
+              loadedFaqs = typeof orgData.faq_knowledge === 'string' ? JSON.parse(orgData.faq_knowledge) : orgData.faq_knowledge;
+            } catch {}
+          }
+
+          setBotName(loadedBotName);
+          setAgencyName(loadedAgencyName);
+          setWelcomeMessage(loadedWelcome);
+          setCustomRules(loadedRules);
+          setFaqList(Array.isArray(loadedFaqs) ? loadedFaqs : []);
+          setBookingUrl(orgData.calendar_booking_url || '');
+          setAdvisorPhone(orgData.advisor_alert_phone || '');
+
+          setMessages([{
+            id: 'welcome',
+            sender: 'bot',
+            text: loadedWelcome,
+            timestamp: new Date()
+          }]);
+          return;
+        }
 
         // 2. Si no está en organizations, consultar profiles
         const { data: prof } = await supabase
@@ -61,14 +93,12 @@ export const StandaloneChatWidget: React.FC = () => {
         const linkedOrg = prof?.organizations as any;
 
         const activeBotName =
-          org?.bot_name ||
           linkedOrg?.bot_name ||
           prof?.bot_name ||
-          org?.name ||
-          'JULIO';
+          prof?.nombre ||
+          'Asistente IA';
 
         const activeAgencyName =
-          org?.name ||
           linkedOrg?.name ||
           prof?.agency_name ||
           prof?.company_name ||
@@ -76,13 +106,12 @@ export const StandaloneChatWidget: React.FC = () => {
           'Inmobiliaria';
 
         const activeWelcome =
-          org?.welcome_message ||
           linkedOrg?.welcome_message ||
           prof?.welcome_message ||
           `¡Hola! Soy ${activeBotName}, tu asesor inmobiliario. ¿En qué puedo ayudarte?`;
 
         let activeFaqs: FaqItem[] = [];
-        const rawFaqs = org?.faq_knowledge || linkedOrg?.faq_knowledge || prof?.faq_knowledge;
+        const rawFaqs = linkedOrg?.faq_knowledge || prof?.faq_knowledge;
         if (rawFaqs) {
           try {
             activeFaqs = typeof rawFaqs === 'string' ? JSON.parse(rawFaqs) : rawFaqs;
@@ -90,8 +119,6 @@ export const StandaloneChatWidget: React.FC = () => {
         }
 
         const activeRules =
-          org?.custom_prompt_instructions ||
-          org?.system_prompt ||
           linkedOrg?.custom_prompt_instructions ||
           linkedOrg?.system_prompt ||
           prof?.custom_prompt_instructions ||
@@ -99,13 +126,11 @@ export const StandaloneChatWidget: React.FC = () => {
           '';
 
         const activeBooking =
-          org?.calendar_booking_url ||
           linkedOrg?.calendar_booking_url ||
           prof?.calendar_booking_url ||
           '';
 
         const activePhone =
-          org?.advisor_alert_phone ||
           linkedOrg?.advisor_alert_phone ||
           prof?.advisor_alert_phone ||
           prof?.phone ||
@@ -114,19 +139,17 @@ export const StandaloneChatWidget: React.FC = () => {
         setBotName(activeBotName);
         setAgencyName(activeAgencyName);
         setWelcomeMessage(activeWelcome);
-        setFaqList(activeFaqs);
+        setFaqList(Array.isArray(activeFaqs) ? activeFaqs : []);
         setCustomRules(activeRules);
         setBookingUrl(activeBooking);
         setAdvisorPhone(activePhone);
 
-        setMessages([
-          {
-            id: 'welcome-msg',
-            sender: 'bot',
-            text: activeWelcome,
-            timestamp: new Date(),
-          },
-        ]);
+        setMessages([{
+          id: 'welcome',
+          sender: 'bot',
+          text: activeWelcome,
+          timestamp: new Date()
+        }]);
       } catch (err) {
         console.warn('StandaloneChatWidget: Error loading bot settings:', err);
       }
