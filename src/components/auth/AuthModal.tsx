@@ -2,7 +2,7 @@
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { supabase } from '../../lib/supabase';
-import { X, Mail, Lock, User, Sparkles, ArrowRight, Play, KeyRound, ArrowLeft, RefreshCw } from 'lucide-react';
+import { X, Mail, Lock, User, Sparkles, ArrowRight, Play, KeyRound, ArrowLeft, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export const AuthModal: React.FC<{
   isOpen: boolean;
@@ -20,12 +20,16 @@ export const AuthModal: React.FC<{
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Estados robustos para Reenvío OTP y Cooldown
+  const [resendCooldown, setResendCooldown] = useState(60);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccessMsg, setResendSuccessMsg] = useState('');
 
   const { signIn, signInAsDemoUser, signInWithGoogle } = useAuth();
 
+  // Reset al abrir/cerrar modal o cambiar de tab inicial
   useEffect(() => {
     setTab(initialTab);
     if (!isOpen) {
@@ -37,9 +41,21 @@ export const AuthModal: React.FC<{
       setConfirmPassword('');
       setDisplayName('');
       setErrorMsg(null);
-      setResendSuccess(false);
+      setResendSuccessMsg('');
+      setResendCooldown(60);
     }
   }, [initialTab, isOpen]);
+
+  // Temporizador decreciente de cooldown para reenvío OTP
+  useEffect(() => {
+    let timer: any;
+    if (step === 'verify_otp' && resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, resendCooldown]);
 
   if (!isOpen) return null;
 
@@ -66,6 +82,7 @@ export const AuthModal: React.FC<{
   const handleAction = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setErrorMsg(null);
+    setResendSuccessMsg('');
 
     const inputVal = identifier.trim();
     const fullName = displayName.trim();
@@ -140,6 +157,7 @@ export const AuthModal: React.FC<{
           if (isRetryableOr500) {
             setPendingEmail(inputVal);
             setOtpCode('');
+            setResendCooldown(60);
             setStep('verify_otp');
             return;
           }
@@ -159,9 +177,10 @@ export const AuthModal: React.FC<{
           return;
         }
 
-        // Flujo normal:
+        // Flujo normal a verificación OTP:
         setPendingEmail(inputVal);
         setOtpCode('');
+        setResendCooldown(60);
         setStep('verify_otp');
       }
     } catch (err: any) {
@@ -169,6 +188,7 @@ export const AuthModal: React.FC<{
       // Si atrapa error de red/fetch pero el mail se envió, pasar a OTP
       setPendingEmail(inputVal);
       setOtpCode('');
+      setResendCooldown(60);
       setStep('verify_otp');
     } finally {
       setLoading(false);
@@ -185,6 +205,7 @@ export const AuthModal: React.FC<{
 
     setLoading(true);
     setErrorMsg(null);
+    setResendSuccessMsg('');
 
     try {
       const { data, error } = await supabase.auth.verifyOtp({
@@ -250,30 +271,35 @@ export const AuthModal: React.FC<{
   };
 
   const handleResendOtp = async () => {
-    if (!pendingEmail || resending) return;
-    setResending(true);
+    if (resendCooldown > 0 || isResending || !pendingEmail) return;
+    setIsResending(true);
+    setResendSuccessMsg('');
     setErrorMsg(null);
-    setResendSuccess(false);
 
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: pendingEmail.trim(),
       });
+
       console.log("Resend response:", { error });
+
       if (error) {
-        const errString = error.message || (typeof error === 'string' ? error : 'No se pudo reenviar el código.');
-        setErrorMsg(errString);
-        return;
+        console.error("Error al reenviar OTP:", error);
+        if (error.message?.includes('security purposes') || error.message?.includes('rate limit')) {
+          setErrorMsg('Por favor esperá unos instantes antes de solicitar otro código.');
+        } else {
+          setErrorMsg(error.message || 'No se pudo reenviar el código.');
+        }
+      } else {
+        setResendSuccessMsg('¡Código reenviado con éxito! Revisá tu casilla.');
+        setResendCooldown(60); // Reiniciar temporizador
       }
-      setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 5000);
     } catch (err: any) {
-      console.error("Resend Unexpected Catch:", err);
-      const errString = err?.message || (typeof err === 'string' ? err : 'No se pudo reenviar el código. Intenta en unos instantes.');
-      setErrorMsg(errString);
+      console.error("Catch resend OTP:", err);
+      setErrorMsg('Error al solicitar el código.');
     } finally {
-      setResending(false);
+      setIsResending(false);
     }
   };
 
@@ -335,9 +361,10 @@ export const AuthModal: React.FC<{
               </div>
             )}
 
-            {resendSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium text-center">
-                ¡Código reenviado con éxito! Revisa tu bandeja de entrada o spam.
+            {resendSuccessMsg && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium text-center flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{resendSuccessMsg}</span>
               </div>
             )}
 
@@ -376,24 +403,31 @@ export const AuthModal: React.FC<{
             </form>
 
             <div className="flex flex-col items-center gap-3 pt-2 text-xs">
-              <button
-                type="button"
-                onClick={handleResendOtp}
-                disabled={resending}
-                className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 underline font-semibold transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
-                <span>¿No te llegó? Reenviar código</span>
-              </button>
+              {resendCooldown > 0 ? (
+                <div className="inline-flex items-center gap-1.5 text-slate-500 font-medium cursor-not-allowed select-none">
+                  <RefreshCw className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Reenviar código en <strong className="text-slate-400">{resendCooldown}s</strong></span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={isResending}
+                  className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 underline font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
+                  <span>¿No recibiste el código? Reenviar código</span>
+                </button>
+              )}
 
               <button
                 type="button"
                 onClick={() => {
                   setStep('form');
                   setErrorMsg(null);
-                  setResendSuccess(false);
+                  setResendSuccessMsg('');
                 }}
-                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer pt-1"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Volver / Cambiar correo</span>
