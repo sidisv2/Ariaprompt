@@ -34,12 +34,21 @@ export const StandaloneChatWidget: React.FC = () => {
     const loadAgencyBotConfig = async () => {
       if (!supabase) return;
 
+      const rawUrl = typeof window !== 'undefined' ? window.location.href : '';
       const params = new URLSearchParams(window.location.search);
-      let targetId = params.get('agencyId') || params.get('agency_id') || params.get('id') || params.get('agentId') || agencyId;
+      let targetId = params.get('agencyId') || params.get('agency_id') || params.get('id') || params.get('agentId') || agencyId || '';
 
+      // Fallback 1: Si no está en search params, buscar en el pathname
       if (!targetId && window.location.pathname.includes('/embed/chat/')) {
         const parts = window.location.pathname.split('/embed/chat/');
         if (parts[1]) targetId = parts[1].replace('/', '');
+      }
+
+      // Fallback 2: Sanitizar y extraer UUID con regex en caso de URLs mal formadas o con comillas pegadas
+      const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+      const uuidMatch = (targetId || rawUrl).match(uuidRegex);
+      if (uuidMatch && uuidMatch[0]) {
+        targetId = uuidMatch[0];
       }
 
       if (!targetId) return;

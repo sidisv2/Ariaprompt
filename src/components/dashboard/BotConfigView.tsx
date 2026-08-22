@@ -18,7 +18,8 @@ import {
   Loader2,
   Send,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 
 import { WhatsAppSettings } from './WhatsAppSettings';
