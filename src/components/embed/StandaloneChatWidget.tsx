@@ -16,7 +16,7 @@ interface FaqItem {
 
 export const StandaloneChatWidget: React.FC = () => {
   const [agencyId, setAgencyId] = useState<string>('');
-  const [botName, setBotName] = useState<string>('Asistente IA');
+  const [botName, setBotName] = useState<string>('JULIO');
   const [agencyName, setAgencyName] = useState<string>('Inmobiliaria');
   const [welcomeMessage, setWelcomeMessage] = useState<string>('¡Hola! ¿En qué puedo ayudarte hoy?');
   const [customRules, setCustomRules] = useState<string>('');
@@ -29,102 +29,104 @@ export const StandaloneChatWidget: React.FC = () => {
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. CARGA DE CONFIGURACIÓN REAL DESDE SUPABASE
+  // 1. CARGA DE CONFIGURACIÓN REAL DESDE SUPABASE CON PRIORIDAD EN ORGANIZATIONS
   useEffect(() => {
     const loadAgencyBotConfig = async () => {
       const params = new URLSearchParams(window.location.search);
-      let targetAgencyId = params.get('agencyId') || params.get('agency_id') || params.get('agentId') || agencyId;
+      let targetId = params.get('agencyId') || params.get('agency_id') || params.get('agentId') || agencyId;
 
-      if (!targetAgencyId && window.location.pathname.includes('/embed/chat/')) {
+      if (!targetId && window.location.pathname.includes('/embed/chat/')) {
         const parts = window.location.pathname.split('/embed/chat/');
-        if (parts[1]) targetAgencyId = parts[1].replace('/', '');
+        if (parts[1]) targetId = parts[1].replace('/', '');
       }
 
-      if (!targetAgencyId || !supabase) return;
-      setAgencyId(targetAgencyId);
+      if (!targetId || !supabase) return;
+      setAgencyId(targetId);
 
       try {
-        // Buscar en organizations
-        const { data: orgData } = await supabase
+        // 1. Consultar organizations primero (or: id === targetId OR user_id === targetId)
+        const { data: org } = await supabase
           .from('organizations')
           .select('*')
-          .or(`id.eq.${targetAgencyId},user_id.eq.${targetAgencyId}`)
+          .or(`id.eq.${targetId},user_id.eq.${targetId}`)
           .maybeSingle();
 
-        if (orgData) {
-          const loadedBotName = orgData.bot_name || 'Asistente IA';
-          const loadedAgencyName = orgData.name || 'Inmobiliaria';
-          const loadedWelcome = orgData.welcome_message || `¡Hola! Soy tu asistente de ${loadedAgencyName}. ¿En qué te puedo ayudar hoy?`;
-          const loadedRules = orgData.custom_prompt_instructions || orgData.system_prompt || '';
-          let loadedFaqs: FaqItem[] = [];
-
-          if (orgData.faq_knowledge) {
-            try {
-              loadedFaqs = typeof orgData.faq_knowledge === 'string'
-                ? JSON.parse(orgData.faq_knowledge)
-                : orgData.faq_knowledge;
-            } catch {}
-          }
-
-          setBotName(loadedBotName);
-          setAgencyName(loadedAgencyName);
-          setWelcomeMessage(loadedWelcome);
-          setCustomRules(loadedRules);
-          setFaqList(loadedFaqs);
-          setBookingUrl(orgData.calendar_booking_url || '');
-          setAdvisorPhone(orgData.advisor_alert_phone || '');
-
-          setMessages([
-            {
-              id: 'welcome-msg',
-              sender: 'bot',
-              text: loadedWelcome,
-              timestamp: new Date(),
-            },
-          ]);
-          return;
-        }
-
-        // Buscar en profiles si no se encontró en organizations directamente
-        const { data: profile } = await supabase
+        // 2. Si no está en organizations, consultar profiles
+        const { data: prof } = await supabase
           .from('profiles')
           .select('*, organizations(*)')
-          .or(`id.eq.${targetAgencyId},organization_id.eq.${targetAgencyId}`)
+          .eq('id', targetId)
           .maybeSingle();
 
-        if (profile) {
-          const org = profile.organizations as any;
-          const loadedBotName = org?.bot_name || profile.nombre || profile.full_name || 'Asistente IA';
-          const loadedAgencyName = org?.name || profile.nombre || profile.full_name || 'Inmobiliaria';
-          const loadedWelcome = org?.welcome_message || `¡Hola! Soy tu asistente de ${loadedAgencyName}. ¿En qué puedo ayudarte hoy?`;
-          const loadedRules = org?.custom_prompt_instructions || org?.system_prompt || '';
-          let loadedFaqs: FaqItem[] = [];
+        const linkedOrg = prof?.organizations as any;
 
-          if (org?.faq_knowledge) {
-            try {
-              loadedFaqs = typeof org.faq_knowledge === 'string'
-                ? JSON.parse(org.faq_knowledge)
-                : org.faq_knowledge;
-            } catch {}
-          }
+        const activeBotName =
+          org?.bot_name ||
+          linkedOrg?.bot_name ||
+          prof?.bot_name ||
+          org?.name ||
+          'JULIO';
 
-          setBotName(loadedBotName);
-          setAgencyName(loadedAgencyName);
-          setWelcomeMessage(loadedWelcome);
-          setCustomRules(loadedRules);
-          setFaqList(loadedFaqs);
-          setBookingUrl(org?.calendar_booking_url || '');
-          setAdvisorPhone(org?.advisor_alert_phone || profile.advisor_alert_phone || profile.phone || '');
+        const activeAgencyName =
+          org?.name ||
+          linkedOrg?.name ||
+          prof?.agency_name ||
+          prof?.company_name ||
+          prof?.nombre ||
+          'Inmobiliaria';
 
-          setMessages([
-            {
-              id: 'welcome-msg',
-              sender: 'bot',
-              text: loadedWelcome,
-              timestamp: new Date(),
-            },
-          ]);
+        const activeWelcome =
+          org?.welcome_message ||
+          linkedOrg?.welcome_message ||
+          prof?.welcome_message ||
+          `¡Hola! Soy ${activeBotName}, tu asesor inmobiliario. ¿En qué puedo ayudarte?`;
+
+        let activeFaqs: FaqItem[] = [];
+        const rawFaqs = org?.faq_knowledge || linkedOrg?.faq_knowledge || prof?.faq_knowledge;
+        if (rawFaqs) {
+          try {
+            activeFaqs = typeof rawFaqs === 'string' ? JSON.parse(rawFaqs) : rawFaqs;
+          } catch {}
         }
+
+        const activeRules =
+          org?.custom_prompt_instructions ||
+          org?.system_prompt ||
+          linkedOrg?.custom_prompt_instructions ||
+          linkedOrg?.system_prompt ||
+          prof?.custom_prompt_instructions ||
+          prof?.system_prompt ||
+          '';
+
+        const activeBooking =
+          org?.calendar_booking_url ||
+          linkedOrg?.calendar_booking_url ||
+          prof?.calendar_booking_url ||
+          '';
+
+        const activePhone =
+          org?.advisor_alert_phone ||
+          linkedOrg?.advisor_alert_phone ||
+          prof?.advisor_alert_phone ||
+          prof?.phone ||
+          '';
+
+        setBotName(activeBotName);
+        setAgencyName(activeAgencyName);
+        setWelcomeMessage(activeWelcome);
+        setFaqList(activeFaqs);
+        setCustomRules(activeRules);
+        setBookingUrl(activeBooking);
+        setAdvisorPhone(activePhone);
+
+        setMessages([
+          {
+            id: 'welcome-msg',
+            sender: 'bot',
+            text: activeWelcome,
+            timestamp: new Date(),
+          },
+        ]);
       } catch (err) {
         console.warn('StandaloneChatWidget: Error loading bot settings:', err);
       }
@@ -226,7 +228,7 @@ export const StandaloneChatWidget: React.FC = () => {
           data.reply ||
           data.text ||
           data.message ||
-          `¡Hola! Estoy a tu disposición para asesorarte en nombre de ${agencyName}.`;
+          `¡Hola! Soy ${botName} de ${agencyName}. ¿En qué puedo asesorarte hoy?`;
         setMessages((prev) =>
           prev.map((m) => (m.id === botMsgId ? { ...m, text: botResponseText } : m))
         );
@@ -263,7 +265,7 @@ export const StandaloneChatWidget: React.FC = () => {
           if (bookingUrl) {
             matchedResponse = `¡Con gusto! Podés agendar tu visita presencial directamente desde nuestro calendario oficial aquí: ${bookingUrl} o dejarnos tu WhatsApp para coordinar día y horario.`;
           } else {
-            matchedResponse = `¡Excelente! Para agendar una visita a la propiedad, por favor dejanos tu teléfono o WhatsApp y un asesor comercial te contactará a la brevedad.`;
+            matchedResponse = `¡Excelente! Para agendar una visita a la propiedad, por favor dejanos tu teléfono o WhatsApp y un asesor comercial de ${agencyName} te contactará a la brevedad.`;
           }
         }
       }
@@ -271,7 +273,7 @@ export const StandaloneChatWidget: React.FC = () => {
       // C. Saludos o consultas comunes
       if (!matchedResponse) {
         if (queryLower.includes('hola') || queryLower.includes('buenos') || queryLower.includes('buenas')) {
-          matchedResponse = `¡Hola! Gracias por comunicarte con ${agencyName}. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar?`;
+          matchedResponse = `¡Hola! Gracias por comunicarte con ${agencyName}. Soy ${botName}. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar?`;
         } else if (
           queryLower.includes('precio') ||
           queryLower.includes('costo') ||
@@ -282,7 +284,7 @@ export const StandaloneChatWidget: React.FC = () => {
         ) {
           matchedResponse = `En ${agencyName} contamos con opciones destacadas en venta y alquiler. Si me indicás ambientes, zona o presupuesto estimado, te comparto las fichas comerciales disponibles.`;
         } else if (customRules) {
-          matchedResponse = `He tomado nota de tu consulta sobre "${messageText}". ${customRules}. Si nos dejás tu número de contacto, nuestro equipo comercial se comunicará de inmediato.`;
+          matchedResponse = `He tomado nota de tu consulta sobre "${messageText}". ${customRules}. Si nos dejás tu número de contacto, nuestro equipo se comunicará de inmediato.`;
         } else {
           matchedResponse = `He tomado nota de tu consulta sobre "${messageText}". Si nos compartís tu número de WhatsApp, un asesor comercial de ${agencyName} se pondrá en contacto para brindarte todos los detalles.`;
         }
