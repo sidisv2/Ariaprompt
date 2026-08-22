@@ -60,14 +60,34 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   const [alertEmail, setAlertEmail] = useState<string>('alertas@inmobiliaria.com');
   const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>('5491123456789');
   const [notifyWhatsappVisit, setNotifyWhatsappVisit] = useState<boolean>(true);
-  const [desktopPermission, setDesktopPermission] = useState<string>(
-    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
-  );
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
-  const handleRequestDesktopPermission = async () => {
+  useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
-      const perm = await Notification.requestPermission();
-      setDesktopPermission(perm);
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const handleEnableNotifications = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      alert('Tu navegador no soporta notificaciones de escritorio.');
+      return;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+
+      if (permission === 'granted') {
+        new Notification('🔔 Aria Prop - Alertas Activadas', {
+          body: '¡Excelente! Ahora recibirás alertas en vivo cuando un lead pida visita o escriba en el CRM.',
+          icon: '/favicon.svg'
+        });
+      } else if (permission === 'denied') {
+        alert('Las notificaciones fueron bloqueadas. Podés habilitarlas desde el candado de la barra de direcciones del navegador.');
+      }
+    } catch (err) {
+      console.error('Error al solicitar permisos de notificación:', err);
     }
   };
 
@@ -525,17 +545,31 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleRequestDesktopPermission}
-                  className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer shrink-0 ${
-                    desktopPermission === 'granted'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                  }`}
-                >
-                  {desktopPermission === 'granted' ? '✓ Notificaciones Activas' : 'Activar Notificaciones'}
-                </button>
+                {notificationPermission === 'granted' ? (
+                  <button
+                    type="button"
+                    onClick={handleEnableNotifications}
+                    className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/30 transition-all shrink-0"
+                  >
+                    <span>✓ Notificaciones Activas</span>
+                  </button>
+                ) : notificationPermission === 'denied' ? (
+                  <button
+                    type="button"
+                    onClick={() => alert('Las notificaciones fueron bloqueadas en tu navegador. Podés habilitarlas desde el ícono de candado en la barra de direcciones.')}
+                    className="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <span>Bloqueadas en Navegador</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleEnableNotifications}
+                    className="px-3.5 py-1.5 rounded-xl font-extrabold text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                  >
+                    <span>Activar Notificaciones</span>
+                  </button>
+                )}
               </div>
             </div>
 
