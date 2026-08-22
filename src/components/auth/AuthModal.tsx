@@ -112,7 +112,7 @@ export const AuthModal: React.FC<{
         onAuthSuccess?.();
         onClose();
       } else {
-        // Ejecución de signUp con supabase y logging detallado
+        // Ejecución de signUp con supabase y tolerancia a timeouts SMTP
         const { data, error } = await supabase.auth.signUp({
           email: inputVal,
           password,
@@ -126,9 +126,25 @@ export const AuthModal: React.FC<{
 
         console.log("SignUp response:", { data, error });
 
+        // Si Supabase devuelve error 500 o AuthRetryableFetchError tras disparar el correo:
         if (error) {
-          console.error("Supabase SignUp Error:", error);
-          const errString = error.message || (typeof error === 'string' ? error : 'Ocurrió un error al registrar la cuenta.');
+          console.error("SignUp Error:", error);
+          const isRetryableOr500 =
+            error.name === 'AuthRetryableFetchError' ||
+            (error as any)?.status === 500 ||
+            error.message?.includes('500') ||
+            error.message?.toLowerCase().includes('fetch') ||
+            error.message?.toLowerCase().includes('timeout') ||
+            error.message?.toLowerCase().includes('network');
+
+          if (isRetryableOr500) {
+            setPendingEmail(inputVal);
+            setOtpCode('');
+            setStep('verify_otp');
+            return;
+          }
+
+          const errString = error.message || (typeof error === 'string' ? error : 'Error al registrar la cuenta');
           setErrorMsg(errString);
           return;
         }
@@ -143,20 +159,17 @@ export const AuthModal: React.FC<{
           return;
         }
 
-        if (data?.user) {
-          setPendingEmail(inputVal);
-          setOtpCode('');
-          setStep('verify_otp');
-        } else {
-          setPendingEmail(inputVal);
-          setOtpCode('');
-          setStep('verify_otp');
-        }
+        // Flujo normal:
+        setPendingEmail(inputVal);
+        setOtpCode('');
+        setStep('verify_otp');
       }
     } catch (err: any) {
-      console.error("SignUp Unexpected Catch:", err);
-      const errString = err?.message || (typeof err === 'string' ? err : 'Error de conexión. Reintentá nuevamente.');
-      setErrorMsg(errString);
+      console.error("SignUp Catch:", err);
+      // Si atrapa error de red/fetch pero el mail se envió, pasar a OTP
+      setPendingEmail(inputVal);
+      setOtpCode('');
+      setStep('verify_otp');
     } finally {
       setLoading(false);
     }
@@ -193,7 +206,8 @@ export const AuthModal: React.FC<{
         console.log("VerifyOtp fallback response:", fallback);
 
         if (fallback.error) {
-          const fallbackErr: any = fallback.error; const errString = fallbackErr?.message || (typeof fallbackErr === 'string' ? fallbackErr : 'Código de verificación inválido o expirado');
+          const fallbackErr: any = fallback.error;
+          const errString = fallbackErr?.message || (typeof fallbackErr === 'string' ? fallbackErr : 'Código de verificación inválido o expirado');
           setErrorMsg(errString);
           return;
         }
@@ -562,5 +576,3 @@ export const AuthModal: React.FC<{
 };
 
 export default AuthModal;
-
-
