@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { AppRoute, Property, Lead, BotConfig } from '../../types';
 import { MobileHeader } from './MobileHeader';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -53,6 +53,8 @@ interface MobileViewProps {
   onClearSelectedLead: () => void;
   onInterveneLead: (leadId: string) => void;
   onAddProperty: (newProp: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => Promise<void>;
+  onUpdateProperty?: (id: string, updates: Partial<Property>) => void;
+  onDeleteProperty?: (id: string) => void;
   onUpdateLeadStatus: (leadId: string, status: Lead['status']) => Promise<void>;
   onUpdateBotConfig: (config: Partial<BotConfig>) => Promise<void>;
   onOpenPrompt?: (promptText: string) => void;
@@ -68,6 +70,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onClearSelectedLead,
   onInterveneLead,
   onAddProperty,
+  onUpdateProperty,
+  onDeleteProperty,
   onUpdateLeadStatus,
   onUpdateBotConfig,
   onOpenPrompt,
@@ -81,7 +85,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {currentRoute === 'dashboard-metrics' ? (
           <SummaryDashboardView leads={leads} onRouteChange={onRouteChange} />
         ) : currentRoute === 'dashboard-properties' ? (
-          <PropertiesView properties={properties} onAddProperty={onAddProperty} />
+          <PropertiesView properties={properties} onAddProperty={onAddProperty} onUpdateProperty={onUpdateProperty} onDeleteProperty={onDeleteProperty} />
         ) : currentRoute === 'dashboard-leads' ? (
           <LeadsView
             leads={leads}

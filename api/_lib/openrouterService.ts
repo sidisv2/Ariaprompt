@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+﻿import OpenAI from 'openai';
 
 export interface ChatMessage {
   sender: 'user' | 'bot' | 'model' | 'assistant';

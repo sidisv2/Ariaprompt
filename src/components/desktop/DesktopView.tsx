@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { AppRoute, Property, Lead, BotConfig } from '../../types';
 import { Header } from '../common/Header';
 import { DashboardSidebar } from '../common/DashboardSidebar';
@@ -59,6 +59,8 @@ interface DesktopViewProps {
   onClearSelectedLead: () => void;
   onInterveneLead: (leadId: string) => void;
   onAddProperty: (newProp: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => Promise<void>;
+  onUpdateProperty?: (id: string, updates: Partial<Property>) => void;
+  onDeleteProperty?: (id: string) => void;
   onUpdateLeadStatus: (leadId: string, status: Lead['status']) => Promise<void>;
   onUpdateBotConfig: (config: Partial<BotConfig>) => Promise<void>;
   onOpenPrompt?: (promptText: string) => void;
@@ -74,6 +76,8 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
   onClearSelectedLead,
   onInterveneLead,
   onAddProperty,
+  onUpdateProperty,
+  onDeleteProperty,
   onUpdateLeadStatus,
   onUpdateBotConfig,
   onOpenPrompt,
@@ -106,7 +110,7 @@ export const DesktopView: React.FC<DesktopViewProps> = ({
               <MetricsView leads={leads} onInterveneLead={onInterveneLead} />
             )}
             {currentRoute === 'dashboard-properties' && (
-              <PropertiesView properties={properties} onAddProperty={onAddProperty} />
+              <PropertiesView properties={properties} onAddProperty={onAddProperty} onUpdateProperty={onUpdateProperty} onDeleteProperty={onDeleteProperty} />
             )}
             {currentRoute === 'dashboard-leads' && (
               <LeadsView

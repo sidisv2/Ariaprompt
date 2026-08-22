@@ -249,6 +249,16 @@ function AppInner() {
     };
   }, [user?.id, user?.isDemoAccount]);
 
+  const handleUpdateProperty = (id: string, updates: Partial<Property>) => {
+    setProperties((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    );
+  };
+
+  const handleDeleteProperty = (id: string) => {
+    setProperties((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const handleAddProperty = async (newPropData: Omit<Property, 'id' | 'createdAt' | 'documents' | 'featured'>) => {
     let authUserId = user?.id;
     if (isSupabaseConfigured && supabase) {
@@ -410,6 +420,8 @@ function AppInner() {
           onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
           onInterveneLead={handleInterveneLead}
           onAddProperty={handleAddProperty}
+          onUpdateProperty={handleUpdateProperty}
+          onDeleteProperty={handleDeleteProperty}
           onUpdateLeadStatus={handleUpdateLeadStatus}
           onUpdateBotConfig={handleUpdateBotConfig}
         />
@@ -424,6 +436,8 @@ function AppInner() {
           onClearSelectedLead={() => setSelectedLeadForChat(undefined)}
           onInterveneLead={handleInterveneLead}
           onAddProperty={handleAddProperty}
+          onUpdateProperty={handleUpdateProperty}
+          onDeleteProperty={handleDeleteProperty}
           onUpdateLeadStatus={handleUpdateLeadStatus}
           onUpdateBotConfig={handleUpdateBotConfig}
           onOpenPrompt={handleOpenPrompt}

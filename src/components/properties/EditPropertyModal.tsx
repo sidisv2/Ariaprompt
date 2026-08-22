@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Property } from '../../types';
-import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface EditPropertyModalProps {
@@ -81,23 +81,24 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
     try {
       const updatedProp: Property = {
         ...property,
-        title,
-        code,
+        title: title.trim(),
+        code: code.trim(),
         type,
         operation_type: operationType,
-        price,
+        price: Number(price),
         currency,
-        description,
         location: {
-          address,
-          zone,
-          city,
+          ...property.location,
+          address: address.trim(),
+          zone: zone.trim(),
+          city: city.trim(),
         },
         features: {
-          bedrooms,
-          bathrooms,
-          areaM2,
-          parking,
+          ...property.features,
+          bedrooms: Number(bedrooms),
+          bathrooms: Number(bathrooms),
+          areaM2: Number(areaM2),
+          parking: Number(parking),
           pool: property.features?.pool ?? true,
           garage: parking > 0 || (property.features?.garage ?? true),
           elevator: property.features?.elevator ?? false,
@@ -131,7 +132,7 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
         {/* Modal Header */}
         <div>
           <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" /> Edición Rápida de Inmueble
+            <Sparkles className="w-4 h-4" /> Edición de Inmueble
           </div>
           <h2 className="text-xl font-extrabold text-white mt-1">
             Editar Propiedad: {property.code || property.title}
@@ -153,7 +154,7 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
             </h3>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Título de la Propiedad</label>
+              <label className="block text-slate-300 font-semibold mb-1">Título de la Propiedad *</label>
               <input
                 type="text"
                 required
@@ -166,6 +167,19 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
+                <label className="block text-slate-300 font-semibold mb-1">Tipo de Operación *</label>
+                <select
+                  value={operationType}
+                  onChange={(e) => setOperationType(e.target.value)}
+                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="sale">🏷️ Venta</option>
+                  <option value="rent">🏠 Alquiler Tradicional</option>
+                  <option value="temporary_rent">⏳ Alquiler Temporal</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-slate-300 font-semibold mb-1">Código Referencia</label>
                 <input
                   type="text"
@@ -176,19 +190,6 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Tipo de Operación</label>
-                <select
-                  value={operationType}
-                  onChange={(e) => setOperationType(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="sale">🏷️ Venta</option>
-                  <option value="rent">🔑 Alquiler Tradicional</option>
-                  <option value="temporary_rent">🏖️ Alquiler Temporal</option>
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-slate-300 font-semibold mb-1">Tipo de Inmueble</label>
                 <select
                   value={type}
@@ -196,16 +197,16 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-medium"
                 >
                   <option value="apartment">🏢 Departamento / Piso</option>
-                  <option value="house">🏠 Casa / Chalet</option>
-                  <option value="ph">🏡 PH (Propiedad Horizontal)</option>
-                  <option value="land">🌲 Terreno / Lote</option>
-                  <option value="commercial">🏪 Local Comercial</option>
-                  <option value="office">💼 Oficina / Consultorio</option>
+                  <option value="house">🏡 Casa / Chalet</option>
+                  <option value="ph">🏘️ PH (Propiedad Horizontal)</option>
+                  <option value="land">🏞️ Terreno / Lote</option>
+                  <option value="commercial">🏬 Local Comercial</option>
+                  <option value="office">🏢 Oficina / Consultorio</option>
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-300 font-semibold mb-1">Moneda & Precio</label>
                 <div className="flex items-center gap-2">
@@ -222,18 +223,18 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
                     required
                     value={price}
                     onChange={(e) => setPrice(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-mono font-bold"
+                    className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm font-bold"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Expensas (Estimadas)</label>
+                <label className="block text-slate-300 font-semibold mb-1">Expensas / Gastos (Opcional)</label>
                 <input
                   type="number"
                   value={expenses}
                   onChange={(e) => setExpenses(Number(e.target.value))}
-                  placeholder="Ej. 15000"
+                  placeholder="0"
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-mono"
                 />
               </div>
