@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+﻿import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { generateStructuredAriaRealEstateResponse, ExtractedLeadData } from '../_lib/openrouterService.js';
 
@@ -23,100 +23,113 @@ function getBackendSupabaseClient() {
 }
 
 /**
- * Intelligent rule-based fallback response generator (used if OpenRouter API is unavailable)
- * NEVER uses fixed canned strings. Always crafts custom, warm real estate responses.
+ * Intelligent rule-based fallback response generator (used if LLM API is unavailable)
+ * Evaluates FAQs and business instructions dynamically.
  */
 function generateCommercialFallbackResponse(
   message: string,
-  agentName: string = 'Aria',
-  agencyName: string = 'Aria Prop',
-  properties: any[] = []
+  agentName: string = 'JULIO',
+  agencyName: string = 'Inmobiliaria',
+  properties: any[] = [],
+  customRules: string = '',
+  faqList: any[] = [],
+  bookingUrl: string = ''
 ): { replyText: string; extractedData: ExtractedLeadData; matchedProperties: any[] } {
   const query = message.toLowerCase();
 
-  // Extract entities
-  let budgetMax: number | null = null;
-  const budgetMatch = query.match(/(\$\d+|\d+[\.\d+]*\s*(usd|dolares|dólares|mil|k))/i);
-  if (budgetMatch) {
-    const rawNum = query.match(/\d[\d\.\,]*/)?.[0]?.replace(/\./g, '');
-    if (rawNum) {
-      let num = parseInt(rawNum, 10);
-      if (query.includes('k') || query.includes('mil')) num *= 1000;
-      if (!isNaN(num)) budgetMax = num;
+  // 1. Match configured FAQs from Supabase
+  if (Array.isArray(faqList) && faqList.length > 0) {
+    for (const faq of faqList) {
+      if (!faq.question || !faq.answer) continue;
+      const qWords = faq.question.toLowerCase().split(' ').filter((w: string) => w.length > 3);
+      const hasMatch = qWords.some((w: string) => query.includes(w));
+      if (hasMatch) {
+        return {
+          replyText: faq.answer,
+          extractedData: {
+            budget_max_usd: null,
+            preferred_zone: null,
+            property_type: null,
+            operation_type: null,
+            lead_name: null,
+            status: 'active',
+          },
+          matchedProperties: properties.slice(0, 2),
+        };
+      }
     }
   }
 
-  let preferredZone: string | null = null;
-  const zones = ['palermo', 'recoleta', 'belgrano', 'puerto madero', 'mendoza', 'nordelta', 'san isidro', 'polanco', 'condesa'];
-  for (const z of zones) {
-    if (query.includes(z)) {
-      preferredZone = z.charAt(0).toUpperCase() + z.slice(1);
-      break;
-    }
+  // 2. Booking intent
+  if (
+    query.includes('visita') ||
+    query.includes('ver') ||
+    query.includes('agendar') ||
+    query.includes('cita') ||
+    query.includes('conocer') ||
+    query.includes('horario')
+  ) {
+    const bookingMsg = bookingUrl
+      ? `¡Con gusto! Podés coordinar una visita presencial directamente desde nuestro calendario oficial aquí: ${bookingUrl} o dejarnos tu número de WhatsApp para contactarte.`
+      : `Con mucho gusto podemos coordinar una visita presencial. Por favor dejanos tu número de WhatsApp y un asesor comercial de ${agencyName} te contactará a la brevedad para agendar día y hora.`;
+
+    return {
+      replyText: bookingMsg,
+      extractedData: {
+        budget_max_usd: null,
+        preferred_zone: null,
+        property_type: null,
+        operation_type: null,
+        lead_name: null,
+        status: 'qualified',
+      },
+      matchedProperties: properties.slice(0, 2),
+    };
   }
 
-  let operationType: string | null = null;
-  if (query.includes('alquiler') || query.includes('alquilar') || query.includes('renta')) {
-    operationType = 'alquiler';
-  } else if (query.includes('compra') || query.includes('comprar') || query.includes('venta') || query.includes('inversion')) {
-    operationType = 'venta';
+  // 3. Greetings
+  if (query.includes('hola') || query.includes('buenas') || query.includes('buenos dias') || query.includes('buenas tardes')) {
+    return {
+      replyText: `¡Hola! Soy ${agentName}, el asesor virtual de ${agencyName}. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar tu próximo inmueble?`,
+      extractedData: {
+        budget_max_usd: null,
+        preferred_zone: null,
+        property_type: null,
+        operation_type: null,
+        lead_name: null,
+        status: 'active',
+      },
+      matchedProperties: properties.slice(0, 2),
+    };
   }
 
-  let propertyType: string | null = null;
-  if (query.includes('depto') || query.includes('departamento') || query.includes('ambiente')) propertyType = 'departamento';
-  else if (query.includes('casa') || query.includes('chalet')) propertyType = 'casa';
-  else if (query.includes('penthouse')) propertyType = 'penthouse';
-  else if (query.includes('oficina') || query.includes('local')) propertyType = 'comercial';
-
-  // Match properties
-  const matched = properties.filter((p) => {
-    let match = false;
-    if (preferredZone && (p.zone || p.city || '').toLowerCase().includes(preferredZone.toLowerCase())) match = true;
-    if (operationType && (p.operation || '').toLowerCase() === operationType) match = true;
-    if (budgetMax && p.price && p.price <= budgetMax * 1.2) match = true;
-    return match;
-  });
-
-  const finalMatched = matched.length > 0 ? matched.slice(0, 3) : properties.slice(0, 2);
-
-  // Craft dynamic response based on intent
-  let replyText = '';
-
-  if (query.includes('hola') || query.includes('buenas') || query.includes('buenos dias') || query.includes('buenas noches')) {
-    replyText = `¡Hola! 👋 Soy ${agentName}, asesora comercial inmobiliaria en ${agencyName}. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar tu próximo inmueble?`;
-  } else if (query.includes('visita') || query.includes('ver') || query.includes('coordinar') || query.includes('cita')) {
-    replyText = `Con mucho gusto puedo coordinar una visita presencial o virtual para ti. 📅 Habitualmente organizamos recorridos de lunes a sábados. ¿Qué día y franja horaria prefieres? Te agendo de inmediato con nuestro equipo.`;
-  } else if (finalMatched.length > 0) {
-    const propDetails = finalMatched
-      .map((p) => `• *${p.title || 'Propiedad'}* en ${p.zone || p.city || 'Mendoza'} (${(p.operation || 'DISPONIBLE').toUpperCase()}): $${p.price?.toLocaleString('en-US') || 0} USD - ${p.bedrooms || 2} habs.`)
-      .join('\n');
-    replyText = `¡Excelente consulta! En ${agencyName} contamos con opciones destacadas que se adaptan a tu búsqueda:\n\n${propDetails}\n\n¿Te gustaría recibir la ficha técnica completa o agendar una visita a alguna de estas propiedades?`;
-  } else {
-    replyText = `Gracias por tu mensaje. Para ofrecerte las mejores opciones en nuestro catálogo de ${agencyName}, ¿nos podrías confirmar tu presupuesto estimado y la zona de preferencia? Así filtraré los mejores inmuebles para ti.`;
+  // 4. Custom business rules fallback
+  if (customRules) {
+    return {
+      replyText: `He tomado nota de tu consulta sobre "${message}". ${customRules}. Si nos compartís tu número de WhatsApp, un asesor comercial de ${agencyName} se pondrá en contacto para brindarte atención personalizada.`,
+      extractedData: {
+        budget_max_usd: null,
+        preferred_zone: null,
+        property_type: null,
+        operation_type: null,
+        lead_name: null,
+        status: 'active',
+      },
+      matchedProperties: properties.slice(0, 2),
+    };
   }
-
-  const isQualified = Boolean(budgetMax || preferredZone || operationType);
 
   return {
-    replyText,
+    replyText: `Gracias por comunicarte con ${agencyName}. Soy ${agentName}. He registrado tu consulta sobre "${message}". Si nos compartís tu número de WhatsApp o correo, nuestro equipo comercial te enviará las opciones disponibles de inmediato.`,
     extractedData: {
-      budget_max_usd: budgetMax,
-      preferred_zone: preferredZone,
-      property_type: propertyType,
-      operation_type: operationType,
+      budget_max_usd: null,
+      preferred_zone: null,
+      property_type: null,
+      operation_type: null,
       lead_name: null,
-      status: isQualified ? 'qualified' : 'active',
+      status: 'active',
     },
-    matchedProperties: finalMatched.map((m) => ({
-      id: m.id,
-      title: m.title || 'Propiedad en catálogo',
-      price: m.price || 0,
-      type: m.type || 'Inmueble',
-      zone: m.zone || 'Mendoza',
-      url: `https://ariaprop.online/properties/${m.id}`,
-      bedrooms: m.bedrooms || 2,
-      areaM2: m.area_m2 || 60,
-    })),
+    matchedProperties: properties.slice(0, 2),
   };
 }
 
@@ -137,7 +150,21 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-    const { message, history = [], orgId, agentName = 'Aria', agencyName = 'Aria Prop' } = body;
+    const {
+      message,
+      history = [],
+      agencyId,
+      agency_id,
+      orgId,
+      agentName,
+      botName,
+      agencyName,
+      customRules,
+      faqList = [],
+      bookingUrl,
+    } = body;
+
+    const targetId = agencyId || agency_id || orgId;
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'El mensaje es obligatorio' });
@@ -147,116 +174,105 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
     let properties: any[] = [];
     let botConfig: any = null;
 
-    if (supabase) {
+    if (supabase && targetId) {
       try {
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('*')
+          .or(`id.eq.${targetId},user_id.eq.${targetId}`)
+          .maybeSingle();
+
+        if (orgData) {
+          botConfig = orgData;
+        } else {
+          const { data: profData } = await supabase
+            .from('profiles')
+            .select('*, organizations(*)')
+            .eq('id', targetId)
+            .maybeSingle();
+
+          if (profData?.organizations) {
+            botConfig = profData.organizations;
+          }
+        }
+
+        // Fetch properties
         let propQuery = supabase.from('properties').select('*');
-        if (orgId) {
-          propQuery = propQuery.eq('organization_id', orgId);
+        if (botConfig?.id) {
+          propQuery = propQuery.or(`organization_id.eq.${botConfig.id},user_id.eq.${targetId}`);
         }
         const { data: propsData } = await propQuery.limit(15);
         if (propsData && propsData.length > 0) {
           properties = propsData;
         }
-
-        if (orgId) {
-          const { data: orgData } = await supabase.from('organizations').select('*').eq('id', orgId).single();
-          if (orgData) {
-            botConfig = orgData;
-          }
-        }
       } catch (err) {
-        console.warn('⚠️ Supabase error in chatHandler:', err);
+        console.warn('Supabase fetch error in chatHandler:', err);
       }
     }
 
-    // Default property list if DB empty
-    if (properties.length === 0) {
-      properties = [
-        {
-          id: 'prop-101',
-          title: 'Departamento 2 Ambientes c/ Balcón Vista Abierta',
-          price: 800,
-          operation: 'ALQUILER',
-          zone: 'Palermo Soho',
-          type: 'departamento',
-          bedrooms: 1,
-          area_m2: 52,
-        },
-        {
-          id: 'prop-102',
-          title: 'Casa Moderna 4 Ambientes c/ Piscina Privada',
-          price: 350000,
-          operation: 'VENTA',
-          zone: 'Nordelta',
-          type: 'casa',
-          bedrooms: 3,
-          area_m2: 280,
-        },
-        {
-          id: 'prop-103',
-          title: 'Penthouse de Lujo c/ Terraza y Vista al Río',
-          price: 520000,
-          operation: 'VENTA',
-          zone: 'Puerto Madero',
-          type: 'penthouse',
-          bedrooms: 3,
-          area_m2: 195,
-        },
-      ];
-    }
-
-    const effectiveAgentName = botConfig?.assistant_name || agentName;
-    const effectiveAgencyName = botConfig?.name || agencyName;
+    const effectiveAgentName = botName || agentName || botConfig?.bot_name || 'JULIO';
+    const effectiveAgencyName = agencyName || botConfig?.name || 'Inmobiliaria';
+    const effectiveCustomRules = customRules || botConfig?.custom_prompt_instructions || botConfig?.system_prompt || '';
+    const effectiveFaqs = faqList.length > 0 ? faqList : (botConfig?.faq_knowledge || []);
+    const effectiveBookingUrl = bookingUrl || botConfig?.calendar_booking_url || '';
 
     const propertyCatalogText = properties
       .map(
         (p) =>
-          `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation || 'ALQUILER').toUpperCase()}) en ${p.zone || 'Mendoza'}. Precio: $${p.price} USD. ${p.bedrooms || 2} hab. Ficha: https://ariaprop.online/properties/${p.id}`
+          `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation || 'ALQUILER').toUpperCase()}) en ${p.zone || 'Zona'}. Precio: $${p.price} USD. ${p.bedrooms || 2} hab. Ficha: https://ariaprop.online/properties/${p.id}`
       )
       .join('\n');
+
+    // Adapt history for OpenRouter
+    const adaptedHistory = history.map((h: any) => ({
+      sender: (h.sender === 'user' || h.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: h.content || h.text || (h.parts && h.parts[0]?.text) || '',
+    }));
 
     try {
       const response = await generateStructuredAriaRealEstateResponse({
         message,
-        history,
+        history: adaptedHistory,
         propertyContext: propertyCatalogText,
         agentName: effectiveAgentName,
         agencyName: effectiveAgencyName,
+        customInstructions: effectiveCustomRules,
+        faqKnowledge: effectiveFaqs,
+        calendarBookingUrl: effectiveBookingUrl,
       });
 
       const latencyMs = Date.now() - startTime;
 
-      // Extract matching properties
-      const lowerReply = response.replyText.toLowerCase();
-      const matched = properties.filter(
-        (p) => lowerReply.includes(p.title?.toLowerCase() || '') || lowerReply.includes(p.id) || lowerReply.includes(p.zone?.toLowerCase() || '')
-      );
-
       return res.status(200).json({
         success: true,
+        reply: response.replyText,
         replyText: response.replyText,
+        text: response.replyText,
+        message: response.replyText,
         extractedData: response.extractedData,
-        matchedProperties: (matched.length > 0 ? matched : properties.slice(0, 2)).map((m) => ({
-          id: m.id,
-          title: m.title || 'Propiedad en catálogo',
-          price: m.price || 0,
-          type: m.type || 'Inmueble',
-          zone: m.zone || 'Mendoza',
-          url: `https://ariaprop.online/properties/${m.id}`,
-          bedrooms: m.bedrooms || 2,
-          areaM2: m.area_m2 || 60,
-        })),
+        matchedProperties: properties.slice(0, 3),
         latencyMs,
-        source: 'openrouter',
+        source: 'openrouter_ai',
       });
     } catch (llmErr) {
-      console.warn('⚠️ LLM Exception in chatHandler, executing smart commercial fallback:', llmErr);
-      const fallback = generateCommercialFallbackResponse(message, effectiveAgentName, effectiveAgencyName, properties);
+      console.warn('LLM fallback triggered in chatHandler:', llmErr);
+      const fallback = generateCommercialFallbackResponse(
+        message,
+        effectiveAgentName,
+        effectiveAgencyName,
+        properties,
+        effectiveCustomRules,
+        effectiveFaqs,
+        effectiveBookingUrl
+      );
       const latencyMs = Date.now() - startTime;
 
       return res.status(200).json({
         success: true,
+        reply: fallback.replyText,
         replyText: fallback.replyText,
+        text: fallback.replyText,
+        message: fallback.replyText,
         extractedData: fallback.extractedData,
         matchedProperties: fallback.matchedProperties,
         latencyMs,
@@ -264,7 +280,7 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
       });
     }
   } catch (err: any) {
-    console.error('❌ Chat handler error:', err);
+    console.error('Chat handler error:', err);
     return res.status(500).json({
       error: 'Error al procesar el mensaje en el motor de IA',
       details: err?.message || err,
