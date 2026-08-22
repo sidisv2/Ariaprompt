@@ -506,36 +506,25 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
               {/* Lifecycle Controls Bar */}
               <div className="px-4 py-3 bg-slate-950/90 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                 
-                {/* Public / Private Toggle (Sober Dark Badge with Accent) */}
+                {/* Public / Private Toggle */}
                 <button
                   type="button"
                   onClick={() => handleTogglePublic(prop)}
-                  className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 cursor-pointer ${
                     (prop.is_public ?? true)
-                      ? 'bg-emerald-950/40 hover:bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
-                      : 'bg-slate-800/90 hover:bg-slate-800 text-slate-400 border-slate-700'
+                      ? 'bg-slate-900/90 text-emerald-400 border-emerald-500/40 hover:bg-emerald-950/40 shadow-sm'
+                      : 'bg-slate-900/60 text-slate-400 border-slate-700/60 hover:bg-slate-800 hover:text-slate-300'
                   }`}
-                  title="Alternar Visibilidad Pública para Catálogo e IA"
                 >
-                  {(prop.is_public ?? true) ? (
-                    <>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 animate-pulse" />
-                      <Globe className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Público</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Privado</span>
-                    </>
-                  )}
+                  <span className={`w-2 h-2 rounded-full ${(prop.is_public ?? true) ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`} />
+                  {(prop.is_public ?? true) ? 'Público' : 'Privado'}
                 </button>
 
-                {/* Status Selector Dropdown (Sober Dark Consistent Palette) */}
+                {/* Status Selector Dropdown */}
                 <select
                   value={prop.status || 'available'}
                   onChange={(e) => handleChangeStatus(prop, e.target.value)}
-                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold focus:outline-none border transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold focus:outline-none border transition-all cursor-pointer ${
                     prop.status === 'available'
                       ? 'bg-slate-900 text-emerald-300 border-emerald-500/40'
                       : prop.status === 'reserved'
@@ -552,24 +541,24 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                 </select>
 
                 <div className="flex items-center gap-1.5 ml-auto">
-                  {/* Edit Button (Neutral Dark Styling) */}
+                  {/* Edit Button */}
                   <button
                     type="button"
                     onClick={() => setPropertyToEdit(prop)}
-                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer"
-                    title="Editar Inmueble"
+                    className="p-2 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-slate-600 transition cursor-pointer"
+                    title="Editar"
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
+                    <Edit3 className="w-4 h-4" />
                   </button>
 
-                  {/* Delete Trash Button (Neutral Dark to Rose on Hover) */}
+                  {/* Delete Trash Button */}
                   <button
                     type="button"
                     onClick={() => setPropertyToDelete(prop)}
-                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/40 transition-all cursor-pointer"
-                    title="Eliminar Inmueble"
+                    className="p-2 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 hover:border-rose-500/40 transition cursor-pointer"
+                    title="Eliminar"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
