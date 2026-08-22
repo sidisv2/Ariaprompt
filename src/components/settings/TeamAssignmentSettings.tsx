@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Users,
   UserPlus,
@@ -14,9 +14,11 @@ import {
   Trash2,
   Building,
   Crown,
+  Loader2,
+  Save
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabase';
 
 export interface CommercialAdvisor {
   id: string;
@@ -43,7 +45,7 @@ export function generateAdvisorWhatsappHandoverUrl(
 ): string {
   const cleanPhone = advisor.phone.replace(/\D/g, '');
   const message = encodeURIComponent(
-    `🎯 Hola ${advisor.name}, te asignamos a ${leadName} interesado en ${propertyTitle}. Ficha comercial en panel.`
+    `👋 Hola ${advisor.name}, te asignamos a ${leadName} interesado en ${propertyTitle}. Ficha comercial en panel.`
   );
   return `https://wa.me/${cleanPhone}?text=${message}`;
 }
@@ -81,6 +83,8 @@ export const TeamAssignmentSettings: React.FC = () => {
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newSpecialty, setNewSpecialty] = useState<CommercialAdvisor['specialty']>('Ventas');
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Simulation State
   const [simulationResult, setSimulationResult] = useState<{
@@ -88,32 +92,102 @@ export const TeamAssignmentSettings: React.FC = () => {
     whatsappUrl: string;
   } | null>(null);
 
-  const handleAddAdvisor = (e: React.FormEvent) => {
+  // Cargar asesores desde Supabase (tabla organizations -> team_members o round_robin_agents)
+  useEffect(() => {
+    async function loadTeam() {
+      if (!supabase || !user?.id) return;
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile?.organization_id) {
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('team_members, round_robin_agents')
+            .eq('id', profile.organization_id)
+            .maybeSingle();
+
+          const loaded = org?.team_members || org?.round_robin_agents;
+          if (loaded) {
+            const parsed = typeof loaded === 'string' ? JSON.parse(loaded) : loaded;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setAdvisors(parsed);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load team advisors from Supabase:', e);
+      }
+    }
+    loadTeam();
+  }, [user]);
+
+  // Persistir cambios en Supabase
+  const persistAdvisors = async (updated: CommercialAdvisor[]) => {
+    setAdvisors(updated);
+    if (!supabase || !user?.id) return;
+
+    try {
+      setSaving(true);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.organization_id) {
+        await supabase
+          .from('organizations')
+          .update({
+            team_members: updated,
+            round_robin_agents: updated,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', profile.organization_id);
+
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error('Error saving team advisors to Supabase:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddAdvisor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || !newPhone.trim()) return;
+
+    const cleanPhone = newPhone.replace(/[^0-9]/g, '');
 
     const newAdvisor: CommercialAdvisor = {
       id: 'adv-' + Date.now(),
       name: newName.trim(),
-      phone: newPhone.trim(),
+      phone: cleanPhone,
       specialty: newSpecialty,
       isOnDuty: true,
       assignedLeadsCount: 0,
     };
 
-    setAdvisors((prev) => [...prev, newAdvisor]);
+    const updated = [...advisors, newAdvisor];
+    await persistAdvisors(updated);
+
     setNewName('');
     setNewPhone('');
   };
 
-  const handleToggleDuty = (id: string) => {
-    setAdvisors((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, isOnDuty: !a.isOnDuty } : a))
-    );
+  const handleToggleDuty = async (id: string) => {
+    const updated = advisors.map((a) => (a.id === id ? { ...a, isOnDuty: !a.isOnDuty } : a));
+    await persistAdvisors(updated);
   };
 
-  const handleDeleteAdvisor = (id: string) => {
-    setAdvisors((prev) => prev.filter((a) => a.id !== id));
+  const handleDeleteAdvisor = async (id: string) => {
+    const updated = advisors.filter((a) => a.id !== id);
+    await persistAdvisors(updated);
   };
 
   const handleSimulateAssignment = () => {
@@ -126,12 +200,11 @@ export const TeamAssignmentSettings: React.FC = () => {
     const url = generateAdvisorWhatsappHandoverUrl(nextAdv);
     setSimulationResult({ advisor: nextAdv, whatsappUrl: url });
 
-    // Increment count in state
-    setAdvisors((prev) =>
-      prev.map((a) =>
-        a.id === nextAdv.id ? { ...a, assignedLeadsCount: a.assignedLeadsCount + 1 } : a
-      )
+    // Increment count in state and persist
+    const updated = advisors.map((a) =>
+      a.id === nextAdv.id ? { ...a, assignedLeadsCount: a.assignedLeadsCount + 1 } : a
     );
+    persistAdvisors(updated);
   };
 
   return (
@@ -159,13 +232,23 @@ export const TeamAssignmentSettings: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleSimulateAssignment}
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-        >
-          <Play className="w-4 h-4 fill-slate-950" />
-          <span>Simular Asignación de Turno ⚡</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {saveSuccess && (
+            <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4" />
+              Sincronizado
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSimulateAssignment}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+          >
+            <Play className="w-4 h-4 fill-slate-950" />
+            <span>Simular Asignación de Turno ✨</span>
+          </button>
+        </div>
       </div>
 
       {/* Simulation Result Toast */}
@@ -236,7 +319,7 @@ export const TeamAssignmentSettings: React.FC = () => {
             <select
               value={newSpecialty}
               onChange={(e) => setNewSpecialty(e.target.value as any)}
-              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white focus:border-emerald-400 outline-none"
+              className="w-full p-2.5 rounded-xl bg-slate-900 border border-white/10 text-white focus:border-emerald-400 outline-none cursor-pointer"
             >
               <option value="Ventas">Ventas (Propiedades en venta)</option>
               <option value="Alquileres">Alquileres (Tradicional y Temporal)</option>
@@ -247,10 +330,11 @@ export const TeamAssignmentSettings: React.FC = () => {
 
           <button
             type="submit"
-            disabled={!newName.trim() || !newPhone.trim()}
-            className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all cursor-pointer disabled:opacity-50 shadow-md"
+            disabled={saving || !newName.trim() || !newPhone.trim()}
+            className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all cursor-pointer disabled:opacity-50 shadow-md flex items-center justify-center gap-2"
           >
-            Añadir Asesor al Turnero
+            {saving ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <UserPlus className="w-4 h-4" />}
+            <span>Añadir Asesor al Turnero</span>
           </button>
         </form>
 
@@ -294,7 +378,7 @@ export const TeamAssignmentSettings: React.FC = () => {
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 block truncate">
-                      WhatsApp: {adv.phone} · Assigned: {adv.assignedLeadsCount} leads
+                      WhatsApp: {adv.phone} • Asignados: {adv.assignedLeadsCount} leads
                     </span>
                   </div>
                 </div>
@@ -311,19 +395,19 @@ export const TeamAssignmentSettings: React.FC = () => {
                     {adv.isOnDuty ? (
                       <>
                         <ToggleRight className="w-4 h-4 text-emerald-400" />
-                        <span>🟢 En Guardia</span>
+                        <span>En Guardia</span>
                       </>
                     ) : (
                       <>
                         <ToggleLeft className="w-4 h-4 text-slate-500" />
-                        <span>⚪ Fuera de Turno</span>
+                        <span>Fuera de Turno</span>
                       </>
                     )}
                   </button>
 
                   <button
                     onClick={() => handleDeleteAdvisor(adv.id)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

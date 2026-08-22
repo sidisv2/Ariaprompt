@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Code,
   Copy,
@@ -27,10 +27,10 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
   agentId = 'agent-aria-2026',
   agentName = 'Aria',
   agencyName = 'Inmobiliaria Palermo',
-  initialWelcome = '👋 ¡Hola! Soy el asistente virtual de la inmobiliaria. ¿En qué zona o tipo de propiedad estás buscando?',
+  initialWelcome = '¡Hola! Soy el asistente virtual de la inmobiliaria. ¿En qué zona o tipo de propiedad estás buscando?',
 }) => {
   const { user } = useAuth();
-  const activeAgentId = user?.id || agentId;
+  const activeAgencyId = user?.id || agentId;
 
   // Customization State
   const [brandColor, setBrandColor] = useState('#10b981');
@@ -39,10 +39,8 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
   const [copied, setCopied] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(true);
 
-  // Script snippet generator
-  const snippetCode = `<script src="https://ariaprop.online/widget.js" data-agent-id="${activeAgentId}" data-color="${brandColor}" data-position="${position}" data-welcome="${encodeURIComponent(
-    welcomeMessage
-  )}" async></script>`;
+  // Script snippet generator matching required format
+  const snippetCode = `<script src="https://ariaprop.online/embed/chat.js" data-agency-id="${activeAgencyId}" data-color="${brandColor}" data-position="${position}"></script>`;
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(snippetCode);
@@ -53,80 +51,74 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
   return (
     <div className="p-6 rounded-3xl bg-slate-900/90 border border-white/10 shadow-2xl space-y-6 text-white backdrop-blur-xl font-sans">
       
-      {/* Header */}
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black">
             <Globe className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2">
-              Widget Webchat Embebible para tu Web
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black text-white">Widget Webchat Embebible para tu Sitio</h3>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase">
+                1-Click Embed
+              </span>
+            </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Personalizá e instalá la burbuja de atención flotante con IA en tu sitio web inmobiliario.
+              Instalá el asistente inmobiliario en tu portal web pegando una sola línea de código JavaScript.
             </p>
           </div>
         </div>
 
         <button
+          type="button"
           onClick={handleCopyCode}
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
         >
           {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          <span>{copied ? '¡Código Copiado!' : '📋 Copiar Script Embebible'}</span>
+          <span>{copied ? '¡Snippet Copiado!' : 'Copiar Código de Instalación'}</span>
         </button>
       </div>
 
-      {/* Main 2-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* LEFT COLUMN: CONFIGURATION & SNIPPET (7 COLS) */}
-        <div className="lg:col-span-7 space-y-6 text-xs">
+        {/* LEFT COLUMN: CUSTOMIZATION CONTROLS (7 COLS) */}
+        <div className="lg:col-span-7 space-y-4 text-xs">
           
-          {/* Color & Position Controls */}
           <div className="p-4 rounded-2xl bg-slate-950 border border-white/10 space-y-4">
-            <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+            <h4 className="font-extrabold text-white text-sm flex items-center gap-2 border-b border-white/10 pb-2">
               <Sliders className="w-4 h-4 text-emerald-400" />
-              Personalización Visual & Mensaje
+              Personalización Visual del Widget
             </h4>
 
-            {/* Brand Color Selector */}
+            {/* Color Palette Selector */}
             <div>
-              <label className="block text-slate-300 font-bold mb-2">Color de Marca del Botón</label>
+              <label className="block text-slate-300 font-bold mb-1.5">Color Primario de Marca</label>
               <div className="flex items-center gap-3">
-                {[
-                  { name: 'Verde Esmeralda', hex: '#10b981' },
-                  { name: 'Azul Broker', hex: '#2563eb' },
-                  { name: 'Índigo', hex: '#6366f1' },
-                  { name: 'Púrpura', hex: '#8b5cf6' },
-                ].map((color) => (
+                {['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#0f172a'].map((c) => (
                   <button
-                    key={color.hex}
+                    key={c}
                     type="button"
-                    onClick={() => setBrandColor(color.hex)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all cursor-pointer ${
-                      brandColor === color.hex ? 'border-white scale-110 shadow-md' : 'border-transparent opacity-75 hover:opacity-100'
+                    onClick={() => setBrandColor(c)}
+                    className={`w-7 h-7 rounded-full border-2 transition-transform cursor-pointer ${
+                      brandColor === c ? 'scale-125 border-white shadow-lg' : 'border-transparent opacity-70 hover:opacity-100'
                     }`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.name}
+                    style={{ backgroundColor: c }}
                   />
                 ))}
-
                 <input
-                  type="color"
+                  type="text"
                   value={brandColor}
                   onChange={(e) => setBrandColor(e.target.value)}
-                  className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border border-white/20 p-0"
-                  title="Color Personalizado"
+                  className="w-24 px-2 py-1 rounded-lg bg-slate-900 border border-white/10 text-white font-mono text-[11px] outline-none"
                 />
               </div>
             </div>
 
-            {/* Position Toggle */}
+            {/* Screen Position */}
             <div>
               <label className="block text-slate-300 font-bold mb-1.5">Posición en Pantalla</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setPosition('bottom-right')}
@@ -136,7 +128,7 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
                       : 'bg-slate-900 border-white/10 text-slate-400'
                   }`}
                 >
-                  ↘️ Abajo Derecha (Recomendado)
+                  ↘ Abajo Derecha (Recomendado)
                 </button>
                 <button
                   type="button"
@@ -147,7 +139,7 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
                       : 'bg-slate-900 border-white/10 text-slate-400'
                   }`}
                 >
-                  ↙️ Abajo Izquierda
+                  ↙ Abajo Izquierda
                 </button>
               </div>
             </div>
@@ -159,7 +151,7 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
                 rows={2}
                 value={welcomeMessage}
                 onChange={(e) => setWelcomeMessage(e.target.value)}
-                className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 text-white focus:border-emerald-400 outline-none"
+                className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 text-white focus:border-emerald-400 outline-none resize-none"
               />
             </div>
           </div>
@@ -187,7 +179,7 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
             <ul className="space-y-1 text-[11px] list-disc list-inside text-slate-400">
               <li><strong>WordPress:</strong> Pegá el script en Apariencia → Editor de Tema → header.php antes de &lt;/head&gt;.</li>
               <li><strong>Webflow:</strong> En Project Settings → Custom Code → Head Code.</li>
-              <li><strong>Tokko Broker / Sitios Inmobiliarios:</strong> En la sección de Scripts de Seguimiento o HTML Personalizado.</li>
+              <li><strong>Tokko Broker / Argenprop / Sitios Inmobiliarios:</strong> En la sección de Scripts de Seguimiento o HTML Personalizado.</li>
             </ul>
           </div>
 
@@ -200,7 +192,7 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
               <Laptop className="w-4 h-4 text-emerald-400" />
               Previsualización en Vivo de la Web
             </h4>
-            <span className="text-[10px] text-emerald-400 font-mono font-bold">Interactivo ⚡</span>
+            <span className="text-[10px] text-emerald-400 font-mono font-bold">Interactivo ✓</span>
           </div>
 
           {/* Browser Window Mockup */}
@@ -253,7 +245,7 @@ export const WebchatWidgetSnippet: React.FC<WebchatWidgetSnippetProps> = ({
                   </div>
                   <button
                     onClick={() => setIsPreviewOpen(false)}
-                    className="p-1 rounded-full hover:bg-black/10 text-slate-950 font-black"
+                    className="p-1 rounded-full hover:bg-black/10 text-slate-950 font-black cursor-pointer"
                   >
                     ✕
                   </button>

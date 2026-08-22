@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { BotConfig } from '../../types';
 import { 
   Bot, 
@@ -16,14 +16,17 @@ import {
   HelpCircle,
   ShieldAlert,
   Loader2,
-  Send
+  Send,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 import { WhatsAppSettings } from './WhatsAppSettings';
 import { AgentWizardModal, AgentData } from './AgentWizardModal';
 import { TeamAssignmentSettings } from '../settings/TeamAssignmentSettings';
 import { WebchatWidgetSnippet } from '../settings/WebchatWidgetSnippet';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 export interface FaqItem {
   question: string;
@@ -36,6 +39,7 @@ interface BotConfigViewProps {
 }
 
 export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdateBotConfig }) => {
+  const { user } = useAuth();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [agentName, setAgentName] = useState(botConfig.agentName || 'Aria');
@@ -56,7 +60,6 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   const [alertEmail, setAlertEmail] = useState<string>('alertas@inmobiliariapalermo.com');
   const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>('5491123456789');
   const [notifyWhatsappVisit, setNotifyWhatsappVisit] = useState<boolean>(true);
-  const [notifyEmailHandover, setNotifyEmailHandover] = useState<boolean>(true);
   const [desktopPermission, setDesktopPermission] = useState<string>(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
   );
@@ -76,59 +79,69 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
 
   const [saving, setSaving] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Load existing organization configuration from Supabase
   useEffect(() => {
     async function loadOrgConfig() {
-      if (!supabase) return;
+      if (!supabase || !user?.id) return;
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-        if (!user) return;
-
         const { data: profile } = await supabase
           .from('profiles')
-          .select('organization_id')
+          .select('organization_id, advisor_alert_phone, phone')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (profile?.organization_id) {
-          const { data: org } = await supabase
-            .from('organizations')
-            .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, alert_email, advisor_alert_phone, name')
-            .eq('id', profile.organization_id)
-            .single();
+        if (profile) {
+          if (profile.advisor_alert_phone || profile.phone) {
+            setAdvisorAlertPhone(profile.advisor_alert_phone || profile.phone);
+          }
 
-          if (org) {
-            if (org.bot_name) setAgentName(org.bot_name);
-            if (org.name) setAgencyName(org.name);
-            if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
-            if (org.alert_email) setAlertEmail(org.alert_email);
-            if (org.advisor_alert_phone) setAdvisorAlertPhone(org.advisor_alert_phone);
-            if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
-              setBotTone(org.bot_tone);
-            }
-            if (org.custom_prompt_instructions) {
-              setCustomInstructions(org.custom_prompt_instructions);
-            }
-            if (org.faq_knowledge) {
-              try {
-                const parsed = typeof org.faq_knowledge === 'string' ? JSON.parse(org.faq_knowledge) : org.faq_knowledge;
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                  setFaqList(parsed);
-                }
-              } catch {}
+          if (profile.organization_id) {
+            const { data: org } = await supabase
+              .from('organizations')
+              .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, alert_email, advisor_alert_phone, name, welcome_message, system_prompt')
+              .eq('id', profile.organization_id)
+              .maybeSingle();
+
+            if (org) {
+              if (org.bot_name) setAgentName(org.bot_name);
+              if (org.name) setAgencyName(org.name);
+              if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
+              if (org.alert_email) setAlertEmail(org.alert_email);
+              if (org.advisor_alert_phone) setAdvisorAlertPhone(org.advisor_alert_phone);
+              if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
+                setBotTone(org.bot_tone as any);
+              }
+              if (org.custom_prompt_instructions) {
+                setCustomInstructions(org.custom_prompt_instructions);
+              }
+              if (org.welcome_message) {
+                setWelcomeMsg(org.welcome_message);
+              }
+              if (org.system_prompt) {
+                setSystemPrompt(org.system_prompt);
+              }
+              if (org.faq_knowledge) {
+                try {
+                  const parsed = typeof org.faq_knowledge === 'string' ? JSON.parse(org.faq_knowledge) : org.faq_knowledge;
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    setFaqList(parsed);
+                  }
+                } catch {}
+              }
             }
           }
         }
       } catch (err) {
-        console.warn('⚠️ Could not load org bot settings from Supabase:', err);
+        console.warn('Could not load org bot settings from Supabase:', err);
       }
     }
     loadOrgConfig();
-  }, []);
+  }, [user]);
 
-  const embedScript = `<script src="${window.location.origin}/aria-widget.js" data-agent-id="${botConfig.agentId}" async></script>`;
+  const activeAgencyId = user?.id || botConfig.agentId || 'agency-default';
+  const embedScript = `<script src="https://ariaprop.online/embed/chat.js" data-agency-id="${activeAgencyId}"></script>`;
 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(embedScript);
@@ -156,6 +169,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
     e.preventDefault();
     setSaving(true);
     setSaveSuccess(false);
+    setSaveError(null);
 
     // 1. Update local App state
     onUpdateBotConfig({
@@ -164,46 +178,87 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
       welcomeMessage: welcomeMsg,
       primaryColor,
       whatsappNumber: whatsapp,
-      customSystemPrompt: systemPrompt,
+      customSystemPrompt: systemPrompt || customInstructions,
     });
 
     // 2. Persist to Supabase `organizations` table
-    if (supabase) {
+    if (supabase && user?.id) {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const user = sessionData.session?.user;
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id')
-            .eq('id', user.id)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const validFaqs = faqList.filter((f) => f.question.trim() && f.answer.trim());
+        const cleanAdvisorPhone = advisorAlertPhone.replace(/[^0-9]/g, '');
+
+        let orgId = profile?.organization_id;
+
+        if (!orgId) {
+          const { data: newOrg } = await supabase
+            .from('organizations')
+            .upsert({
+              user_id: user.id,
+              name: agencyName,
+              bot_name: agentName,
+              bot_tone: botTone,
+              custom_prompt_instructions: customInstructions,
+              system_prompt: systemPrompt,
+              welcome_message: welcomeMsg,
+              faq_knowledge: validFaqs,
+              calendar_booking_url: calendarBookingUrl.trim(),
+              alert_email: alertEmail.trim(),
+              advisor_alert_phone: cleanAdvisorPhone,
+              updated_at: new Date().toISOString(),
+            })
+            .select('id')
             .single();
 
-          if (profile?.organization_id) {
-            const validFaqs = faqList.filter((f) => f.question.trim() && f.answer.trim());
-            await supabase
-              .from('organizations')
-              .update({
-                bot_name: agentName,
-                bot_tone: botTone,
-                custom_prompt_instructions: customInstructions,
-                faq_knowledge: validFaqs,
-                calendar_booking_url: calendarBookingUrl.trim(),
-                alert_email: alertEmail.trim(),
-                advisor_alert_phone: advisorAlertPhone.trim(),
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', profile.organization_id);
+          if (newOrg?.id) {
+            orgId = newOrg.id;
+            await supabase.from('profiles').update({ organization_id: orgId }).eq('id', user.id);
           }
+        } else {
+          await supabase
+            .from('organizations')
+            .update({
+              name: agencyName,
+              bot_name: agentName,
+              bot_tone: botTone,
+              custom_prompt_instructions: customInstructions,
+              system_prompt: systemPrompt,
+              welcome_message: welcomeMsg,
+              faq_knowledge: validFaqs,
+              calendar_booking_url: calendarBookingUrl.trim(),
+              alert_email: alertEmail.trim(),
+              advisor_alert_phone: cleanAdvisorPhone,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', orgId);
         }
-      } catch (err) {
-        console.error('❌ Error saving bot config to Supabase:', err);
+
+        await supabase
+          .from('profiles')
+          .update({
+            advisor_alert_phone: cleanAdvisorPhone,
+            phone: cleanAdvisorPhone,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } catch (err: any) {
+        console.error('Error saving bot config to Supabase:', err);
+        setSaveError(err?.message || 'Error al guardar la configuración');
       }
+    } else {
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     }
 
     setSaving(false);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   return (
@@ -228,7 +283,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/25 hover:scale-105 transition-all cursor-pointer"
           >
             <Sparkles className="w-4 h-4 fill-slate-950 text-slate-950" />
-            <span>🧙‍♂️ Wizard Configurar Agente</span>
+            <span>Wizard Configurar Agente</span>
           </button>
 
           <div className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-bold flex items-center gap-1.5">
@@ -274,6 +329,17 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Mensaje de Saludo Inicial (WhatsApp / Webchat)</label>
+                <textarea
+                  rows={2}
+                  value={welcomeMsg}
+                  onChange={(e) => setWelcomeMsg(e.target.value)}
+                  placeholder="¡Hola! Soy tu asesora virtual 24/7..."
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 transition-all resize-none"
+                />
               </div>
 
               <div>
@@ -463,19 +529,26 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="pt-3 flex items-center justify-between gap-4">
-              {saveSuccess && (
-                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 animate-pulse">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  ¡Configuración guardada exitosamente!
-                </span>
-              )}
+            {/* Save Alerts & Button */}
+            {saveSuccess && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>¡Configuración guardada exitosamente en la base de datos!</span>
+              </div>
+            )}
 
+            {saveError && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>{saveError}</span>
+              </div>
+            )}
+
+            <div className="pt-2 flex items-center justify-end">
               <button
                 type="submit"
                 disabled={saving}
-                className="ml-auto px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin text-slate-950" /> : <Save className="w-4 h-4 fill-current text-slate-950" />}
                 <span>Guardar Configuración del Bot</span>
@@ -568,6 +641,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
       {/* Webchat Embeddable Widget Customizer */}
       <div className="pt-6 border-t border-white/10">
         <WebchatWidgetSnippet
+          agentId={activeAgencyId}
           agentName={agentName}
           agencyName={agencyName}
           initialWelcome={welcomeMsg}
@@ -608,3 +682,5 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
     </div>
   );
 };
+
+export default BotConfigView;
