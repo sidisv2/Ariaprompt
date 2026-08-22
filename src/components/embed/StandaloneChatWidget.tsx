@@ -2,6 +2,13 @@
 import { Bot, Send, Sparkles, Building2, Phone, Calendar, ArrowRight } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
+interface ChatMessage {
+  id: string;
+  sender: 'user' | 'bot' | 'agent';
+  text: string;
+  timestamp: Date;
+}
+
 export const StandaloneChatWidget: React.FC = () => {
   const [agencyId, setAgencyId] = useState<string>('');
   const [agentName, setAgentName] = useState<string>('Aria');
@@ -12,9 +19,9 @@ export const StandaloneChatWidget: React.FC = () => {
   const [calendarUrl, setCalendarUrl] = useState<string>('');
   const [advisorPhone, setAdvisorPhone] = useState<string>('');
 
-  const [messages, setMessages] = useState<Array<{ sender: 'user' | 'agent'; text: string }>>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputVal, setInputVal] = useState<string>('');
-  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Leer agencyId de la URL (?agencyId=... o /embed/chat/:agencyId)
@@ -80,86 +87,140 @@ export const StandaloneChatWidget: React.FC = () => {
   useEffect(() => {
     setMessages([
       {
-        sender: 'agent',
+        id: 'welcome-msg',
+        sender: 'bot',
         text: welcomeMessage,
+        timestamp: new Date(),
       },
     ]);
   }, [welcomeMessage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, isSending]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const query = inputVal.trim();
-    if (!query || isTyping) return;
+  const handleSendMessage = async (textToSend?: string | React.FormEvent) => {
+    if (typeof textToSend === 'object' && textToSend !== null && 'preventDefault' in textToSend) {
+      textToSend.preventDefault();
+      textToSend = undefined;
+    }
 
+    const messageText = (typeof textToSend === 'string' ? textToSend : inputVal).trim();
+    if (!messageText || isSending) return;
+
+    const userMsg: ChatMessage = {
+      id: Date.now().toString(),
+      sender: 'user',
+      text: messageText,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
     setInputVal('');
-    const newHistory = [...messages, { sender: 'user' as const, text: query }];
-    setMessages(newHistory);
-    setIsTyping(true);
+    setIsSending(true);
+
+    // Agregar mensaje temporal del bot con loader
+    const botMsgId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      { id: botMsgId, sender: 'bot', text: '...', timestamp: new Date() },
+    ]);
 
     try {
+      // 1. Intentar llamar al backend /api/chat
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: query,
-          history: newHistory.map((m) => ({ sender: m.sender, content: m.text })),
-          agency_id: agencyId,
+          message: messageText,
+          agencyId: agencyId || undefined,
+          agency_id: agencyId || undefined,
+          history: messages.slice(-6).map((m) => ({
+            role: m.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: m.text }],
+          })),
         }),
       });
 
-      if (!response.body) {
-        setIsTyping(false);
-        return;
-      }
+      if (response.ok) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/event-stream')) {
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let fullText = '';
-
-      setMessages((prev) => [...prev, { sender: 'agent', text: '' }]);
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.replace('data: ', ''));
-              if (data.text) {
-                fullText += data.text;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  const last = updated[updated.length - 1];
-                  if (last && last.sender === 'agent') {
-                    last.text = fullText;
-                  }
-                  return updated;
-                });
+          if (reader) {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n\n');
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.replace('data: ', ''));
+                    if (data.text) {
+                      fullText += data.text;
+                      setMessages((prev) =>
+                        prev.map((m) => (m.id === botMsgId ? { ...m, text: fullText } : m))
+                      );
+                    }
+                  } catch {}
+                }
               }
-            } catch {
-              // ignore json parse error on streaming chunks
             }
           }
+          if (fullText.trim()) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === botMsgId ? { ...m, text: fullText } : m))
+            );
+            return;
+          }
         }
+
+        const data = await response.json();
+        const botResponseText =
+          data.reply ||
+          data.text ||
+          data.message ||
+          '¡Hola! Estoy a tu disposición para ayudarte a encontrar la propiedad ideal.';
+        setMessages((prev) =>
+          prev.map((m) => (m.id === botMsgId ? { ...m, text: botResponseText } : m))
+        );
+      } else {
+        throw new Error('API /api/chat error status: ' + response.status);
       }
     } catch (err) {
-      console.error('Chat error:', err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          sender: 'agent',
-          text: 'Disculpá, tuve una interrupción de conexión. Por favor reintentá tu consulta.',
-        },
-      ]);
+      console.warn('Fallback local para widget de chat:', err);
+      // Respuesta asistida local inteligente si la API externa no está disponible
+      let fallbackText = `¡Hola! Gracias por comunicarte con ${agencyName || 'nuestra agencia'}. `;
+      const queryLower = messageText.toLowerCase();
+
+      if (queryLower.includes('hola') || queryLower.includes('buenos') || queryLower.includes('buenas')) {
+        fallbackText += `¿Estás buscando comprar, alquilar o información sobre algún departamento o lote en particular?`;
+      } else if (
+        queryLower.includes('precio') ||
+        queryLower.includes('costo') ||
+        queryLower.includes('cuanto') ||
+        queryLower.includes('valor') ||
+        queryLower.includes('tasacion')
+      ) {
+        fallbackText += `Contamos con opciones variadas en venta y alquiler con excelente tasación. Si me indicás la zona, ambientes o tu presupuesto estimado, te comparto las fichas comerciales disponibles.`;
+      } else if (queryLower.includes('visita') || queryLower.includes('ver') || queryLower.includes('conocer') || queryLower.includes('agendar')) {
+        fallbackText += `¡Excelente! Podemos coordinar una visita presencial. ${
+          calendarUrl
+            ? 'Podés agendarla directamente en nuestro calendario o dejarme tu teléfono.'
+            : 'Dejame tu número de WhatsApp y un asesor comercial te contactará para fijar día y hora.'
+        }`;
+      } else {
+        fallbackText += `He tomado nota de tu consulta sobre "${messageText}". Si nos dejás tu número o WhatsApp, un asesor comercial te contactará de inmediato con todos los detalles.`;
+      }
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === botMsgId ? { ...m, text: fallbackText } : m))
+      );
     } finally {
-      setIsTyping(false);
+      setIsSending(false);
     }
   };
 
@@ -192,7 +253,7 @@ export const StandaloneChatWidget: React.FC = () => {
             href={calendarUrl}
             target="_blank"
             rel="noreferrer"
-            className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition-transform active:scale-95 flex items-center gap-1.5 shadow-sm"
+            className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition-transform active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Agendar Visita</span>
@@ -202,9 +263,9 @@ export const StandaloneChatWidget: React.FC = () => {
 
       {/* Messages Scroll Area */}
       <div className="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs bg-[#0b141a]">
-        {messages.map((msg, idx) => (
+        {messages.map((msg) => (
           <div
-            key={idx}
+            key={msg.id}
             className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} animate-fadeIn`}
           >
             <div
@@ -214,21 +275,21 @@ export const StandaloneChatWidget: React.FC = () => {
                   : 'bg-slate-900 text-slate-200 border border-white/10 rounded-tl-none shadow-sm'
               }`}
             >
-              {msg.text || (isTyping && idx === messages.length - 1 ? 'Pensando respuesta...' : '')}
+              {msg.text === '...' ? (
+                <div className="flex items-center gap-1.5 py-1 px-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce"></span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.2s]"></span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.4s]"></span>
+                </div>
+              ) : (
+                msg.text
+              )}
             </div>
             <span className="text-[9px] text-slate-500 font-mono mt-1 px-1">
               {msg.sender === 'user' ? 'Tú' : agentName}
             </span>
           </div>
         ))}
-
-        {isTyping && (
-          <div className="flex items-center gap-2 p-3 max-w-[120px] rounded-2xl bg-slate-900 border border-white/10 text-emerald-400 text-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce"></span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]"></span>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]"></span>
-          </div>
-        )}
 
         <div ref={messagesEndRef} />
       </div>
@@ -245,7 +306,7 @@ export const StandaloneChatWidget: React.FC = () => {
 
         <button
           type="submit"
-          disabled={isTyping || !inputVal.trim()}
+          disabled={isSending || !inputVal.trim()}
           className="p-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition-transform active:scale-95 disabled:opacity-40 cursor-pointer"
         >
           <Send className="w-4 h-4" />
