@@ -42,22 +42,22 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   const { user } = useAuth();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [agentName, setAgentName] = useState(botConfig.agentName || 'Aria');
-  const [agencyName, setAgencyName] = useState(botConfig.agencyName || 'Inmobiliaria Palermo');
-  const [welcomeMsg, setWelcomeMsg] = useState(botConfig.welcomeMessage || '¡Hola! Soy tu asesora virtual 24/7. ¿Qué tipo de propiedad estás buscando?');
+  const [agentName, setAgentName] = useState(botConfig.agentName || 'JULIO');
+  const [agencyName, setAgencyName] = useState(botConfig.agencyName || 'Inmobiliaria');
+  const [welcomeMsg, setWelcomeMsg] = useState(botConfig.welcomeMessage || '¡Hola! Soy tu asesor virtual 24/7. ¿Qué tipo de propiedad estás buscando?');
   const [primaryColor, setPrimaryColor] = useState(botConfig.primaryColor || '#10b981');
   const [whatsapp, setWhatsapp] = useState(botConfig.whatsappNumber || '');
   const [systemPrompt, setSystemPrompt] = useState(botConfig.customSystemPrompt || '');
 
   // Bot Identity & Tone State
   const [botTone, setBotTone] = useState<'friendly' | 'formal' | 'luxury' | 'direct'>('friendly');
-  const [calendarBookingUrl, setCalendarBookingUrl] = useState<string>('https://cal.com/inmobiliaria-palermo/visita');
+  const [calendarBookingUrl, setCalendarBookingUrl] = useState<string>('');
   const [customInstructions, setCustomInstructions] = useState<string>(
     'No aceptamos alquileres temporales de menos de 3 meses. El horario de visitas presenciales es de Lunes a Viernes de 10 a 18 hs.'
   );
   
   // Notifications Settings State
-  const [alertEmail, setAlertEmail] = useState<string>('alertas@inmobiliariapalermo.com');
+  const [alertEmail, setAlertEmail] = useState<string>('alertas@inmobiliaria.com');
   const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>('5491123456789');
   const [notifyWhatsappVisit, setNotifyWhatsappVisit] = useState<boolean>(true);
   const [desktopPermission, setDesktopPermission] = useState<string>(
@@ -81,56 +81,62 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Load existing organization configuration from Supabase
+  // 1. CARGA EN BOTCONFIGVIEW (useEffect)
   useEffect(() => {
     async function loadOrgConfig() {
-      if (!supabase || !user?.id) return;
+      if (!supabase) return;
       try {
+        const { data: authData } = await supabase.auth.getUser();
+        const currentUserId = authData?.user?.id || user?.id;
+        if (!currentUserId) return;
+
+        // Consultar organizations buscando por user_id o id
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('*')
+          .or(`user_id.eq.${currentUserId},id.eq.${currentUserId}`)
+          .maybeSingle();
+
+        if (org) {
+          if (org.bot_name) setAgentName(org.bot_name);
+          if (org.name) setAgencyName(org.name);
+          if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
+          if (org.alert_email) setAlertEmail(org.alert_email);
+          if (org.advisor_alert_phone) setAdvisorAlertPhone(org.advisor_alert_phone);
+          if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
+            setBotTone(org.bot_tone as any);
+          }
+          if (org.custom_prompt_instructions || org.system_prompt) {
+            setCustomInstructions(org.custom_prompt_instructions || org.system_prompt);
+            setSystemPrompt(org.system_prompt || org.custom_prompt_instructions);
+          }
+          if (org.welcome_message) {
+            setWelcomeMsg(org.welcome_message);
+          }
+          if (org.faq_knowledge) {
+            try {
+              const parsed = typeof org.faq_knowledge === 'string' ? JSON.parse(org.faq_knowledge) : org.faq_knowledge;
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setFaqList(parsed);
+              }
+            } catch {}
+          }
+          return;
+        }
+
+        // Fallback en profiles
         const { data: profile } = await supabase
           .from('profiles')
-          .select('organization_id, advisor_alert_phone, phone')
-          .eq('id', user.id)
+          .select('organization_id, advisor_alert_phone, phone, nombre, full_name')
+          .eq('id', currentUserId)
           .maybeSingle();
 
         if (profile) {
           if (profile.advisor_alert_phone || profile.phone) {
             setAdvisorAlertPhone(profile.advisor_alert_phone || profile.phone);
           }
-
-          if (profile.organization_id) {
-            const { data: org } = await supabase
-              .from('organizations')
-              .select('bot_name, bot_tone, custom_prompt_instructions, faq_knowledge, calendar_booking_url, alert_email, advisor_alert_phone, name, welcome_message, system_prompt')
-              .eq('id', profile.organization_id)
-              .maybeSingle();
-
-            if (org) {
-              if (org.bot_name) setAgentName(org.bot_name);
-              if (org.name) setAgencyName(org.name);
-              if (org.calendar_booking_url) setCalendarBookingUrl(org.calendar_booking_url);
-              if (org.alert_email) setAlertEmail(org.alert_email);
-              if (org.advisor_alert_phone) setAdvisorAlertPhone(org.advisor_alert_phone);
-              if (['friendly', 'formal', 'luxury', 'direct'].includes(org.bot_tone)) {
-                setBotTone(org.bot_tone as any);
-              }
-              if (org.custom_prompt_instructions) {
-                setCustomInstructions(org.custom_prompt_instructions);
-              }
-              if (org.welcome_message) {
-                setWelcomeMsg(org.welcome_message);
-              }
-              if (org.system_prompt) {
-                setSystemPrompt(org.system_prompt);
-              }
-              if (org.faq_knowledge) {
-                try {
-                  const parsed = typeof org.faq_knowledge === 'string' ? JSON.parse(org.faq_knowledge) : org.faq_knowledge;
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    setFaqList(parsed);
-                  }
-                } catch {}
-              }
-            }
+          if (profile.nombre || profile.full_name) {
+            setAgencyName(profile.nombre || profile.full_name);
           }
         }
       } catch (err) {
@@ -165,6 +171,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
     });
   };
 
+  // 2. GUARDADO EN BOTCONFIGVIEW (handleSaveConfig)
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -181,63 +188,65 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
       customSystemPrompt: systemPrompt || customInstructions,
     });
 
-    // 2. Persist to Supabase `organizations` table
-    if (supabase && user?.id) {
+    if (supabase) {
       try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('organization_id')
-          .eq('id', user.id)
-          .maybeSingle();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const currentUserId = authUser?.id || user?.id;
+
+        if (!currentUserId) {
+          setSaving(false);
+          setSaveSuccess(true);
+          return;
+        }
 
         const validFaqs = faqList.filter((f) => f.question.trim() && f.answer.trim());
         const cleanAdvisorPhone = advisorAlertPhone.replace(/[^0-9]/g, '');
 
-        let orgId = profile?.organization_id;
+        const payload = {
+          user_id: currentUserId,
+          name: agencyName.trim(),
+          bot_name: agentName.trim(),
+          welcome_message: welcomeMsg.trim(),
+          custom_prompt_instructions: customInstructions.trim(),
+          system_prompt: (systemPrompt || customInstructions).trim(),
+          faq_knowledge: validFaqs,
+          calendar_booking_url: calendarBookingUrl.trim(),
+          bot_tone: botTone,
+          advisor_alert_phone: cleanAdvisorPhone,
+          alert_email: alertEmail.trim(),
+          updated_at: new Date().toISOString(),
+        };
 
-        if (!orgId) {
-          const { data: newOrg } = await supabase
+        // Verificar si ya existe registro por user_id o por id
+        const { data: existing } = await supabase
+          .from('organizations')
+          .select('id')
+          .or(`user_id.eq.${currentUserId},id.eq.${currentUserId}`)
+          .maybeSingle();
+
+        if (existing) {
+          await supabase.from('organizations').update(payload).eq('id', existing.id);
+        } else {
+          const { data: inserted } = await supabase
             .from('organizations')
-            .upsert({
-              user_id: user.id,
-              name: agencyName,
-              bot_name: agentName,
-              bot_tone: botTone,
-              custom_prompt_instructions: customInstructions,
-              system_prompt: systemPrompt,
-              welcome_message: welcomeMsg,
-              faq_knowledge: validFaqs,
-              calendar_booking_url: calendarBookingUrl.trim(),
-              alert_email: alertEmail.trim(),
-              advisor_alert_phone: cleanAdvisorPhone,
-              updated_at: new Date().toISOString(),
-            })
+            .insert([{ ...payload, id: currentUserId, user_id: currentUserId }])
             .select('id')
             .single();
 
-          if (newOrg?.id) {
-            orgId = newOrg.id;
-            await supabase.from('profiles').update({ organization_id: orgId }).eq('id', user.id);
+          if (inserted?.id) {
+            await supabase.from('profiles').update({ organization_id: inserted.id }).eq('id', currentUserId);
           }
-        } else {
-          await supabase
-            .from('organizations')
-            .update({
-              name: agencyName,
-              bot_name: agentName,
-              bot_tone: botTone,
-              custom_prompt_instructions: customInstructions,
-              system_prompt: systemPrompt,
-              welcome_message: welcomeMsg,
-              faq_knowledge: validFaqs,
-              calendar_booking_url: calendarBookingUrl.trim(),
-              alert_email: alertEmail.trim(),
-              advisor_alert_phone: cleanAdvisorPhone,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', orgId);
         }
 
+        // Actualizar metadatos de auth para sincronización local
+        await supabase.auth.updateUser({
+          data: {
+            bot_name: agentName.trim(),
+            agency_name: agencyName.trim(),
+          },
+        });
+
+        // Actualizar tabla profiles
         await supabase
           .from('profiles')
           .update({
@@ -245,17 +254,17 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
             phone: cleanAdvisorPhone,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', user.id);
+          .eq('id', currentUserId);
 
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        setTimeout(() => setSaveSuccess(false), 4000);
       } catch (err: any) {
         console.error('Error saving bot config to Supabase:', err);
         setSaveError(err?.message || 'Error al guardar la configuración');
       }
     } else {
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => setSaveSuccess(false), 4000);
     }
 
     setSaving(false);
@@ -315,7 +324,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                     type="text"
                     value={agentName}
                     onChange={(e) => setAgentName(e.target.value)}
-                    placeholder="Ej: Valeria de Inmobiliaria Palermo"
+                    placeholder="Ej: JULIO"
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
@@ -326,6 +335,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                     type="text"
                     value={agencyName}
                     onChange={(e) => setAgencyName(e.target.value)}
+                    placeholder="Ej: Inmobiliaria Palermo"
                     className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
@@ -337,7 +347,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                   rows={2}
                   value={welcomeMsg}
                   onChange={(e) => setWelcomeMsg(e.target.value)}
-                  placeholder="¡Hola! Soy tu asesora virtual 24/7..."
+                  placeholder="¡Hola! Soy tu asesor virtual 24/7..."
                   className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-emerald-500 transition-all resize-none"
                 />
               </div>
@@ -351,7 +361,7 @@ export const BotConfigView: React.FC<BotConfigViewProps> = ({ botConfig, onUpdat
                   type="url"
                   value={calendarBookingUrl}
                   onChange={(e) => setCalendarBookingUrl(e.target.value)}
-                  placeholder="Ej: https://cal.com/inmobiliaria-palermo/visita"
+                  placeholder="Ej: https://cal.com/inmobiliaria/visita"
                   className="w-full bg-slate-950 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500 transition-all"
                 />
               </div>
