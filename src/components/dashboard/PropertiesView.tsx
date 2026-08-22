@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Property } from '../../types';
+import { Property, RentalPeriod } from '../../types';
 export type PropertyOperationType = 'sale' | 'rent' | 'temporary_rent' | string;
 import { useLanguage } from '../../context/LanguageContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -25,7 +25,8 @@ import {
   Home, 
   Clock,
   Globe,
-  Lock
+  Lock,
+  Calendar
 } from 'lucide-react';
 
 import { PropertyImporterModal, ImportedPropertyItem } from '../properties/PropertyImporterModal';
@@ -69,6 +70,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
           title: editedProp.title,
           type: editedProp.type,
           operation_type: editedProp.operation_type || 'sale',
+          rental_period: editedProp.operation_type === 'sale' ? null : (editedProp.rental_period || 'monthly'),
           price: Number(editedProp.price) || 0,
           currency: editedProp.currency || 'USD',
           surface_m2: Number(editedProp.features?.areaM2) || 0,
@@ -149,6 +151,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
   const [formCode, setFormCode] = useState('');
   const [formType, setFormType] = useState<Property['type']>('apartment');
   const [formOperationType, setFormOperationType] = useState<PropertyOperationType>('sale');
+  const [formRentalPeriod, setFormRentalPeriod] = useState<RentalPeriod>('monthly');
   const [formPrice, setFormPrice] = useState<number>(185000);
   const [formCurrency, setFormCurrency] = useState<'USD' | 'ARS' | 'EUR'>('USD');
   const [formCity, setFormCity] = useState('Buenos Aires');
@@ -201,6 +204,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
       code: formCode || `PROP-${Math.floor(100 + Math.random() * 900)}`,
       type: formType,
       operation_type: formOperationType,
+      rental_period: formOperationType === 'sale' ? null : (formRentalPeriod || 'monthly'),
       status: 'available',
       is_public: true,
       price: Number(formPrice),
@@ -257,6 +261,20 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
     const uniqueParts = Array.from(new Set(parts));
     if (uniqueParts.length === 0) return loc.city || 'Buenos Aires';
     return `${uniqueParts.join(', ')}${loc.city ? ` (${loc.city})` : ''}`;
+  };
+
+  const formatPriceDisplay = (prop: Property) => {
+    const formattedNum = Number(prop.price).toLocaleString('en-US');
+    const curr = prop.currency || 'USD';
+    const op = prop.operation_type || (prop.price < 5000 ? 'rent' : 'sale');
+
+    if (op === 'sale') {
+      return `$${formattedNum} ${curr}`;
+    }
+
+    const period = prop.rental_period || (op === 'temporary_rent' ? 'nightly' : 'monthly');
+    const periodLabel = period === 'nightly' ? '/ noche' : period === 'yearly' ? '/ año' : '/ mes';
+    return `$${formattedNum} ${curr} ${periodLabel}`;
   };
 
   return (
@@ -443,7 +461,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                 </div>
 
                 <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/30">
-                  ${Number(prop.price).toLocaleString('en-US')} {prop.currency || 'USD'} {prop.price < 5000 ? '/mes' : ''}
+                  {formatPriceDisplay(prop)}
                 </div>
 
                 {/* Status Overlay Pill */}
@@ -649,7 +667,13 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                       <label className="block text-slate-300 font-semibold mb-1">Tipo de Operación *</label>
                       <select
                         value={formOperationType}
-                        onChange={(e) => setFormOperationType(e.target.value as PropertyOperationType)}
+                        onChange={(e) => {
+                          const newOp = e.target.value as PropertyOperationType;
+                          setFormOperationType(newOp);
+                          if (newOp === 'temporary_rent') setFormRentalPeriod('nightly');
+                          else if (newOp === 'rent') setFormRentalPeriod('monthly');
+                          else setFormRentalPeriod(null);
+                        }}
                         className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
                       >
                         <option value="sale">🏷️ Venta</option>
@@ -727,7 +751,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
               {wizardStep === 2 && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Precio & Moneda</label>
+                    <label className="block text-slate-300 font-semibold mb-1">Precio, Moneda & Período</label>
                     <div className="flex items-center gap-2">
                       <select
                         value={formCurrency}
@@ -746,6 +770,27 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
                         placeholder="Ej. 180000"
                         className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm"
                       />
+
+                      {/* Rental Period Selector */}
+                      {formOperationType !== 'sale' && (
+                        <select
+                          value={formRentalPeriod || (formOperationType === 'temporary_rent' ? 'nightly' : 'monthly')}
+                          onChange={(e) => setFormRentalPeriod(e.target.value as RentalPeriod)}
+                          className="bg-slate-950 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-300 font-bold text-xs"
+                        >
+                          {formOperationType === 'temporary_rent' ? (
+                            <>
+                              <option value="nightly">/ noche</option>
+                              <option value="monthly">/ mes</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="monthly">/ mes</option>
+                              <option value="yearly">/ año</option>
+                            </>
+                          )}
+                        </select>
+                      )}
                     </div>
                   </div>
 
@@ -897,6 +942,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
       <PropertyImporterModal
         isOpen={isImporterOpen}
         onClose={() => setIsImporterOpen(false)}
+        existingPropertiesCount={properties.length}
         onImportComplete={(importedProps: ImportedPropertyItem[]) => {
           importedProps.forEach((item) => {
             onAddProperty({
@@ -904,6 +950,7 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
               code: `PROP-${Math.floor(100 + Math.random() * 900)}`,
               type: 'apartment',
               operation_type: item.operation_type,
+              rental_period: item.operation_type === 'sale' ? null : (item.operation_type === 'temporary_rent' ? 'nightly' : 'monthly'),
               status: item.status,
               is_public: item.is_public,
               price: item.price,

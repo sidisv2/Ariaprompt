@@ -40,12 +40,15 @@ export interface PropertySource {
   lastUpdated?: string;
 }
 
+export type RentalPeriod = 'monthly' | 'yearly' | 'nightly' | null;
+
 export interface Property {
   id: string;
   title: string;
   code: string;
   type: 'apartment' | 'house' | 'ph' | 'land' | 'commercial' | 'office' | 'warehouse' | 'penthouse' | 'villa' | 'chalet' | string;
   operation_type?: string;
+  rental_period?: RentalPeriod;
   status: 'available' | 'reserved' | 'sold' | 'rented' | string;
   is_public?: boolean;
   price: number;

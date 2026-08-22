@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Property } from '../../types';
-import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock } from 'lucide-react';
+import { Property, RentalPeriod } from '../../types';
+import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock, Calendar } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface EditPropertyModalProps {
@@ -20,6 +20,9 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
   const [type, setType] = useState<Property['type']>(property.type || 'apartment');
   const [operationType, setOperationType] = useState<string>(
     property.operation_type || (property.price < 5000 ? 'rent' : 'sale')
+  );
+  const [rentalPeriod, setRentalPeriod] = useState<RentalPeriod>(
+    property.rental_period || (operationType === 'temporary_rent' ? 'nightly' : 'monthly')
   );
   const [price, setPrice] = useState<number>(property.price || 0);
   const [currency, setCurrency] = useState<'USD' | 'ARS'>(property.currency === 'ARS' ? 'ARS' : 'USD');
@@ -85,6 +88,7 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
         code: code.trim(),
         type,
         operation_type: operationType,
+        rental_period: operationType === 'sale' ? null : (rentalPeriod || 'monthly'),
         price: Number(price),
         currency,
         location: {
@@ -170,7 +174,13 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
                 <label className="block text-slate-300 font-semibold mb-1">Tipo de Operación *</label>
                 <select
                   value={operationType}
-                  onChange={(e) => setOperationType(e.target.value)}
+                  onChange={(e) => {
+                    const newOp = e.target.value;
+                    setOperationType(newOp);
+                    if (newOp === 'temporary_rent') setRentalPeriod('nightly');
+                    else if (newOp === 'rent') setRentalPeriod('monthly');
+                    else setRentalPeriod(null);
+                  }}
                   className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-emerald-500"
                 >
                   <option value="sale">🏷️ Venta</option>
@@ -208,7 +218,7 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Moneda & Precio</label>
+                <label className="block text-slate-300 font-semibold mb-1">Moneda, Precio & Período</label>
                 <div className="flex items-center gap-2">
                   <select
                     value={currency}
@@ -225,6 +235,27 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
                     onChange={(e) => setPrice(Number(e.target.value))}
                     className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white font-mono text-sm font-bold"
                   />
+
+                  {/* Rental Period Selector */}
+                  {operationType !== 'sale' && (
+                    <select
+                      value={rentalPeriod || (operationType === 'temporary_rent' ? 'nightly' : 'monthly')}
+                      onChange={(e) => setRentalPeriod(e.target.value as RentalPeriod)}
+                      className="bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-emerald-300 font-bold"
+                    >
+                      {operationType === 'temporary_rent' ? (
+                        <>
+                          <option value="nightly">/ noche</option>
+                          <option value="monthly">/ mes</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="monthly">/ mes</option>
+                          <option value="yearly">/ año</option>
+                        </>
+                      )}
+                    </select>
+                  )}
                 </div>
               </div>
 
