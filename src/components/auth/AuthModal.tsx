@@ -129,7 +129,7 @@ export const AuthModal: React.FC<{
         onAuthSuccess?.();
         onClose();
       } else {
-        // Ejecución de signUp con supabase y tolerancia a timeouts SMTP
+        // Ejecución de signUp con supabase
         const { data, error } = await supabase.auth.signUp({
           email: inputVal,
           password,
@@ -143,16 +143,26 @@ export const AuthModal: React.FC<{
 
         console.log("SignUp response:", { data, error });
 
-        // Si Supabase devuelve error 500 o AuthRetryableFetchError tras disparar el correo:
+        // 1. Error directo de Supabase
         if (error) {
           console.error("SignUp Error:", error);
+          const msgLower = (error.message || '').toLowerCase();
+          if (
+            msgLower.includes('already registered') ||
+            msgLower.includes('already in use') ||
+            msgLower.includes('user already exists')
+          ) {
+            setErrorMsg('Este correo electrónico ya está registrado. Por favor, iniciá sesión.');
+            return;
+          }
+
           const isRetryableOr500 =
             error.name === 'AuthRetryableFetchError' ||
             (error as any)?.status === 500 ||
             error.message?.includes('500') ||
-            error.message?.toLowerCase().includes('fetch') ||
-            error.message?.toLowerCase().includes('timeout') ||
-            error.message?.toLowerCase().includes('network');
+            msgLower.includes('fetch') ||
+            msgLower.includes('timeout') ||
+            msgLower.includes('network');
 
           if (isRetryableOr500) {
             setPendingEmail(inputVal);
@@ -162,8 +172,14 @@ export const AuthModal: React.FC<{
             return;
           }
 
-          const errString = error.message || (typeof error === 'string' ? error : 'Error al registrar la cuenta');
+          const errString = error.message || (typeof error === 'string' ? error : 'Error al registrar la cuenta.');
           setErrorMsg(errString);
+          return;
+        }
+
+        // 2. Detección de enumeración (usuario ya existe en Supabase con identidades vacías)
+        if (data?.user && data.user.identities && data.user.identities.length === 0) {
+          setErrorMsg('Este correo electrónico ya se encuentra registrado. Por favor, iniciá sesión.');
           return;
         }
 
@@ -177,11 +193,18 @@ export const AuthModal: React.FC<{
           return;
         }
 
-        // Flujo normal a verificación OTP:
-        setPendingEmail(inputVal);
-        setOtpCode('');
-        setResendCooldown(60);
-        setStep('verify_otp');
+        // 3. Usuario nuevo:
+        if (data?.user) {
+          setPendingEmail(inputVal);
+          setOtpCode('');
+          setResendCooldown(60);
+          setStep('verify_otp');
+        } else {
+          setPendingEmail(inputVal);
+          setOtpCode('');
+          setResendCooldown(60);
+          setStep('verify_otp');
+        }
       }
     } catch (err: any) {
       console.error("SignUp Catch:", err);
