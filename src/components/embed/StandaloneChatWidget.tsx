@@ -9,14 +9,19 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
 export const StandaloneChatWidget: React.FC = () => {
   const [agencyId, setAgencyId] = useState<string>('');
-  const [agentName, setAgentName] = useState<string>('Aria');
-  const [agencyName, setAgencyName] = useState<string>('Inmobiliaria Palermo');
-  const [welcomeMessage, setWelcomeMessage] = useState<string>(
-    '¡Hola! Soy tu asistente inmobiliaria 24/7. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar?'
-  );
-  const [calendarUrl, setCalendarUrl] = useState<string>('');
+  const [botName, setBotName] = useState<string>('Asistente IA');
+  const [agencyName, setAgencyName] = useState<string>('Inmobiliaria');
+  const [welcomeMessage, setWelcomeMessage] = useState<string>('¡Hola! ¿En qué puedo ayudarte hoy?');
+  const [customRules, setCustomRules] = useState<string>('');
+  const [faqList, setFaqList] = useState<FaqItem[]>([]);
+  const [bookingUrl, setBookingUrl] = useState<string>('');
   const [advisorPhone, setAdvisorPhone] = useState<string>('');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -24,81 +29,115 @@ export const StandaloneChatWidget: React.FC = () => {
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Leer agencyId de la URL (?agencyId=... o /embed/chat/:agencyId)
+  // 1. CARGA DE CONFIGURACIÓN REAL DESDE SUPABASE
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    let id = urlParams.get('agencyId') || urlParams.get('agency_id') || urlParams.get('agentId') || '';
+    const loadAgencyBotConfig = async () => {
+      const params = new URLSearchParams(window.location.search);
+      let targetAgencyId = params.get('agencyId') || params.get('agency_id') || params.get('agentId') || agencyId;
 
-    if (!id && window.location.pathname.includes('/embed/chat/')) {
-      const parts = window.location.pathname.split('/embed/chat/');
-      if (parts[1]) id = parts[1].replace('/', '');
-    }
+      if (!targetAgencyId && window.location.pathname.includes('/embed/chat/')) {
+        const parts = window.location.pathname.split('/embed/chat/');
+        if (parts[1]) targetAgencyId = parts[1].replace('/', '');
+      }
 
-    setAgencyId(id);
-
-    async function loadAgencyBotConfig(targetId: string) {
-      if (!targetId || !supabase) return;
+      if (!targetAgencyId || !supabase) return;
+      setAgencyId(targetAgencyId);
 
       try {
-        // 1. Buscar en profiles
+        // Buscar en organizations
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('*')
+          .or(`id.eq.${targetAgencyId},user_id.eq.${targetAgencyId}`)
+          .maybeSingle();
+
+        if (orgData) {
+          const loadedBotName = orgData.bot_name || 'Asistente IA';
+          const loadedAgencyName = orgData.name || 'Inmobiliaria';
+          const loadedWelcome = orgData.welcome_message || `¡Hola! Soy tu asistente de ${loadedAgencyName}. ¿En qué te puedo ayudar hoy?`;
+          const loadedRules = orgData.custom_prompt_instructions || orgData.system_prompt || '';
+          let loadedFaqs: FaqItem[] = [];
+
+          if (orgData.faq_knowledge) {
+            try {
+              loadedFaqs = typeof orgData.faq_knowledge === 'string'
+                ? JSON.parse(orgData.faq_knowledge)
+                : orgData.faq_knowledge;
+            } catch {}
+          }
+
+          setBotName(loadedBotName);
+          setAgencyName(loadedAgencyName);
+          setWelcomeMessage(loadedWelcome);
+          setCustomRules(loadedRules);
+          setFaqList(loadedFaqs);
+          setBookingUrl(orgData.calendar_booking_url || '');
+          setAdvisorPhone(orgData.advisor_alert_phone || '');
+
+          setMessages([
+            {
+              id: 'welcome-msg',
+              sender: 'bot',
+              text: loadedWelcome,
+              timestamp: new Date(),
+            },
+          ]);
+          return;
+        }
+
+        // Buscar en profiles si no se encontró en organizations directamente
         const { data: profile } = await supabase
           .from('profiles')
           .select('*, organizations(*)')
-          .or(`id.eq.${targetId},organization_id.eq.${targetId}`)
+          .or(`id.eq.${targetAgencyId},organization_id.eq.${targetAgencyId}`)
           .maybeSingle();
 
-        if (profile?.organizations) {
+        if (profile) {
           const org = profile.organizations as any;
-          if (org.bot_name) setAgentName(org.bot_name);
-          if (org.name) setAgencyName(org.name);
-          if (org.welcome_message) setWelcomeMessage(org.welcome_message);
-          if (org.calendar_booking_url) setCalendarUrl(org.calendar_booking_url);
-          if (org.advisor_alert_phone) setAdvisorPhone(org.advisor_alert_phone);
-        } else if (profile) {
-          if (profile.nombre || profile.full_name) setAgencyName(profile.nombre || profile.full_name);
-          if (profile.advisor_alert_phone || profile.phone) setAdvisorPhone(profile.advisor_alert_phone || profile.phone);
-        }
+          const loadedBotName = org?.bot_name || profile.nombre || profile.full_name || 'Asistente IA';
+          const loadedAgencyName = org?.name || profile.nombre || profile.full_name || 'Inmobiliaria';
+          const loadedWelcome = org?.welcome_message || `¡Hola! Soy tu asistente de ${loadedAgencyName}. ¿En qué puedo ayudarte hoy?`;
+          const loadedRules = org?.custom_prompt_instructions || org?.system_prompt || '';
+          let loadedFaqs: FaqItem[] = [];
 
-        // 2. Buscar en organizations
-        const { data: org } = await supabase
-          .from('organizations')
-          .select('*')
-          .or(`id.eq.${targetId},user_id.eq.${targetId}`)
-          .maybeSingle();
+          if (org?.faq_knowledge) {
+            try {
+              loadedFaqs = typeof org.faq_knowledge === 'string'
+                ? JSON.parse(org.faq_knowledge)
+                : org.faq_knowledge;
+            } catch {}
+          }
 
-        if (org) {
-          if (org.bot_name) setAgentName(org.bot_name);
-          if (org.name) setAgencyName(org.name);
-          if (org.welcome_message) setWelcomeMessage(org.welcome_message);
-          if (org.calendar_booking_url) setCalendarUrl(org.calendar_booking_url);
-          if (org.advisor_alert_phone) setAdvisorPhone(org.advisor_alert_phone);
+          setBotName(loadedBotName);
+          setAgencyName(loadedAgencyName);
+          setWelcomeMessage(loadedWelcome);
+          setCustomRules(loadedRules);
+          setFaqList(loadedFaqs);
+          setBookingUrl(org?.calendar_booking_url || '');
+          setAdvisorPhone(org?.advisor_alert_phone || profile.advisor_alert_phone || profile.phone || '');
+
+          setMessages([
+            {
+              id: 'welcome-msg',
+              sender: 'bot',
+              text: loadedWelcome,
+              timestamp: new Date(),
+            },
+          ]);
         }
       } catch (err) {
-        console.warn('StandaloneChatWidget: Could not load config from Supabase:', err);
+        console.warn('StandaloneChatWidget: Error loading bot settings:', err);
       }
-    }
+    };
 
-    if (id) {
-      loadAgencyBotConfig(id);
-    }
-  }, []);
-
-  // Inicializar con el mensaje de bienvenida
-  useEffect(() => {
-    setMessages([
-      {
-        id: 'welcome-msg',
-        sender: 'bot',
-        text: welcomeMessage,
-        timestamp: new Date(),
-      },
-    ]);
-  }, [welcomeMessage]);
+    loadAgencyBotConfig();
+  }, [agencyId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSending]);
 
+  // 2. RESPUESTAS INTELIGENTES BASADAS EN FAQ, REGLAS Y BACKEND
   const handleSendMessage = async (textToSend?: string | React.FormEvent) => {
     if (typeof textToSend === 'object' && textToSend !== null && 'preventDefault' in textToSend) {
       textToSend.preventDefault();
@@ -127,7 +166,7 @@ export const StandaloneChatWidget: React.FC = () => {
     ]);
 
     try {
-      // 1. Intentar llamar al backend /api/chat
+      // 1. Intentar llamar al backend /api/chat con el contexto completo
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,6 +174,10 @@ export const StandaloneChatWidget: React.FC = () => {
           message: messageText,
           agencyId: agencyId || undefined,
           agency_id: agencyId || undefined,
+          agencyName,
+          botName,
+          customRules,
+          faqList,
           history: messages.slice(-6).map((m) => ({
             role: m.sender === 'user' ? 'user' : 'model',
             parts: [{ text: m.text }],
@@ -183,7 +226,7 @@ export const StandaloneChatWidget: React.FC = () => {
           data.reply ||
           data.text ||
           data.message ||
-          '¡Hola! Estoy a tu disposición para ayudarte a encontrar la propiedad ideal.';
+          `¡Hola! Estoy a tu disposición para asesorarte en nombre de ${agencyName}.`;
         setMessages((prev) =>
           prev.map((m) => (m.id === botMsgId ? { ...m, text: botResponseText } : m))
         );
@@ -191,33 +234,62 @@ export const StandaloneChatWidget: React.FC = () => {
         throw new Error('API /api/chat error status: ' + response.status);
       }
     } catch (err) {
-      console.warn('Fallback local para widget de chat:', err);
-      // Respuesta asistida local inteligente si la API externa no está disponible
-      let fallbackText = `¡Hola! Gracias por comunicarte con ${agencyName || 'nuestra agencia'}. `;
+      console.warn('Procesamiento con FAQs y reglas de negocio locales:', err);
       const queryLower = messageText.toLowerCase();
+      let matchedResponse = '';
 
-      if (queryLower.includes('hola') || queryLower.includes('buenos') || queryLower.includes('buenas')) {
-        fallbackText += `¿Estás buscando comprar, alquilar o información sobre algún departamento o lote en particular?`;
-      } else if (
-        queryLower.includes('precio') ||
-        queryLower.includes('costo') ||
-        queryLower.includes('cuanto') ||
-        queryLower.includes('valor') ||
-        queryLower.includes('tasacion')
-      ) {
-        fallbackText += `Contamos con opciones variadas en venta y alquiler con excelente tasación. Si me indicás la zona, ambientes o tu presupuesto estimado, te comparto las fichas comerciales disponibles.`;
-      } else if (queryLower.includes('visita') || queryLower.includes('ver') || queryLower.includes('conocer') || queryLower.includes('agendar')) {
-        fallbackText += `¡Excelente! Podemos coordinar una visita presencial. ${
-          calendarUrl
-            ? 'Podés agendarla directamente en nuestro calendario o dejarme tu teléfono.'
-            : 'Dejame tu número de WhatsApp y un asesor comercial te contactará para fijar día y hora.'
-        }`;
-      } else {
-        fallbackText += `He tomado nota de tu consulta sobre "${messageText}". Si nos dejás tu número o WhatsApp, un asesor comercial te contactará de inmediato con todos los detalles.`;
+      // A. Comprobar si coincide con alguna FAQ configurada en Supabase
+      if (Array.isArray(faqList) && faqList.length > 0) {
+        for (const faq of faqList) {
+          if (!faq.question || !faq.answer) continue;
+          const qWords = faq.question.toLowerCase().split(' ').filter((w) => w.length > 3);
+          const hasMatch = qWords.some((w) => queryLower.includes(w));
+          if (hasMatch) {
+            matchedResponse = faq.answer;
+            break;
+          }
+        }
+      }
+
+      // B. Si coincide con agendar visita o reserva
+      if (!matchedResponse) {
+        if (
+          queryLower.includes('visita') ||
+          queryLower.includes('ver') ||
+          queryLower.includes('agendar') ||
+          queryLower.includes('cita') ||
+          queryLower.includes('conocer')
+        ) {
+          if (bookingUrl) {
+            matchedResponse = `¡Con gusto! Podés agendar tu visita presencial directamente desde nuestro calendario oficial aquí: ${bookingUrl} o dejarnos tu WhatsApp para coordinar día y horario.`;
+          } else {
+            matchedResponse = `¡Excelente! Para agendar una visita a la propiedad, por favor dejanos tu teléfono o WhatsApp y un asesor comercial te contactará a la brevedad.`;
+          }
+        }
+      }
+
+      // C. Saludos o consultas comunes
+      if (!matchedResponse) {
+        if (queryLower.includes('hola') || queryLower.includes('buenos') || queryLower.includes('buenas')) {
+          matchedResponse = `¡Hola! Gracias por comunicarte con ${agencyName}. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar?`;
+        } else if (
+          queryLower.includes('precio') ||
+          queryLower.includes('costo') ||
+          queryLower.includes('cuanto') ||
+          queryLower.includes('valor') ||
+          queryLower.includes('alquiler') ||
+          queryLower.includes('venta')
+        ) {
+          matchedResponse = `En ${agencyName} contamos con opciones destacadas en venta y alquiler. Si me indicás ambientes, zona o presupuesto estimado, te comparto las fichas comerciales disponibles.`;
+        } else if (customRules) {
+          matchedResponse = `He tomado nota de tu consulta sobre "${messageText}". ${customRules}. Si nos dejás tu número de contacto, nuestro equipo comercial se comunicará de inmediato.`;
+        } else {
+          matchedResponse = `He tomado nota de tu consulta sobre "${messageText}". Si nos compartís tu número de WhatsApp, un asesor comercial de ${agencyName} se pondrá en contacto para brindarte todos los detalles.`;
+        }
       }
 
       setMessages((prev) =>
-        prev.map((m) => (m.id === botMsgId ? { ...m, text: fallbackText } : m))
+        prev.map((m) => (m.id === botMsgId ? { ...m, text: matchedResponse } : m))
       );
     } finally {
       setIsSending(false);
@@ -239,7 +311,7 @@ export const StandaloneChatWidget: React.FC = () => {
 
           <div>
             <div className="flex items-center gap-1.5">
-              <h3 className="font-extrabold text-sm text-white tracking-tight">{agentName}</h3>
+              <h3 className="font-extrabold text-sm text-white tracking-tight">{botName}</h3>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold border border-emerald-500/30">
                 IA 24/7
               </span>
@@ -248,9 +320,9 @@ export const StandaloneChatWidget: React.FC = () => {
           </div>
         </div>
 
-        {calendarUrl && (
+        {bookingUrl && (
           <a
-            href={calendarUrl}
+            href={bookingUrl}
             target="_blank"
             rel="noreferrer"
             className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs transition-transform active:scale-95 flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -286,7 +358,7 @@ export const StandaloneChatWidget: React.FC = () => {
               )}
             </div>
             <span className="text-[9px] text-slate-500 font-mono mt-1 px-1">
-              {msg.sender === 'user' ? 'Tú' : agentName}
+              {msg.sender === 'user' ? 'Tú' : botName}
             </span>
           </div>
         ))}
