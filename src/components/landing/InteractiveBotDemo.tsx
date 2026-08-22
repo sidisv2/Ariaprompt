@@ -275,7 +275,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
           </div>
 
           {/* Chat Background & Messages Body */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0b141a] bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
+          <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0b141a] scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
             {messages.map((msg) => {
               const isUser = msg.sender === 'user';
               return (
@@ -390,3 +390,4 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
     </div>
   );
 };
+

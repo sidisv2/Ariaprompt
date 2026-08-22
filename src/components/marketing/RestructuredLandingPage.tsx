@@ -161,7 +161,7 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
               {/* Chat Simulation Area */}
               <div className="space-y-3 pt-3 text-xs min-h-[360px] flex flex-col justify-between">
                 
-                <div className="space-y-3 overflow-y-auto max-h-[320px] pr-1">
+                <div className="space-y-3 overflow-y-auto max-h-[320px] pr-1 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   
                   {/* Client Text Message */}
                   <div className="flex justify-end">
@@ -889,3 +889,4 @@ export const RestructuredLandingPage: React.FC<RestructuredLandingPageProps> = (
     </div>
   );
 };
+

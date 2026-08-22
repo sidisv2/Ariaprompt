@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -22,8 +22,26 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
   const { messages, send, isTyping } = useChat({ initialContext: initialContext as any });
   const { t } = useLanguage();
   const [input, setInput] = useState('');
+  const [sentCount, setSentCount] = useState<number>(0);
   const endRef = useRef<HTMLDivElement | null>(null);
   const { user, openAuthModal } = useAuth();
+
+  // Load / sync message count from localStorage
+  useEffect(() => {
+    try {
+      if (user) {
+        // Logged-in users should have their demo counter cleared
+        localStorage.removeItem('sent_messages_count');
+        localStorage.removeItem('aria_demo_count');
+        setSentCount(0);
+      } else {
+        const stored = parseInt(localStorage.getItem('sent_messages_count') || '0', 10);
+        setSentCount(isNaN(stored) ? 0 : stored);
+      }
+    } catch {
+      setSentCount(0);
+    }
+  }, [user, isOpen]);
 
   // If a prefilledPrompt is passed when opened, auto-send it
   useEffect(() => {
@@ -40,38 +58,23 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
     }
   }, [isOpen, messages, isTyping]);
 
-  const getSentCount = (): number => {
-    try {
-      return parseInt(localStorage.getItem('sent_messages_count') || '0', 10);
-    } catch {
-      return 0;
-    }
-  };
-
   const incrementSentCount = () => {
+    if (user) return; // Do not increment demo counter for authenticated users
     try {
-      const current = getSentCount();
-      localStorage.setItem('sent_messages_count', String(current + 1));
+      const next = sentCount + 1;
+      setSentCount(next);
+      localStorage.setItem('sent_messages_count', String(next));
+      localStorage.setItem('aria_demo_count', String(next));
     } catch {
       // ignore
     }
   };
 
-  // Dev admin bypass check
-  const isAdmin = Boolean(
-    user?.role === 'admin' ||
-    user?.email === 'admin@admin.com' ||
-    localStorage.getItem('aria_prop_mock_role') === 'admin'
-  );
+  // Authenticated user bypass
+  const isAuthenticated = Boolean(user);
 
-  const isSubscriber = Boolean(
-    user &&
-    (user as any).role !== 'guest' &&
-    (user as any).subscriptionTier &&
-    (user as any).subscriptionTier !== 'free'
-  );
-
-  const isLimitReached = !isAdmin && !isSubscriber && getSentCount() >= 3;
+  // Limit only applies to anonymous users who have reached 3 or more messages
+  const isLimitReached = !isAuthenticated && sentCount >= 3;
 
   const renderMarkdown = (text: string) => {
     const raw = marked.parse(text || '') as string;
@@ -114,13 +117,13 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
               </div>
               <p className="text-[10px] text-slate-400">
-                {isAdmin || isSubscriber ? (
+                {isAuthenticated ? (
                   <span className="text-emerald-400 font-semibold flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3 inline" /> Acceso Ilimitado Activo
                   </span>
                 ) : (
                   <span className={isLimitReached ? 'text-amber-400 font-bold' : 'text-slate-400'}>
-                    Prueba Gratis ({Math.min(getSentCount(), 3)}/3 Mensajes)
+                    Prueba Gratis ({Math.min(sentCount, 3)}/3 Mensajes)
                   </span>
                 )}
               </p>
@@ -169,7 +172,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
             </div>
           )}
 
-          {/* Friendly Paywall Banner when 3-message limit is reached */}
+          {/* Friendly Paywall Banner when 3-message limit is reached (Anonymous only) */}
           {isLimitReached && (
             <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center space-y-3 my-3 shadow-xl animate-fadeIn">
               <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
@@ -180,7 +183,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
                 <p className="text-[11px] text-slate-300 leading-relaxed">
                   {initialContext === 'property'
                     ? '¿Te gustaría dejar tu WhatsApp para que un asesor te contacte y coordine una visita?'
-                    : 'Has alcanzado el límite de 3 mensajes de prueba. Crea tu cuenta gratis o contacta a un asesor para continuar.'}
+                    : 'Has alcanzado el límite de 3 consultas de prueba. Crea tu cuenta gratis o inicia sesión para continuar usando el asistente sin límites.'}
                 </p>
               </div>
 
@@ -198,7 +201,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
                   rel="noopener noreferrer"
                   className="w-full py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-emerald-400 border border-emerald-500/30 font-bold text-xs transition-all text-center block"
                 >
-                  📱 Contactar Asesor por WhatsApp
+                  💬 Contactar Asesor por WhatsApp
                 </a>
               </div>
             </div>
