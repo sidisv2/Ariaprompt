@@ -20,7 +20,8 @@ import {
   LogOut,
   KeyRound,
   X,
-  AlertCircle
+  AlertCircle,
+  Phone
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { uploadFileToSupabase } from '../../lib/storageService';
@@ -50,31 +51,69 @@ export const ProfileSettingsView: React.FC = () => {
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
 
-  // Extra platform preferences
-  const [advisorAlertPhone, setAdvisorAlertPhone] = useState<string>(
-    (user as any)?.advisor_alert_phone || (user as any)?.phone || '5491140143729'
-  );
-  const [notifyWhatsappVisit, setNotifyWhatsappVisit] = useState<boolean>(
-    (user as any)?.notify_whatsapp_visit ?? true
-  );
-  const [uploadingAvatar, setUploadingAvatar] = useState<boolean>(false);
+  // 4. Platform Preferences & WhatsApp Alerts State
+  const [phone, setPhone] = useState<string>('');
+  const [language, setLanguage] = useState<'es' | 'en' | 'pt'>(userPreferences.language || 'es');
+  const [currency, setCurrency] = useState<'USD' | 'MXN' | 'COP' | 'ARS' | 'CLP'>(userPreferences.defaultCurrency || 'USD');
   const [savingPreferences, setSavingPreferences] = useState<boolean>(false);
   const [prefsSuccess, setPrefsSuccess] = useState<string | null>(null);
   const [prefsError, setPrefsError] = useState<string | null>(null);
 
-  const [theme, setTheme] = useState<'dark' | 'light' | 'system'>(userPreferences.theme);
-  const [language, setLanguage] = useState<'es' | 'en' | 'pt'>(userPreferences.language);
-  const [currency, setCurrency] = useState<'USD' | 'MXN' | 'COP' | 'ARS' | 'CLP'>(userPreferences.defaultCurrency);
-  const [notificationsEmail, setNotificationsEmail] = useState<boolean>(userPreferences.notificationsEmail);
-  const [notificationsWhatsapp, setNotificationsWhatsapp] = useState<boolean>(userPreferences.notificationsWhatsapp);
-
+  const [uploadingAvatar, setUploadingAvatar] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Carga inicial y sincronización con Supabase profiles y metadata
   useEffect(() => {
-    if (user) {
+    let mounted = true;
+
+    async function loadUserDataAndPreferences() {
+      if (!user?.id) return;
+
       setNombre(user.nombre || '');
       setAvatarUrl(user.avatarUrl || '');
+
+      try {
+        // Consultar la tabla profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (mounted && profile) {
+          const userPhone = profile.phone || profile.advisor_alert_phone || (user as any)?.phone || '';
+          if (userPhone) setPhone(userPhone);
+
+          if (profile.language && ['es', 'en', 'pt'].includes(profile.language)) {
+            setLanguage(profile.language as any);
+          }
+          if (profile.currency && ['USD', 'MXN', 'COP', 'ARS', 'CLP'].includes(profile.currency)) {
+            setCurrency(profile.currency as any);
+          }
+          if (profile.avatar_url) {
+            setAvatarUrl(profile.avatar_url);
+          }
+          if (profile.full_name || profile.nombre) {
+            setNombre(profile.full_name || profile.nombre);
+          }
+        } else if (mounted) {
+          // Fallback a metadata de sesión
+          const meta = (user as any)?.user_metadata || {};
+          const fallbackPhone = meta.whatsapp_phone || meta.phone_number || meta.phone || '';
+          if (fallbackPhone) setPhone(fallbackPhone);
+          if (meta.language) setLanguage(meta.language);
+          if (meta.currency) setCurrency(meta.currency);
+        }
+      } catch (err) {
+        console.warn('Error al cargar perfil de Supabase:', err);
+      }
     }
+
+    loadUserDataAndPreferences();
+
+    return () => {
+      mounted = false;
+    };
   }, [user]);
 
   if (!user) {
@@ -251,33 +290,67 @@ export const ProfileSettingsView: React.FC = () => {
     }
   };
 
-  // 5. Guardar Preferencias de Plataforma
+  // 5. Guardar Preferencias de Plataforma & Teléfono WhatsApp
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingPreferences(true);
     setPrefsError(null);
     setPrefsSuccess(null);
 
+    // Limpiar formato del teléfono (quitar espacios, guiones y signos +)
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+
+    if (cleanPhone && (cleanPhone.length < 8 || cleanPhone.length > 15)) {
+      setPrefsError('Por favor ingresá un número de teléfono válido (entre 8 y 15 dígitos con código de país, ej. 5492604014372)');
+      setSavingPreferences(false);
+      return;
+    }
+
     try {
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        advisor_alert_phone: advisorAlertPhone.trim(),
-        notify_whatsapp_visit: notifyWhatsappVisit,
-        updated_at: new Date().toISOString(),
+      // 1. Actualizar metadatos de sesión en auth
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          phone_number: cleanPhone,
+          whatsapp_phone: cleanPhone,
+          phone: cleanPhone,
+          language,
+          currency,
+        },
       });
 
+      if (authError) {
+        console.warn('Error updating auth user metadata:', authError);
+      }
+
+      // 2. Actualizar tabla profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          phone: cleanPhone,
+          advisor_alert_phone: cleanPhone,
+          language,
+          currency,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.error('Error updating profiles table:', profileError);
+        setPrefsError('Error al guardar las preferencias en la base de datos.');
+        return;
+      }
+
+      // 3. Actualizar contexto de preferencias locales
       updateUserPreferences({
-        theme,
         language,
         defaultCurrency: currency,
-        notificationsEmail,
-        notificationsWhatsapp,
       });
 
-      setPrefsSuccess('Preferencias guardadas correctamente');
-      setTimeout(() => setPrefsSuccess(null), 4000);
+      setPhone(cleanPhone);
+      setPrefsSuccess('Preferencias y teléfono de WhatsApp guardados con éxito.');
+      setTimeout(() => setPrefsSuccess(null), 5000);
     } catch (err: any) {
-      setPrefsError(err?.message || 'Error al guardar preferencias');
+      setPrefsError(err?.message || 'Error al guardar las preferencias.');
     } finally {
       setSavingPreferences(false);
     }
@@ -581,7 +654,7 @@ export const ProfileSettingsView: React.FC = () => {
         </form>
       </div>
 
-      {/* 4. SECCIÓN: PREFERENCIAS DE PLATAFORMA & WHATSAPP */}
+      {/* 4. SECCIÓN: PREFERENCIAS DE PLATAFORMA & ALERTAS WHATSAPP */}
       <div className="bg-slate-900 border border-emerald-500/20 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
         <div className="flex items-center gap-2.5 text-emerald-400 font-bold border-b border-white/5 pb-3">
           <Globe className="w-5 h-5" />
@@ -610,12 +683,12 @@ export const ProfileSettingsView: React.FC = () => {
 
         <form onSubmit={handleSavePreferences} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Idioma</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300">Idioma</label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as any)}
-                className="w-full bg-slate-950 border border-white/10 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
+                className="w-full bg-slate-950 border border-white/10 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none cursor-pointer"
               >
                 <option value="es">Español (ES)</option>
                 <option value="en">English (US)</option>
@@ -623,12 +696,12 @@ export const ProfileSettingsView: React.FC = () => {
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Moneda Principal</label>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-300">Moneda Principal</label>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as any)}
-                className="w-full bg-slate-950 border border-white/10 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-xs text-white outline-none cursor-pointer"
+                className="w-full bg-slate-950 border border-white/10 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none cursor-pointer"
               >
                 <option value="USD">USD ($)</option>
                 <option value="MXN">MXN ($)</option>
@@ -639,29 +712,38 @@ export const ProfileSettingsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-2 pt-2 border-t border-white/5">
+          <div className="space-y-1.5 pt-2 border-t border-white/5">
             <label className="block text-xs font-semibold text-slate-300">
               Teléfono para Alertas de WhatsApp (Asesor Inmobiliario)
             </label>
-            <input
-              type="tel"
-              value={advisorAlertPhone}
-              onChange={(e) => setAdvisorAlertPhone(e.target.value)}
-              placeholder="Ej: 5491140143729"
-              className="w-full bg-slate-950 border border-white/10 focus:border-emerald-500 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono outline-none"
-            />
+            <div className="relative">
+              <Phone className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Ej: 5492604014372"
+                className="w-full bg-slate-950 border border-white/10 focus:border-emerald-500 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white font-mono placeholder-slate-500 outline-none transition-all"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 pt-1">
+              Ingresá el número internacional sin espacios ni símbolos (código de país + número, ej. 5492604014372).
+            </p>
           </div>
 
           <button
             type="submit"
             disabled={savingPreferences}
-            className="py-3 px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-white/10 transition-all cursor-pointer flex items-center justify-center gap-2"
+            className="py-3 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {savingPreferences ? (
-              <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                <span>Guardando Preferencias...</span>
+              </>
             ) : (
               <>
-                <Save className="w-4 h-4 text-emerald-400" />
+                <Save className="w-4 h-4 text-slate-950" />
                 <span>Guardar Preferencias</span>
               </>
             )}
