@@ -1,17 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import {
   Send,
   RefreshCw,
   Phone,
   Video,
-  MoreVertical,
   CheckCheck,
   Building,
   Sparkles,
   ArrowRight,
   MapPin,
-  DollarSign,
-  Calendar,
   CheckCircle2,
   Bot
 } from 'lucide-react';
@@ -38,32 +35,63 @@ const INITIAL_MESSAGES: DemoMessage[] = [
   {
     id: 'msg-1',
     sender: 'bot',
-    text: '👋 ¡Hola! Soy Aria, la Asistente Comercial IA 24/7 de Ariaprop. ¿Qué tipo de propiedad, desarrollo o lote estás buscando hoy?',
+    text: '¡Hola! Soy Aria, la Asistente Comercial IA 24/7 de Ariaprop. ¿Qué tipo de propiedad, desarrollo o lote estás buscando hoy?',
     timestamp: '09:41',
   },
 ];
 
 const SUGGESTIONS = [
-  { label: '🌲 Lote 1.000 m² c/ Costa de Río (Entrega + Cuotas)', key: 'lote' },
+  { label: '🌿 Lote 1.000 m² c/ Costa de Río (Entrega + Cuotas)', key: 'lote' },
   { label: '🏢 Alquiler 2 amb en Palermo ($600 USD)', key: 'palermo' },
   { label: '🏡 Comprar Casa en Nordelta ($350,000 USD)', key: 'nordelta' },
   { label: '📅 Coordinar visita con asesor', key: 'visita' },
-  { label: '📐 Tasar mi propiedad', key: 'tasacion' },
+  { label: '📊 Tasar mi propiedad', key: 'tasacion' },
 ];
 
+const DEMO_GUEST_ID_KEY = 'aria_demo_guest_id';
+const DEMO_MESSAGES_COUNT_KEY = 'aria_demo_messages_count';
+
 export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOpenAuth }) => {
-  const { openAuthModal } = useAuth();
+  const { user, openAuthModal } = useAuth();
   const [messages, setMessages] = useState<DemoMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [sentCount, setSentCount] = useState<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize or read guest_id and persisted message count
+  useEffect(() => {
+    try {
+      if (user) {
+        // Authenticated user -> clear anonymous locks
+        localStorage.removeItem(DEMO_MESSAGES_COUNT_KEY);
+        setSentCount(0);
+      } else {
+        // Ensure unique guest_id exists
+        let guestId = localStorage.getItem(DEMO_GUEST_ID_KEY);
+        if (!guestId) {
+          guestId = 'guest_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+          localStorage.setItem(DEMO_GUEST_ID_KEY, guestId);
+        }
+
+        // Read persisted count (survives F5 / page reload)
+        const stored = parseInt(localStorage.getItem(DEMO_MESSAGES_COUNT_KEY) || '0', 10);
+        setSentCount(isNaN(stored) ? 0 : stored);
+      }
+    } catch {
+      setSentCount(0);
+    }
+  }, [user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  const isAuthenticated = Boolean(user);
+  const isLimitReached = !isAuthenticated && sentCount >= 3;
+
   const handleSendMessage = (textToSend: string) => {
-    if (!textToSend.trim() || isTyping) return;
+    if (!textToSend.trim() || isTyping || isLimitReached) return;
 
     const userMsgText = textToSend.trim();
     const nowTime = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -79,6 +107,15 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
     setInputText('');
     setIsTyping(true);
 
+    // Update persisted count for guests
+    if (!isAuthenticated) {
+      const nextCount = sentCount + 1;
+      setSentCount(nextCount);
+      try {
+        localStorage.setItem(DEMO_MESSAGES_COUNT_KEY, String(nextCount));
+      } catch {}
+    }
+
     // Simulate AI thinking and typing delay (600ms)
     setTimeout(() => {
       let botResponse: DemoMessage;
@@ -88,13 +125,13 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
         botResponse = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: '🌿 ¡Excelente oportunidad de desarrollo! Disponemos de lotes premium en primera línea náutica con plan de financiación directa:',
+          text: '✨ ¡Excelente oportunidad de desarrollo! Disponemos de lotes premium en primera línea náutica con plan de financiación directa:',
           timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
           propertyCard: {
-            title: 'Lote 1.000 m² con Costa de Río · Barrio Náutico',
+            title: 'Lote 1.000 m² con Costa de Río – Barrio Náutico',
             price: 'USD 45.000 (Anticipo 30% + 36 cuotas fijas)',
             location: 'Ribera del Delta / Zona Náutica',
-            details: '1.000 m² • Escritura inmediata • Servicios subterráneos • Amarra propia',
+            details: '1.000 m² · Escritura inmediata · Servicios subterráneos · Amarra propia',
             imageUrl: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80',
             pdfBrochure: true,
             googleMapsUrl: 'https://maps.google.com',
@@ -111,7 +148,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             title: 'Depto 2 Ambientes en Palermo Soho',
             price: '$600 USD / mes',
             location: 'Palermo Soho, CABA',
-            details: '2 amb • 65 m² • Balcón Terraza • Edificio c/ Amenities',
+            details: '2 amb · 65 m² · Balcón Terraza · Edificio c/ Amenities',
             imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
             pdfBrochure: true,
             googleMapsUrl: 'https://maps.google.com',
@@ -127,7 +164,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             title: 'Casa Moderna 4 Amb c/ Piscina en Nordelta',
             price: '$350,000 USD',
             location: 'Barrio Castores, Nordelta',
-            details: '4 amb • 240 m² • Piscina Climatizada • Amarra',
+            details: '4 amb · 240 m² · Piscina Climatizada · Amarra',
             imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
             pdfBrochure: true,
             googleMapsUrl: 'https://maps.google.com',
@@ -138,14 +175,14 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
         botResponse = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: '🤖 ¡Perfecto! He registrado tus datos de preferencia y derivado esta consulta directamente con un Asesor Inmobiliario humano. Te contactaremos en breves momentos.',
+          text: '📅 ¡Perfecto! He registrado tus datos de preferencia y derivado esta consulta directamente con un Asesor Inmobiliario humano. Te contactaremos en breves momentos.',
           timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
         };
       } else if (lowerText.includes('tasar') || lowerText.includes('tasacion')) {
         botResponse = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: '📐 Para realizar una tasación profesional y estimar el Cap Rate de tu inmueble, por favor indícame la ubicación aproximada y los m² totales.',
+          text: '📊 Para realizar una tasación profesional y estimar el Cap Rate de tu inmueble, por favor indícame la ubicación aproximada y los m² totales.',
           timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
         };
       } else {
@@ -158,7 +195,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             title: 'Residencia Premium c/ Vista Panorámica',
             price: '$220,000 USD',
             location: 'Zona Exclusiva',
-            details: '3 amb • 110 m² • Cochera Fija • Vigilancia 24hs',
+            details: '3 amb · 110 m² · Cochera Fija · Vigilancia 24hs',
             imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
             pdfBrochure: true,
             googleMapsUrl: 'https://maps.google.com',
@@ -196,7 +233,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
         </div>
 
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-          Prueba el motor de IA inmobiliaria en tiempo real 🚀
+          Prueba el motor de IA inmobiliaria en tiempo real ⚡
         </h2>
 
         <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
@@ -218,15 +255,18 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
           </li>
         </ul>
 
-        <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <button
-            onClick={handleCtaClick}
-            className="px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
-          >
-            <span>Comenzar gratis en tu inmobiliaria</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
+        {/* CTA only for non-authenticated */}
+        {!isAuthenticated && (
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <button
+              onClick={handleCtaClick}
+              className="px-6 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
+            >
+              <span>Comenzar gratis en tu inmobiliaria</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* RIGHT COLUMN: WhatsApp Phone Mockup Simulator */}
@@ -274,7 +314,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
             </div>
           </div>
 
-          {/* Chat Background & Messages Body */}
+          {/* Chat Background & Messages Body with hidden scrollbar */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0b141a] scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
             {messages.map((msg) => {
               const isUser = msg.sender === 'user';
@@ -325,7 +365,7 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
                             )}
                             {msg.propertyCard.tour360Url && (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[9px] font-bold border border-sky-500/30">
-                                🔄 Tour 360°
+                                🌐 Tour 360°
                               </span>
                             )}
                           </div>
@@ -349,6 +389,29 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
               </div>
             )}
 
+            {/* Paywall Banner for Guests when 3 messages reached */}
+            {isLimitReached && (
+              <div className="p-4 rounded-2xl bg-slate-900 border border-emerald-500/40 text-center space-y-3 my-2 shadow-xl animate-fadeIn">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/30">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-white">Límite de prueba alcanzado (3/3)</p>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Has completado tus 3 mensajes de prueba gratuita. Crea tu cuenta para continuar explorando sin límites.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCtaClick}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>✨ Crear Cuenta Gratis</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             <div ref={chatEndRef} />
           </div>
 
@@ -358,7 +421,8 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
               <button
                 key={s.key}
                 onClick={() => handleSendMessage(s.label)}
-                className="px-2.5 py-1.5 rounded-full bg-[#202c33] hover:bg-[#2a3942] text-slate-200 text-[10px] font-semibold transition-all cursor-pointer whitespace-nowrap border border-white/5"
+                disabled={isLimitReached}
+                className="px-2.5 py-1.5 rounded-full bg-[#202c33] hover:bg-[#2a3942] disabled:opacity-40 text-slate-200 text-[10px] font-semibold transition-all cursor-pointer whitespace-nowrap border border-white/5"
               >
                 {s.label}
               </button>
@@ -369,15 +433,16 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
           <div className="bg-[#202c33] p-2.5 flex items-center gap-2 border-t border-white/5">
             <input
               type="text"
+              disabled={isLimitReached}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(inputText)}
-              placeholder="Escribe una consulta..."
-              className="flex-1 bg-[#2a3942] text-white text-xs rounded-full px-4 py-2 placeholder-slate-400 focus:outline-none"
+              placeholder={isLimitReached ? 'Límite de 3 consultas alcanzado' : 'Escribe una consulta...'}
+              className="flex-1 bg-[#2a3942] text-white text-xs rounded-full px-4 py-2 placeholder-slate-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               onClick={() => handleSendMessage(inputText)}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || isLimitReached}
               className="w-9 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-slate-950 flex items-center justify-center transition-all cursor-pointer shrink-0"
             >
               <Send className="w-4 h-4 fill-current ml-0.5" />
@@ -390,4 +455,5 @@ export const InteractiveBotDemo: React.FC<{ onOpenAuth?: () => void }> = ({ onOp
     </div>
   );
 };
+
 

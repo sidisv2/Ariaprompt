@@ -24,7 +24,7 @@ export const AuthModal: React.FC<{
   const [resendSuccess, setResendSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { signIn, signUp, signInAsDemoUser, signInWithGoogle } = useAuth();
+  const { signIn, signInAsDemoUser, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     setTab(initialTab);
@@ -63,34 +63,41 @@ export const AuthModal: React.FC<{
 
   const handleAction = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setLoading(true);
     setErrorMsg(null);
 
     const inputVal = identifier.trim();
-    if (!inputVal || !password) {
-      setErrorMsg(t('auth.invalidCredentials'));
-      setLoading(false);
-      return;
-    }
+    const fullName = displayName.trim();
 
     if (tab === 'signup') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(inputVal)) {
-        setErrorMsg(t('auth.invalidEmail'));
-        setLoading(false);
+      if (!fullName) {
+        setErrorMsg('Por favor, ingresá tu nombre completo');
         return;
       }
-      if (password.length < 6) {
-        setErrorMsg(t('auth.shortPassword'));
-        setLoading(false);
+      if (!inputVal) {
+        setErrorMsg(t('auth.invalidEmail') || 'Ingresá un correo electrónico válido');
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(inputVal)) {
+        setErrorMsg(t('auth.invalidEmail') || 'Correo electrónico inválido');
+        return;
+      }
+      if (!password || password.length < 6) {
+        setErrorMsg(t('auth.shortPassword') || 'La contraseña debe tener al menos 6 caracteres');
         return;
       }
       if (confirmPassword && confirmPassword !== password) {
-        setErrorMsg(t('auth.passwordMismatch'));
-        setLoading(false);
+        setErrorMsg(t('auth.passwordMismatch') || 'Las contraseñas no coinciden');
+        return;
+      }
+    } else {
+      if (!inputVal || !password) {
+        setErrorMsg(t('auth.invalidCredentials') || 'Por favor completa todos los campos');
         return;
       }
     }
+
+    setLoading(true);
 
     try {
       if (tab === 'login') {
@@ -99,14 +106,33 @@ export const AuthModal: React.FC<{
         onAuthSuccess?.();
         onClose();
       } else {
-        const res = await signUp({
+        // Ejecución de signUp con supabase
+        const { data, error } = await supabase.auth.signUp({
           email: inputVal,
           password,
-          nombre: displayName.trim() || inputVal.split('@')[0],
+          options: {
+            data: {
+              full_name: fullName,
+              nombre: fullName,
+            },
+          },
         });
-        if (!res.success) throw new Error(res.error || 'Error al crear la cuenta. Intenta de nuevo.');
 
-        // Pasamos al paso de verificación OTP
+        if (error) {
+          throw new Error(error.message || 'Error al crear la cuenta. Intenta de nuevo.');
+        }
+
+        // Si ya devuelve sesión activa directa (caso confirmación desactivada)
+        if (data?.session) {
+          onAuthSuccess?.();
+          onClose();
+          if (window.location.pathname === '/' || window.location.pathname === '') {
+            window.location.href = '/app';
+          }
+          return;
+        }
+
+        // Flujo OTP requerido
         setPendingEmail(inputVal);
         setOtpCode('');
         setStep('verify_otp');
@@ -120,8 +146,9 @@ export const AuthModal: React.FC<{
 
   const handleVerifyOtp = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!otpCode.trim()) {
-      setErrorMsg('Por favor ingresa el código de 6 dígitos');
+    const token = otpCode.trim();
+    if (!token || token.length < 6) {
+      setErrorMsg('Por favor ingresá el código de 6 dígitos completo');
       return;
     }
 
@@ -131,33 +158,48 @@ export const AuthModal: React.FC<{
     try {
       const { data, error } = await supabase.auth.verifyOtp({
         email: pendingEmail.trim(),
-        token: otpCode.trim(),
+        token,
         type: 'signup',
       });
 
       if (error) {
-        // Intento fallback con tipo 'email'
+        // Fallback de tipo 'email'
         const fallback = await supabase.auth.verifyOtp({
           email: pendingEmail.trim(),
-          token: otpCode.trim(),
+          token,
           type: 'email',
         });
         if (fallback.error) {
           throw new Error(fallback.error.message || 'Código de verificación inválido o expirado');
         }
+        if (fallback.data?.session || fallback.data?.user) {
+          onAuthSuccess?.();
+          onClose();
+          if (window.location.pathname === '/' || window.location.pathname === '') {
+            window.location.href = '/app';
+          }
+          return;
+        }
       }
 
-      const currentSession = data?.session || (await supabase.auth.getSession()).data.session;
-      if (currentSession || data?.user) {
+      if (data?.session || data?.user) {
         onAuthSuccess?.();
         onClose();
-        // Redirigir a /app o dashboard si es necesario
         if (window.location.pathname === '/' || window.location.pathname === '') {
           window.location.href = '/app';
         }
       } else {
-        onAuthSuccess?.();
-        onClose();
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session) {
+          onAuthSuccess?.();
+          onClose();
+          if (window.location.pathname === '/' || window.location.pathname === '') {
+            window.location.href = '/app';
+          }
+        } else {
+          onAuthSuccess?.();
+          onClose();
+        }
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Código de verificación incorrecto');
@@ -179,9 +221,9 @@ export const AuthModal: React.FC<{
       });
       if (error) throw error;
       setResendSuccess(true);
-      setTimeout(() => setResendSuccess(false), 4000);
+      setTimeout(() => setResendSuccess(false), 5000);
     } catch (err: any) {
-      setErrorMsg(err?.message || 'No se pudo reenviar el código. Intenta en unos momentos.');
+      setErrorMsg(err?.message || 'No se pudo reenviar el código. Intenta en unos instantes.');
     } finally {
       setResending(false);
     }
@@ -225,10 +267,10 @@ export const AuthModal: React.FC<{
                 <KeyRound className="w-6 h-6" />
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-                Confirmá tu cuenta
+                Verificá tu correo
               </h2>
               <p className="text-xs text-slate-400 leading-relaxed px-2">
-                Ingresá el código de 6 dígitos que enviamos a{' '}
+                Ingresá el código de 6 dígitos enviado a{' '}
                 <span className="text-emerald-400 font-bold break-all">{pendingEmail}</span>
               </p>
             </div>
@@ -248,7 +290,7 @@ export const AuthModal: React.FC<{
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300 text-center block">
-                  Código de verificación
+                  Código de 6 dígitos
                 </label>
                 <input
                   type="text"
@@ -287,7 +329,7 @@ export const AuthModal: React.FC<{
                 className="inline-flex items-center gap-1.5 text-emerald-400 hover:text-emerald-300 underline font-semibold transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
-                <span>¿No recibiste el código? Reenviar</span>
+                <span>¿No te llegó? Reenviar código</span>
               </button>
 
               <button
@@ -373,14 +415,18 @@ export const AuthModal: React.FC<{
             <form onSubmit={handleAction} className="space-y-3.5">
               {tab === 'signup' && (
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">{t('auth.nameLabel')}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-300">{t('auth.nameLabel') || 'Nombre Completo'}</label>
+                    <span className="text-[10px] text-emerald-400 font-bold">* Requerido</span>
+                  </div>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                     <input
                       type="text"
+                      required
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder={t('auth.namePlaceholder')}
+                      placeholder={t('auth.namePlaceholder') || 'Tu nombre y apellido'}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
@@ -388,28 +434,30 @@ export const AuthModal: React.FC<{
               )}
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">{t('auth.emailLabel')}</label>
+                <label className="text-xs font-semibold text-slate-300">{t('auth.emailLabel') || 'Correo Electrónico'}</label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
-                    type="text"
+                    type="email"
+                    required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder={t('auth.emailPlaceholder')}
+                    placeholder={t('auth.emailPlaceholder') || 'ejemplo@inmobiliaria.com'}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-slate-300">{t('auth.passwordLabel')}</label>
+                <label className="text-xs font-semibold text-slate-300">{t('auth.passwordLabel') || 'Contraseña'}</label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     type="password"
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('auth.passwordPlaceholder')}
+                    placeholder={t('auth.passwordPlaceholder') || '••••••••'}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
@@ -417,14 +465,15 @@ export const AuthModal: React.FC<{
 
               {tab === 'signup' && (
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-300">{t('auth.confirmPasswordLabel')}</label>
+                  <label className="text-xs font-semibold text-slate-300">{t('auth.confirmPasswordLabel') || 'Confirmar Contraseña'}</label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                     <input
                       type="password"
+                      required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder={t('auth.confirmPasswordPlaceholder')}
+                      placeholder={t('auth.confirmPasswordPlaceholder') || '••••••••'}
                       className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-white text-xs placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                     />
                   </div>
