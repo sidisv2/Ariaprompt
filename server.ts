@@ -50,7 +50,7 @@ async function startServer() {
   // Open Graph Property Meta Tag Endpoint (/api/og/property)
   app.get('/api/og/property', async (req, res) => {
     try {
-      const { handleOgPropertyRoute } = await import('./api/og-property.js');
+      const handleOgPropertyRoute = (await import('./api/og/property.js')).default;
       return handleOgPropertyRoute(req, res);
     } catch (err: any) {
       console.error('❌ Express /api/og/property error:', err);
@@ -65,7 +65,7 @@ async function startServer() {
 
     if (CRAWLER_REGEX.test(userAgent)) {
       try {
-        const { handleOgPropertyRoute } = await import('./api/og-property.js');
+        const handleOgPropertyRoute = (await import('./api/og/property.js')).default;
         req.query = req.query || {};
         req.query.id = req.params.id;
         return handleOgPropertyRoute(req, res);

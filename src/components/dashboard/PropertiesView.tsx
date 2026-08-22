@@ -891,32 +891,30 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
         onClose={() => setIsImporterOpen(false)}
         onImportComplete={(importedProps: ImportedPropertyItem[]) => {
           importedProps.forEach((item) => {
-            const rawOp = item.operation_type;
-            const normOp: PropertyOperationType = rawOp === 'Temporal' ? 'temporary_rent' : rawOp === 'Alquiler' ? 'rent' : 'sale';
             onAddProperty({
               title: item.title,
               code: `PROP-${Math.floor(100 + Math.random() * 900)}`,
               type: 'apartment',
-              operation_type: normOp,
-              status: 'available',
-              is_public: true,
+              operation_type: item.operation_type,
+              status: item.status,
+              is_public: item.is_public,
               price: item.price,
-              currency: item.currency || 'USD',
+              currency: item.currency,
               location: {
-                address: item.address_neighborhood || 'Ubicación importada',
+                address: item.address,
                 city: 'Buenos Aires',
-                zone: item.address_neighborhood || 'Palermo',
+                zone: item.address,
               },
               features: {
-                bedrooms: item.rooms || 2,
-                bathrooms: 1,
-                areaM2: item.surface_m2 || 60,
+                bedrooms: item.rooms,
+                bathrooms: item.bathrooms,
+                areaM2: item.area_sqm,
                 pool: false,
                 garage: false,
                 elevator: true,
                 airConditioning: true,
               },
-              description: item.description || '',
+              description: item.description,
               images: ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
             });
           });
