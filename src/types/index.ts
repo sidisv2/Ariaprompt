@@ -47,6 +47,11 @@ export interface PropertySource {
 
 export type RentalPeriod = 'monthly' | 'yearly' | 'nightly' | null;
 
+export interface PropertyImageItem {
+  url: string;
+  tag: 'Fachada' | 'Cocina' | 'Living' | 'Dormitorio' | 'Baño' | 'Patio/Parque' | 'Pileta' | 'Plano' | 'General' | string;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -92,6 +97,7 @@ export interface Property {
   };
   description: string;
   images: string[];
+  property_images?: PropertyImageItem[];
   documents: PropertyDocument[];
   featured: boolean;
   createdAt: string;

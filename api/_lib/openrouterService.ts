@@ -39,6 +39,7 @@ export interface ExtractedLeadData {
   status: 'active' | 'qualified' | 'handover' | 'human_handoff' | 'closed';
   lead_name: string | null;
   preferred_contact_slot?: string | null;
+  requested_room_image?: string | null;
   requested_pdf_property_id?: string | null;
   requested_pdf_property_title?: string | null;
   appointment?: {
@@ -380,6 +381,7 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
     "lead_name": string | null,
     "preferred_contact_slot": string | null,
     "requested_pdf_property_id": string | null,
+    "requested_room_image": "Fachada" | "Cocina" | "Living" | "Dormitorio" | "Baño" | "Patio/Parque" | "Pileta" | "Plano" | "General" | null,
     "requested_pdf_property_title": string | null,
     "appointment": {
       "requested_date": string | null,
@@ -393,6 +395,7 @@ REGLAS DE EXTRACCIÓN:
 - budget_max_usd: presupuesto numérico en USD si el usuario lo menciona o null.
 - preferred_zone: zona o barrio especificado o null.
 - preferred_contact_slot: si el cliente menciona disponibilidad horaria ("por la tarde", "de 8 a 13 hs", "después de las 15", "mañana a la mañana"), mapealo como franja formal (ej. "Mañana (08:00 - 13:00 hs)", "Tarde (14:00 - 18:00 hs)") o null.
+- requested_room_image: si el cliente pide expresamente ver fotos de un ambiente puntual ("tenés fotos de la cocina?", "mostrame el patio/pileta", "cómo es el living?", "tenés plano?"), mapealo a ("Fachada" | "Cocina" | "Living" | "Dormitorio" | "Baño" | "Patio/Parque" | "Pileta" | "Plano") o null.
 - property_type: tipo de inmueble y operación o null.
 - requested_pdf_property_id: ID exacto de la propiedad en el catálogo si el usuario pide ficha, PDF o brochure (o null).
 - requested_pdf_property_title: Título de la propiedad si se solicita ficha (o null).

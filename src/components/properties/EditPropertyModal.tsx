@@ -55,14 +55,32 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
 
   // Description & Images
   const [description, setDescription] = useState(property.description || '');
-  const [images, setImages] = useState<string[]>(
-    property.images && property.images.length > 0
+
+  // Normalized tagged images
+  const initialTaggedImages: { url: string; tag: string }[] = (() => {
+    if ((property as any).property_images && Array.isArray((property as any).property_images)) {
+      return (property as any).property_images.map((img: any) => ({
+        url: typeof img === 'string' ? img : img.url,
+        tag: typeof img === 'object' && img.tag ? img.tag : 'General',
+      }));
+    }
+    const rawImgs = property.images && property.images.length > 0
       ? property.images
       : (property as any).image_url
       ? [(property as any).image_url]
-      : []
-  );
+      : [];
+    return rawImgs.map((url, idx) => ({
+      url,
+      tag: idx === 0 ? 'Fachada' : 'General',
+    }));
+  })();
+
+  const [taggedImages, setTaggedImages] = useState<{ url: string; tag: string }[]>(initialTaggedImages);
+  const [images, setImages] = useState<string[]>(initialTaggedImages.map((i) => i.url));
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [newImageTag, setNewImageTag] = useState<string>('General');
+
+  const AVAILABLE_TAGS = ['Fachada', 'Cocina', 'Living', 'Dormitorio', 'Baño', 'Patio/Parque', 'Pileta', 'Plano', 'General'];
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -128,6 +146,11 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
     }
 
     if (newUrls.length > 0) {
+      const newItems = newUrls.map((url, idx) => ({
+        url,
+        tag: taggedImages.length === 0 && idx === 0 ? 'Fachada' : 'General',
+      }));
+      setTaggedImages((prev) => [...prev, ...newItems]);
       setImages((prev) => [...prev, ...newUrls]);
     }
     setUploadingImages(false);
@@ -159,6 +182,11 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
 
   const handleSetMainCover = (index: number) => {
     if (index === 0) return;
+    setTaggedImages((prev) => {
+      const selected = prev[index];
+      const rest = prev.filter((_, idx) => idx !== index);
+      return [selected, ...rest];
+    });
     setImages((prev) => {
       const selected = prev[index];
       const rest = prev.filter((_, idx) => idx !== index);
@@ -167,7 +195,13 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
   };
 
   const handleMoveImage = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= images.length) return;
+    if (toIndex < 0 || toIndex >= taggedImages.length) return;
+    setTaggedImages((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, item);
+      return copy;
+    });
     setImages((prev) => {
       const copy = [...prev];
       const [item] = copy.splice(fromIndex, 1);
@@ -178,12 +212,25 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
 
   const handleAddImageUrl = () => {
     if (!newImageUrl.trim()) return;
-    setImages((prev) => [...prev, newImageUrl.trim()]);
+    const url = newImageUrl.trim();
+    setTaggedImages((prev) => [...prev, { url, tag: newImageTag || 'General' }]);
+    setImages((prev) => [...prev, url]);
     setNewImageUrl('');
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
+    setTaggedImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
     setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleUpdateImageTag = (index: number, newTag: string) => {
+    setTaggedImages((prev) => {
+      const copy = [...prev];
+      if (copy[index]) {
+        copy[index] = { ...copy[index], tag: newTag };
+      }
+      return copy;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,6 +239,7 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
     setErrorMsg(null);
 
     try {
+      const plainImages = taggedImages.map((i) => i.url);
       const updatedProp: Property = {
         ...property,
         title: title.trim(),
@@ -218,7 +266,8 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
           elevator: property.features?.elevator ?? false,
           airConditioning: property.features?.airConditioning ?? false,
         },
-        images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
+        images: plainImages.length > 0 ? plainImages : ['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80'],
+        property_images: taggedImages as any,
       };
 
       await onSave(updatedProp);
@@ -535,85 +584,101 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
                 </label>
               </div>
 
-              {/* Interactive Thumbnail Gallery */}
-              {images.length > 0 && (
+              {/* Interactive Thumbnail Gallery with Environment Tags */}
+              {taggedImages.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  {images.map((imgUrl, idx) => (
+                  {taggedImages.map((imgItem, idx) => (
                     <div
                       key={idx}
-                      className={`relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-950 border transition-all group ${
+                      className={`relative rounded-2xl overflow-hidden bg-slate-950 border transition-all flex flex-col ${
                         idx === 0
                           ? 'border-emerald-500 ring-2 ring-emerald-500/30'
                           : 'border-white/10 hover:border-white/25'
                       }`}
                     >
-                      <img
-                        src={imgUrl}
-                        alt={`Foto ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                      />
+                      <div className="relative aspect-[4/3] w-full overflow-hidden group">
+                        <img
+                          src={imgItem.url}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
 
-                      {/* Overlay Controls */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
-                        <div className="flex items-center justify-between">
-                          <button
-                            type="button"
-                            onClick={() => handleSetMainCover(idx)}
-                            className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                              idx === 0
-                                ? 'bg-emerald-500 text-slate-950'
-                                : 'bg-black/60 hover:bg-emerald-500 hover:text-slate-950 text-white'
-                            }`}
-                            title="Marcar como portada"
-                          >
-                            <Star className={`w-3 h-3 ${idx === 0 ? 'fill-current' : ''}`} />
-                          </button>
+                        {/* Overlay Controls */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => handleSetMainCover(idx)}
+                              className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                                idx === 0
+                                  ? 'bg-emerald-500 text-slate-950'
+                                  : 'bg-black/60 hover:bg-emerald-500 hover:text-slate-950 text-white'
+                              }`}
+                              title="Marcar como portada"
+                            >
+                              <Star className={`w-3 h-3 ${idx === 0 ? 'fill-current' : ''}`} />
+                            </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveImage(idx)}
-                            className="p-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
-                            title="Eliminar foto"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1">
-                            {idx > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => handleMoveImage(idx, idx - 1)}
-                                className="p-1 rounded bg-black/60 hover:bg-white/20 text-white"
-                                title="Mover hacia adelante"
-                              >
-                                <ArrowUp className="w-3 h-3" />
-                              </button>
-                            )}
-                            {idx < images.length - 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleMoveImage(idx, idx + 1)}
-                                className="p-1 rounded bg-black/60 hover:bg-white/20 text-white"
-                                title="Mover hacia atrás"
-                              >
-                                <ArrowDown className="w-3 h-3" />
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              className="p-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                              title="Eliminar foto"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           </div>
-                          <span className="text-[10px] font-mono font-bold text-slate-300">
-                            #{idx + 1}
-                          </span>
+
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1">
+                              {idx > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveImage(idx, idx - 1)}
+                                  className="p-1 rounded bg-black/60 hover:bg-white/20 text-white"
+                                  title="Mover hacia adelante"
+                                >
+                                  <ArrowUp className="w-3 h-3" />
+                                </button>
+                              )}
+                              {idx < taggedImages.length - 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveImage(idx, idx + 1)}
+                                  className="p-1 rounded bg-black/60 hover:bg-white/20 text-white"
+                                  title="Mover hacia atrás"
+                                >
+                                  <ArrowDown className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono font-bold text-slate-300">
+                              #{idx + 1}
+                            </span>
+                          </div>
                         </div>
+
+                        {/* Main Badge */}
+                        {idx === 0 && (
+                          <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" /> Portada
+                          </span>
+                        )}
                       </div>
 
-                      {/* Main Badge */}
-                      {idx === 0 && (
-                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
-                          <Check className="w-2.5 h-2.5 stroke-[3]" /> Portada
-                        </span>
-                      )}
+                      {/* Tag Selector */}
+                      <div className="p-2 bg-slate-900 border-t border-white/5 flex items-center gap-1.5">
+                        <Tag className="w-3 h-3 text-emerald-400 shrink-0" />
+                        <select
+                          value={imgItem.tag || 'General'}
+                          onChange={(e) => handleUpdateImageTag(idx, e.target.value)}
+                          className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-emerald-500"
+                        >
+                          {AVAILABLE_TAGS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   ))}
                 </div>
