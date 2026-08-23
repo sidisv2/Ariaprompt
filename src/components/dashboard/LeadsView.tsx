@@ -484,6 +484,29 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     }
   };
 
+  const getSourceBadge = (source?: string) => {
+    const s = (source || 'whatsapp').toLowerCase();
+    if (s.includes('insta')) {
+      return (
+        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-sm shrink-0 uppercase tracking-wider">
+          📸 INSTAGRAM ADS
+        </span>
+      );
+    }
+    if (s.includes('web')) {
+      return (
+        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+          🌐 WEBCHAT
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+        🟢 WHATSAPP
+      </span>
+    );
+  };
+
   const getHandledByBadge = (handledBy?: 'ia' | 'human', status?: CrmLead['status']) => {
     const isHuman = handledBy === 'human' || status === 'handover';
     if (isHuman) {
@@ -734,11 +757,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                         {lead.last_message || lead.preferred_zone || 'Sin mensajes registrados'}
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {lead.source === 'instagram_ads' && (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-sm">
-                            Instagram Ads
-                          </span>
-                        )}
+                        {getSourceBadge(lead.source)}
                         {lead.outbound_status === 'pending' ? (
                           <button
                             type="button"
@@ -801,10 +820,11 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                     <User className="w-6 h-6" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-black text-white text-base">
                         {selectedLead.user_name || `Lead ${selectedLead.user_phone}`}
                       </h3>
+                      {getSourceBadge(selectedLead.source)}
                       {getHandledByBadge(selectedLead.handled_by, selectedLead.status)}
                       {getStatusBadge(selectedLead.status)}
                     </div>

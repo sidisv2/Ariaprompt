@@ -32,7 +32,8 @@ export interface InboxLeadItem {
   last_message: string | null;
   last_message_at: string;
   total_messages: number;
-  channel: 'whatsapp' | 'webchat';
+  channel: 'whatsapp' | 'webchat' | 'instagram';
+  source?: string;
   handled_by?: 'ia' | 'human';
   is_bot_active: boolean;
 }
@@ -485,10 +486,23 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                     {activeLead.user_name ? activeLead.user_name.charAt(0).toUpperCase() : 'P'}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-extrabold text-sm text-white">
                         {activeLead.user_name || activeLead.user_phone}
                       </h3>
+                      {((activeLead as any).source === 'instagram_ads' || activeLead.channel === 'instagram') ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+                          📸 INSTAGRAM ADS
+                        </span>
+                      ) : (activeLead.channel === 'whatsapp' || (activeLead as any).source === 'whatsapp') ? (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+                          🟢 WHATSAPP
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+                          🌐 WEBCHAT
+                        </span>
+                      )}
                       <LeadScoringBadge
                         score={
                           computeLeadScore({
