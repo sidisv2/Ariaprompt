@@ -44,9 +44,10 @@ interface MatchedProperty {
   id: string;
   title: string;
   price: number;
+  currency?: string;
   type: string;
   zone: string;
-  url: string;
+  url?: string;
   bedrooms?: number;
   areaM2?: number;
 }
@@ -78,14 +79,57 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
   const remainingFreeMessages = Math.max(0, MAX_FREE_MESSAGES - sentCount);
   const isFreeLimitReached = !isUnlimitedUser && sentCount >= MAX_FREE_MESSAGES;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome-1',
-      sender: 'bot',
-      text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA comercial de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad o zona estás interesado hoy?`,
-      timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  const defaultWelcomeMessage: ChatMessage = {
+    id: 'welcome-1',
+    sender: 'bot',
+    text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA comercial de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad o zona estás interesado hoy?`,
+    timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('aria_playground_chat_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [defaultWelcomeMessage];
+  });
+
+  // Save messages to localStorage on change
+  useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        localStorage.setItem('aria_playground_chat_history', JSON.stringify(messages));
+      }
+    } catch (_) {}
+  }, [messages]);
+
+  const handleResetChat = () => {
+    try {
+      localStorage.removeItem('aria_playground_chat_history');
+      setMessages([defaultWelcomeMessage]);
+      setExtractedEntities({
+        budget_max_usd: null,
+        preferred_zone: null,
+        property_type: null,
+        operation_type: null,
+        lead_name: null,
+        status: 'active',
+      });
+      setMatchedProperties(dbProperties.slice(0, 5).map(p => ({
+        id: p.id,
+        title: p.title,
+        price: Number(p.price) || 0,
+        currency: p.currency || 'USD',
+        zone: p.zone || p.address || 'Zona',
+        type: p.type || 'apartment',
+        bedrooms: p.bedrooms || 2,
+        areaM2: p.surface_m2 || p.area_m2 || 60,
+      })));
+    } catch (_) {}
+  };
 
   const [inputMsg, setInputMsg] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -103,30 +147,56 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch properties from Supabase for current org
+  // Fetch all active properties from Supabase in real-time
   useEffect(() => {
     async function loadProperties() {
       if (!supabase) return;
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const sbUser = sessionData.session?.user;
-        if (!sbUser) return;
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('organization_id')
-          .eq('id', sbUser.id)
-          .single();
+        let query = supabase
+          .from('properties')
+          .select('*')
+          .neq('is_public', false)
+          .in('status', ['available', 'disponible', 'published']);
 
-        if (profile?.organization_id) {
-          const { data: props } = await supabase
+        if (sbUser) {
+          query = query.or(`user_id.eq.${sbUser.id},organization_id.eq.${sbUser.id}`);
+        }
+
+        const { data: props } = await query.limit(50);
+        if (props && props.length > 0) {
+          setDbProperties(props);
+          setMatchedProperties(props.slice(0, 10).map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            price: Number(p.price) || 0,
+            currency: p.currency || 'USD',
+            zone: p.zone || p.address || 'Zona',
+            type: p.type || 'apartment',
+            bedrooms: p.bedrooms || 2,
+            areaM2: p.surface_m2 || p.area_m2 || 60,
+          })));
+        } else {
+          const { data: fallbackProps } = await supabase
             .from('properties')
             .select('*')
-            .eq('organization_id', profile.organization_id)
-            .limit(10);
-
-          if (props && props.length > 0) {
-            setDbProperties(props);
+            .neq('is_public', false)
+            .in('status', ['available', 'disponible'])
+            .limit(50);
+          if (fallbackProps && fallbackProps.length > 0) {
+            setDbProperties(fallbackProps);
+            setMatchedProperties(fallbackProps.slice(0, 10).map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              price: Number(p.price) || 0,
+              currency: p.currency || 'USD',
+              zone: p.zone || p.address || 'Zona',
+              type: p.type || 'apartment',
+              bedrooms: p.bedrooms || 2,
+              areaM2: p.surface_m2 || p.area_m2 || 60,
+            })));
           }
         }
       } catch (err) {
@@ -289,25 +359,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
     }
   };
 
-  const handleResetChat = () => {
-    setMessages([
-      {
-        id: 'welcome-1',
-        sender: 'bot',
-        text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA comercial de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad estás interesado hoy?`,
-        timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-    setExtractedEntities({
-      budget_max_usd: null,
-      preferred_zone: null,
-      property_type: null,
-      operation_type: null,
-      lead_name: null,
-      status: 'active',
-    });
-    setMatchedProperties([]);
-  };
+
 
   const getLeadTempBadge = () => {
     if (extractedEntities.status === 'qualified' || (extractedEntities.budget_max_usd && extractedEntities.preferred_zone)) {

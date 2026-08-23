@@ -256,20 +256,35 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           return res.status(200).json({ status: 'HUMAN_TAKEOVER_ACTIVE_MESSAGE_RECORDED' });
         }
 
-        // 4. Buscar propiedades activas de la inmobiliaria
+        // 4. Buscar todas las propiedades activas y públicas de la inmobiliaria
         let properties: any[] = [];
-        if (supabase && orgId) {
+        if (supabase) {
           try {
-            const { data: propsData } = await supabase
+            let propQuery = supabase
               .from('properties')
               .select('*')
-              .eq('organization_id', orgId)
-              .limit(10);
+              .neq('is_public', false)
+              .in('status', ['available', 'disponible', 'published']);
 
+            if (orgId && orgId !== 'org-default') {
+              propQuery = propQuery.or(`organization_id.eq.${orgId},user_id.eq.${orgId}`);
+            }
+
+            const { data: propsData } = await propQuery.limit(100);
             if (propsData && propsData.length > 0) {
               properties = propsData;
+            } else {
+              const { data: fallbackProps } = await supabase
+                .from('properties')
+                .select('*')
+                .neq('is_public', false)
+                .in('status', ['available', 'disponible'])
+                .limit(100);
+              if (fallbackProps) properties = fallbackProps;
             }
-          } catch {}
+          } catch (e) {
+            console.warn('Error fetching properties in whatsappHandler:', e);
+          }
         }
 
         const propertyCatalogText = properties

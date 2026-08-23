@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { INITIAL_BOT_CONFIG } from '../data/mockData';
 import { useLanguage } from '../context/LanguageContext';
 import { generateStructuredAriaRealEstateResponse } from '../../api/_lib/openrouterService';
@@ -14,16 +14,43 @@ export interface ChatMessage {
 
 export function useChat(options?: { initialContext?: string }) {
   const { lang } = useLanguage();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome-1',
-      sender: 'bot',
-      content: INITIAL_BOT_CONFIG.welcomeMessage,
-      text: INITIAL_BOT_CONFIG.welcomeMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  
+  const defaultWelcomeMessage: ChatMessage = {
+    id: 'welcome-1',
+    sender: 'bot',
+    content: INITIAL_BOT_CONFIG.welcomeMessage,
+    text: INITIAL_BOT_CONFIG.welcomeMessage,
+    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  };
+
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const saved = localStorage.getItem('aria_slideover_chat_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [defaultWelcomeMessage];
+  });
+
   const [isTyping, setIsTyping] = useState(false);
+
+  // Sync to localStorage
+  useEffect(() => {
+    try {
+      if (messages.length > 0) {
+        localStorage.setItem('aria_slideover_chat_history', JSON.stringify(messages));
+      }
+    } catch (_) {}
+  }, [messages]);
+
+  const clearChat = () => {
+    try {
+      localStorage.removeItem('aria_slideover_chat_history');
+      setMessages([defaultWelcomeMessage]);
+    } catch (_) {}
+  };
 
   const sendMessage = async (text: string, overrideContext?: string, _historyArg?: any) => {
     if (!text.trim()) return;
@@ -58,147 +85,60 @@ export function useChat(options?: { initialContext?: string }) {
 
     try {
       let replyText = '';
-      let recommendedPropId: string | undefined = undefined;
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json, text/event-stream',
-        },
-        body: JSON.stringify({ message: text, history: historyPayload, context: ctx, lang }),
-      });
+      // 1. First attempt call to /api/chat
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            history: historyPayload,
+            context: ctx,
+            lang,
+          }),
+        });
 
-      const contentType = response.headers.get('content-type') || '';
-
-      if (response.ok) {
-        if (contentType.includes('application/json')) {
-          const data = await response.json();
-          if (data.replyText || data.response || data.text) {
-            replyText = data.replyText || data.response || data.text;
-          }
-          if (data.matchedProperties && data.matchedProperties.length > 0) {
-            recommendedPropId = data.matchedProperties[0].id;
-          }
-        } else if (response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let done = false;
-          let buffer = '';
-
-          while (!done) {
-            const { value, done: doneReading } = await reader.read();
-            done = doneReading;
-
-            if (value) {
-              buffer += decoder.decode(value, { stream: !done });
-              const parts = buffer.split('\n\n');
-              buffer = parts.pop() || '';
-
-              for (const part of parts) {
-                const line = part.trim();
-                if (line.startsWith('data: ')) {
-                  try {
-                    const jsonStr = line.replace('data: ', '').trim();
-                    if (jsonStr) {
-                      const parsed = JSON.parse(jsonStr);
-                      if (parsed.text) {
-                        replyText += parsed.text;
-                        setMessages((prev) =>
-                          prev.map((m) =>
-                            m.id === botMessageId
-                              ? { ...m, content: replyText, text: replyText }
-                              : m
-                          )
-                        );
-                      }
-                      if (parsed.recommendedPropertyId) {
-                        recommendedPropId = parsed.recommendedPropertyId;
-                      }
-                    }
-                  } catch (e) {
-                    console.warn('SSE Chunk parse warning:', e);
-                  }
-                }
-              }
-            }
+        if (res.ok) {
+          const data = await res.json();
+          if (data.reply || data.replyText || data.message || data.text) {
+            replyText = data.reply || data.replyText || data.message || data.text;
           }
         }
-      } else {
-        console.warn(`HTTP ${response.status} from /api/chat, triggering client fallback engine...`);
+      } catch (apiErr) {
+        console.warn('API /api/chat error, fallback to client engine:', apiErr);
       }
 
-      // If server response didn't produce text, use client-side OpenRouter / Gemini Real Estate Engine fallback
-      if (!replyText.trim()) {
-        const clientRes = await generateStructuredAriaRealEstateResponse({
+      // 2. Client-side generative engine fallback
+      if (!replyText) {
+        const fallback = await generateStructuredAriaRealEstateResponse({
           message: text,
           history: historyPayload,
+          propertyContext: 'Catálogo de propiedades inmobiliarias activas disponibles en Argentina.',
           agentName: 'Aria',
           agencyName: 'Aria Prop',
         });
-        replyText = clientRes.replyText;
+        replyText = fallback.replyText;
       }
 
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === botMessageId
-            ? {
-                ...m,
-                content: replyText,
-                text: replyText,
-                recommendedPropertyId: recommendedPropId || m.recommendedPropertyId,
-              }
-            : m
-        )
+        prev.map((m) => (m.id === botMessageId ? { ...m, content: replyText, text: replyText } : m))
       );
-    } catch (err: any) {
-      console.warn('⚠️ Server /api/chat error, executing client real estate fallback:', err);
-      try {
-        const clientRes = await generateStructuredAriaRealEstateResponse({
-          message: text,
-          history: historyPayload,
-          agentName: 'Aria',
-          agencyName: 'Aria Prop',
-        });
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === botMessageId
-              ? { ...m, content: clientRes.replyText, text: clientRes.replyText }
-              : m
-          )
-        );
-      } catch (fallbackErr) {
-        const defaultReply =
-          '¡Hola! Soy Aria, tu asesora virtual inmobiliaria. Puedo ayudarte a buscar propiedades en venta o alquiler, cualificar tu presupuesto o agendar una visita. ¿Qué tipo de propiedad estás buscando?';
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === botMessageId ? { ...m, content: defaultReply, text: defaultReply } : m
-          )
-        );
-      }
+    } catch (err) {
+      console.error('Error generating chat response:', err);
+      const errText = 'Disculpas, ocurrió un error momentáneo al consultar el catálogo. Por favor intenta de nuevo en unos instantes.';
+      setMessages((prev) =>
+        prev.map((m) => (m.id === botMessageId ? { ...m, content: errText, text: errText } : m))
+      );
     } finally {
       setIsTyping(false);
     }
   };
 
-  const clearMessages = () => {
-    setMessages([
-      {
-        id: `welcome-${Date.now()}`,
-        sender: 'bot',
-        content: INITIAL_BOT_CONFIG.welcomeMessage,
-        text: INITIAL_BOT_CONFIG.welcomeMessage,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-  };
-
   return {
     messages,
     isTyping,
-    sendMessage,
     send: sendMessage,
-    clearMessages,
-    resetMessages: clearMessages,
+    clearChat,
   };
 }

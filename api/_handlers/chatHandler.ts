@@ -181,36 +181,56 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
     let properties: any[] = [];
     let botConfig: any = null;
 
-    if (supabase && targetId) {
+    if (supabase) {
       try {
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('*')
-          .or(`id.eq.${targetId},user_id.eq.${targetId}`)
-          .maybeSingle();
-
-        if (orgData) {
-          botConfig = orgData;
-        } else {
-          const { data: profData } = await supabase
-            .from('profiles')
-            .select('*, organizations(*)')
-            .eq('id', targetId)
+        if (targetId) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .or(`id.eq.${targetId},user_id.eq.${targetId}`)
             .maybeSingle();
 
-          if (profData?.organizations) {
-            botConfig = profData.organizations;
+          if (orgData) {
+            botConfig = orgData;
+          } else {
+            const { data: profData } = await supabase
+              .from('profiles')
+              .select('*, organizations(*)')
+              .eq('id', targetId)
+              .maybeSingle();
+
+            if (profData?.organizations) {
+              botConfig = profData.organizations;
+            }
           }
         }
 
-        // Fetch properties
-        let propQuery = supabase.from('properties').select('*');
-        if (botConfig?.id) {
-          propQuery = propQuery.or(`organization_id.eq.${botConfig.id},user_id.eq.${targetId}`);
+        // Realizar consulta directa de todas las propiedades activas y públicas disponibles
+        let propQuery = supabase
+          .from('properties')
+          .select('*')
+          .neq('is_public', false)
+          .in('status', ['available', 'disponible', 'published']);
+
+        if (botConfig?.id || targetId) {
+          const activeOrg = botConfig?.id || targetId;
+          propQuery = propQuery.or(`organization_id.eq.${activeOrg},user_id.eq.${activeOrg}`);
         }
-        const { data: propsData } = await propQuery.limit(15);
-        if (propsData && propsData.length > 0) {
+
+        const { data: propsData, error: propsErr } = await propQuery.limit(100);
+        if (!propsErr && propsData && propsData.length > 0) {
           properties = propsData;
+        } else {
+          // Fallback global de propiedades activas si no hay filtro de org específico
+          const { data: fallbackProps } = await supabase
+            .from('properties')
+            .select('*')
+            .neq('is_public', false)
+            .in('status', ['available', 'disponible'])
+            .limit(100);
+          if (fallbackProps && fallbackProps.length > 0) {
+            properties = fallbackProps;
+          }
         }
       } catch (err) {
         console.warn('Supabase fetch error in chatHandler:', err);
@@ -224,10 +244,26 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
     const effectiveBookingUrl = bookingUrl || botConfig?.calendar_booking_url || '';
 
     const propertyCatalogText = properties
-      .map(
-        (p) =>
-          `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation || 'ALQUILER').toUpperCase()}) en ${p.zone || 'Zona'}. Precio: $${p.price} USD. ${p.bedrooms || 2} hab. Ficha: https://ariaprop.online/properties/${p.id}`
-      )
+      .map((p) => {
+        const rawOp = p.operation_type || p.operation || (Number(p.price) < 5000 ? 'rent' : 'sale');
+        const isSale = rawOp === 'sale' || rawOp === 'venta';
+        const isTemp = rawOp === 'temporary_rent' || rawOp === 'temporal';
+        const opTag = isTemp ? '[ALQUILER TEMPORAL]' : isSale ? '[VENTA]' : '[ALQUILER TRADICIONAL]';
+        
+        let periodStr = '';
+        if (!isSale) {
+          const period = p.rental_period || (isTemp ? 'nightly' : 'monthly');
+          periodStr = period === 'nightly' ? ' por noche' : period === 'yearly' ? ' por año' : ' por mes';
+        }
+
+        const loc = [p.address, p.zone, p.city].filter(Boolean).join(', ') || 'Ubicación céntrica';
+        const dorms = p.bedrooms ?? p.features?.bedrooms ?? 2;
+        const baths = p.bathrooms ?? p.features?.bathrooms ?? 1;
+        const area = p.surface_m2 ?? p.area_m2 ?? p.features?.areaM2 ?? 60;
+        const desc = p.description ? ` - ${p.description.slice(0, 120)}` : '';
+
+        return `- [ID: ${p.id} | Código: ${p.code || p.id}] ${opTag} "${p.title}" (${(p.type || 'Inmueble').toUpperCase()}) en ${loc}. Precio: ${Number(p.price).toLocaleString('en-US')} ${p.currency || 'USD'}${periodStr}. ${dorms} hab, ${baths} baños, ${area} m².${desc} Ficha: https://ariaprop.online/properties/${p.id}`;
+      })
       .join('\n');
 
     // 1. Check if lead is handled by Human or IA & Retrieve persistent memory
@@ -338,7 +374,7 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
         text: response.replyText,
         message: response.replyText,
         extractedData: response.extractedData,
-        matchedProperties: properties.slice(0, 3),
+        matchedProperties: properties.slice(0, 10), totalCatalogCount: properties.length,
         latencyMs,
         source: 'openrouter_ai',
       });

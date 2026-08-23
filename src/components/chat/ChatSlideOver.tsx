@@ -2,7 +2,7 @@
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { X, Send, Sparkles, Bot, ShieldCheck } from 'lucide-react';
+import { X, Send, Sparkles, Bot, ShieldCheck, RotateCcw } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -19,7 +19,7 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
   initialContext = 'general',
   prefilledPrompt = '',
 }) => {
-  const { messages, send, isTyping } = useChat({ initialContext: initialContext as any });
+  const { messages, send, isTyping, clearChat } = useChat({ initialContext: initialContext as any });
   const { t } = useLanguage();
   const [input, setInput] = useState('');
   const [sentCount, setSentCount] = useState<number>(0);
@@ -130,13 +130,23 @@ export const ChatSlideOver: React.FC<ChatSlideOverProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            aria-label="Cerrar ventana de chat"
-            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={clearChat}
+              title="Reiniciar chat / Limpiar historial"
+              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-emerald-400 transition-all cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Cerrar ventana de chat"
+              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Message Container */}
