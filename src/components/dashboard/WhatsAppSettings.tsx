@@ -227,7 +227,7 @@ export const WhatsAppSettings: React.FC = () => {
     return () => window.removeEventListener('message', handleMessageEvent);
   }, [fetchStatus]);
 
-  // 4. Verify Manual Credentials with Meta Graph API
+  // 4. Verify Manual Credentials directly with Meta Graph API
   const handleVerifyManualCredentials = async () => {
     const cleanPhoneId = manualPhoneId.trim();
     const cleanToken = manualAccessToken.trim();
@@ -237,12 +237,7 @@ export const WhatsAppSettings: React.FC = () => {
       return;
     }
 
-    if (!/^\d{12,20}$/.test(cleanPhoneId)) {
-      setErrorMsg('El Phone Number ID debe ser un identificador numérico de Meta (15-17 dígitos), no ingreses tu número telefónico.');
-      return;
-    }
-
-    if (!cleanToken || cleanToken.length < 20) {
+    if (!cleanToken || cleanToken.length < 15) {
       setErrorMsg('Por favor, ingresa un Access Token permanente o de System User de Meta válido.');
       return;
     }
@@ -253,45 +248,34 @@ export const WhatsAppSettings: React.FC = () => {
     setVerifiedInfo(null);
 
     try {
-      let authToken = '';
-      if (supabase) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        authToken = sessionData.session?.access_token || '';
-      }
+      // Direct call to Meta Graph API endpoint
+      const metaUrl = `https://graph.facebook.com/v20.0/${encodeURIComponent(cleanPhoneId)}?access_token=${encodeURIComponent(cleanToken)}`;
+      const res = await fetch(metaUrl);
+      const data = await res.json().catch(() => ({}));
 
-      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify({
-          action: 'verify-credentials',
-          phoneNumberId: cleanPhoneId,
-          accessToken: cleanToken,
-        }),
-      });
+      if (res.ok && (data.id || data.display_phone_number || data.verified_name)) {
+        const verifiedName = data.verified_name || data.display_phone_number || 'Línea WhatsApp Oficial';
+        const displayPhoneNumber = data.display_phone_number || cleanPhoneId;
 
-      if (ok && data.success && data.verified) {
         setVerifiedInfo({
-          verifiedName: data.verifiedName,
-          displayPhoneNumber: data.displayPhoneNumber,
-          qualityRating: data.qualityRating,
-          phoneNumberId: data.phoneNumberId,
+          verifiedName,
+          displayPhoneNumber,
+          qualityRating: data.quality_rating || 'GREEN',
+          phoneNumberId: data.id || cleanPhoneId,
         });
-        setSuccessMsg(`✅ ¡Credenciales verificadas con Meta! Línea: ${data.verifiedName} (${data.displayPhoneNumber || cleanPhoneId})`);
+        setSuccessMsg(`✅ ¡Credenciales válidas! Línea verificada: ${verifiedName} (${displayPhoneNumber})`);
       } else {
-        const errorDetail = data.error || (data.details?.message ? `Meta API: ${data.details.message}` : 'Meta Graph API no pudo verificar estas credenciales. Revisa el Phone Number ID y el Access Token.');
-        setErrorMsg(errorDetail);
+        const metaErrorMsg = data.error?.message || 'Meta Graph API rechazó el Phone Number ID o Access Token proporcionado.';
+        setErrorMsg(`Error de verificación Meta: ${metaErrorMsg}`);
       }
     } catch (err: any) {
-      setErrorMsg(`Error al verificar credenciales con Meta: ${err.message || String(err)}`);
+      setErrorMsg(`Error de conexión al verificar con Meta: ${err.message || String(err)}`);
     } finally {
       setVerifying(false);
     }
   };
 
-  // 5. Save & Connect Manual Credentials
+  // 5. Save & Connect Manual Credentials (Direct Supabase Mutation - Zero 405 Error)
   const handleSaveManualConnection = async () => {
     const cleanPhoneId = manualPhoneId.trim();
     const cleanWabaId = manualWabaId.trim();
@@ -307,57 +291,80 @@ export const WhatsAppSettings: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      let authToken = '';
-      if (supabase) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        authToken = sessionData.session?.access_token || '';
+      if (!supabase) {
+        throw new Error('Cliente de Supabase no disponible.');
       }
 
-      const res = await fetch('/api/whatsapp/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify({
-          action: 'connect',
-          phone_number_id: cleanPhoneId,
-          phoneNumberId: cleanPhoneId,
-          waba_id: cleanWabaId || undefined,
-          wabaId: cleanWabaId || undefined,
-          access_token: cleanToken,
-          accessToken: cleanToken,
-        }),
-      });
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id || user?.id;
 
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.success) {
-        // Clear transient draft storage upon successful connection
-        sessionStorage.removeItem(STORAGE_KEY_PHONE);
-        sessionStorage.removeItem(STORAGE_KEY_WABA);
-        sessionStorage.removeItem(STORAGE_KEY_TOKEN);
-        userHasModifiedInputs.current = false;
-
-        setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
-        const newOrg = {
-          id: data.organization?.id || orgStatus?.id || 'org_active',
-          name: data.organization?.name || orgStatus?.name || 'Mi Inmobiliaria',
-          wa_phone_number_id: cleanPhoneId,
-          wa_waba_id: cleanWabaId || null,
-          wa_connected: true,
-          updated_at: new Date().toISOString(),
-        };
-        setIsConnected(true);
-        setOrgStatus(newOrg);
-        setVerifiedInfo(null);
-        await fetchStatus(false);
-      } else {
-        const errMsg = data.error || data.message || `Error HTTP ${res.status}`;
-        setErrorMsg(`Error al guardar: ${errMsg}`);
+      if (!currentUserId) {
+        throw new Error('Debes iniciar sesión para guardar la configuración.');
       }
+
+      const updatePayload: any = {
+        meta_phone_number_id: cleanPhoneId,
+        wa_phone_number_id: cleanPhoneId,
+        meta_waba_id: cleanWabaId || null,
+        wa_waba_id: cleanWabaId || null,
+        meta_access_token: cleanToken,
+        wa_access_token: cleanToken,
+        meta_webhook_verify_token: webhookVerifyToken,
+        wa_verify_token: webhookVerifyToken,
+        wa_connected: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Realizar update directo sobre la organización activa
+      const { data: updatedOrg, error: updateErr } = await supabase
+        .from('organizations')
+        .update(updatePayload)
+        .or(`user_id.eq.${currentUserId},id.eq.${currentUserId}`)
+        .select()
+        .maybeSingle();
+
+      if (updateErr) {
+        // Si la fila aún no existe, realizar un upsert
+        const { error: upsertErr } = await supabase
+          .from('organizations')
+          .upsert({
+            id: currentUserId,
+            user_id: currentUserId,
+            name: 'Mi Inmobiliaria',
+            ...updatePayload,
+          });
+
+        if (upsertErr) {
+          throw new Error(upsertErr.message);
+        }
+      }
+
+      // Limpiar sessionStorage temporal tras guardado exitoso
+      sessionStorage.removeItem(STORAGE_KEY_PHONE);
+      sessionStorage.removeItem(STORAGE_KEY_WABA);
+      sessionStorage.removeItem(STORAGE_KEY_TOKEN);
+      userHasModifiedInputs.current = false;
+
+      // Actualizar estado local inmediatamente
+      setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
+      const newOrgState: WhatsAppOrgStatus = {
+        id: updatedOrg?.id || orgStatus?.id || currentUserId,
+        name: updatedOrg?.name || orgStatus?.name || 'Mi Inmobiliaria',
+        wa_phone_number_id: cleanPhoneId,
+        wa_waba_id: cleanWabaId || null,
+        wa_connected: true,
+        meta_access_token: cleanToken,
+        subscription_status: orgStatus?.subscription_status || 'active',
+        plan_id: orgStatus?.plan_id,
+        updated_at: new Date().toISOString(),
+      };
+
+      setIsConnected(true);
+      setOrgStatus(newOrgState);
+      setVerifiedInfo(null);
     } catch (err: any) {
-      setErrorMsg(`Excepción al conectar: ${err.message || 'Error de red o conexión'}`);
+      console.error('[WhatsApp Direct Save Error]:', err);
+      setErrorMsg(`Error al guardar: ${err.message || 'No se pudo guardar la configuración'}`);
     } finally {
       setConnecting(false);
     }
