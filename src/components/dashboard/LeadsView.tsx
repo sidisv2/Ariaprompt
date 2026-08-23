@@ -910,16 +910,16 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
               {/* Status Switcher & Qualification Metrics */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/5">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Presupuesto Máx</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Presupuesto</span>
                   <span className="text-sm font-extrabold text-white font-mono">
-                    {selectedLead.budget_max_usd ? `$${Number(selectedLead.budget_max_usd).toLocaleString('en-US')} USD` : 'No especificado'}
+                    {selectedLead.budget_max_usd ? `${Number(selectedLead.budget_max_usd).toLocaleString('en-US')} USD` : 'Por definir'}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/5">
                   <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Zona Preferida</span>
                   <span className="text-sm font-extrabold text-emerald-400 truncate block">
-                    {selectedLead.preferred_zone || 'No especificada'}
+                    {selectedLead.preferred_zone || (selectedLead as any).zone || 'Por definir'}
                   </span>
                 </div>
 

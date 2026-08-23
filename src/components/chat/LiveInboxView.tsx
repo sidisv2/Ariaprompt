@@ -515,8 +515,12 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                         size="sm"
                       />
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Zona: <strong className="text-slate-200">{activeLead.preferred_zone || 'CABA'}</strong> · Presupuesto: <strong className="text-emerald-400">${activeLead.budget_max_usd?.toLocaleString()} USD</strong> · Visita: <strong className="text-amber-300">Viernes 16:00 hs</strong>
+                    <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-3 flex-wrap">
+                      <span>Zona: <strong className="text-slate-200">{activeLead.preferred_zone || (activeLead as any).zone || 'Por definir'}</strong></span>
+                      <span>·</span>
+                      <span>Presupuesto: <strong className="text-emerald-400">{activeLead.budget_max_usd ? `${Number(activeLead.budget_max_usd).toLocaleString('en-US')} USD` : 'Por definir'}</strong></span>
+                      <span>·</span>
+                      <span>Visita: <strong className="text-amber-300">{(activeLead as any).scheduled_visit ? new Date((activeLead as any).scheduled_visit).toLocaleString('es-AR') : 'Sin agendar'}</strong></span>
                     </p>
                   </div>
                 </div>
