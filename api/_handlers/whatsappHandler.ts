@@ -147,7 +147,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const wamid = incomingMsg.id;
         const businessPhoneNumberId = metadata?.phone_number_id;
 
+        console.log('📩 [WhatsApp Webhook Inbound]:', {
+          from: fromNumber,
+          phone_number_id: businessPhoneNumberId,
+          type: msgType,
+          wamid: wamid,
+        });
+
         if (!fromNumber || !businessPhoneNumberId) {
+          console.warn('⚠️ Webhook omitido: Falta remitente (from) o phone_number_id');
           return res.status(200).json({ status: 'MISSING_SENDER_OR_PHONE_ID' });
         }
 
@@ -200,6 +208,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         let org: any = null;
         if (supabase) {
           try {
+            // A) Buscar por Phone Number ID exacto
             const { data: orgData } = await supabase
               .from('organizations')
               .select('*')
@@ -208,9 +217,23 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
             if (orgData) {
               org = orgData;
+            } else {
+              // B) Fallback: Buscar la primera organización activa conectada a WhatsApp
+              const { data: fallbackOrg } = await supabase
+                .from('organizations')
+                .select('*')
+                .eq('wa_connected', true)
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              if (fallbackOrg) {
+                console.log('ℹ️ Usando organización activa fallback conectada:', fallbackOrg.id);
+                org = fallbackOrg;
+              }
             }
           } catch (err) {
-            console.warn('Error fetching organization by phone number id:', err);
+            console.warn('Error fetching organization in WhatsApp Webhook:', err);
           }
         }
 
@@ -233,7 +256,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const customRules = org?.custom_prompt_instructions || org?.system_prompt || '';
         const faqList = org?.faq_knowledge || [];
         const bookingUrl = org?.calendar_booking_url || '';
-        const accessToken = org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '';
+        const accessToken = (org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
 
         // 3. Buscar o crear Lead y chequear handled_by & Memoria persistente (últimos 15 mensajes)
         let conversationHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
