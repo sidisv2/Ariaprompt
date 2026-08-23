@@ -306,9 +306,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               const { error: msgErr } = await supabase.from('chat_messages').insert({
                 lead_id: existingConvId,
                 sender: 'user',
-                sender_type: 'user',
                 message_type: messageType,
-                media_type: messageType,
                 media_url: mediaUrl,
                 content: messageText,
                 message_text: messageText,
@@ -442,7 +440,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             const { error: botMsgErr } = await supabase.from('chat_messages').insert({
               lead_id: existingConvId,
               sender: 'assistant',
-              sender_type: 'assistant',
               message_type: 'text',
               content: botReplyText,
               message_text: botReplyText,
