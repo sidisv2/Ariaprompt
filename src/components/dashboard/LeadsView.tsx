@@ -758,7 +758,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <h4 className="font-bold text-white text-xs truncate">
-                          {lead.user_name || `Lead ${lead.user_phone}`}
+                          {lead.user_name || lead.user_phone || 'Prospecto sin nombre'}
                         </h4>
                         <LeadScoringBadge
                           score={computedScoring.score}

@@ -31,11 +31,11 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
     let isMounted = true;
     async function fetchAccountData() {
       try {
-        // Query leads for this user account
+        // Query leads for this user account or organization
         const { data: leadData } = await supabase
           .from('leads')
           .select('*')
-          .eq('user_id', user.id);
+          .or(`user_id.eq.${user.id},organization_id.eq.${user.id}`);
 
         if (isMounted && leadData) {
           setDbLeads(leadData as any);
@@ -104,13 +104,13 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
   }, [dbMessagesCount, accountLeads]);
 
   const qualifiedLeadsCount = useMemo(() => {
-    return accountLeads.filter(
-      (l) => l.temperature === 'hot' || l.temperature === 'warm' || (l.score && l.score >= 50)
+    return (accountLeads || []).filter(
+      (l: any) => l.temperature === 'hot' || l.temperature === 'warm' || l.status === 'qualified' || (l.score && l.score >= 50)
     ).length;
   }, [accountLeads]);
 
   const scheduledVisitsCount = useMemo(() => {
-    return accountLeads.filter((l) => l.status === 'visit_scheduled').length;
+    return (accountLeads || []).filter((l: any) => l.status === 'visit_scheduled' || l.status === 'handover').length;
   }, [accountLeads]);
 
   const conversionRatePercent = useMemo(() => {
@@ -160,7 +160,7 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
       {
         id: 'met-1',
         label: 'Conversaciones Totales Atendidas',
-        value: isZeroActivity ? '0' : totalConversationsCount.toLocaleString('es-ES'),
+        value: isZeroActivity ? '0' : (totalConversationsCount ?? 0).toLocaleString('es-AR'),
         changePercent: isZeroActivity ? 0 : 100,
         trend: 'up',
         timeframe: isZeroActivity ? 'Sin conversaciones todavía' : 'Actividad acumulada de la cuenta',
@@ -343,9 +343,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
                   </p>
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-400 pt-1">
-                    <span>Presupuesto: {lead.budgetMin.toLocaleString('es-ES')}€ - {lead.budgetMax.toLocaleString('es-ES')}€</span>
+                    <span>Presupuesto: {(lead.budgetMin ?? (lead as any).budget_max_usd ?? 0).toLocaleString('es-AR')} - {(lead.budgetMax ?? (lead as any).budget_max_usd ?? 0).toLocaleString('es-AR')} USD</span>
                     <span>•</span>
-                    <span>Zona: {lead.preferredZone}</span>
+                    <span>Zona: {lead.preferredZone || (lead as any).preferred_zone || 'Por definir'}</span>
                   </div>
                 </div>
 
