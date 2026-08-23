@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MessageSquare,
   CheckCircle2,
@@ -65,11 +65,26 @@ export const WhatsAppSettings: React.FC = () => {
   const [copiedWebhook, setCopiedWebhook] = useState<boolean>(false);
   const [copiedToken, setCopiedToken] = useState<boolean>(false);
 
-  // Manual Form States
-  const [manualPhoneId, setManualPhoneId] = useState<string>('');
-  const [manualWabaId, setManualWabaId] = useState<string>('');
-  const [manualAccessToken, setManualAccessToken] = useState<string>('');
+  // SessionStorage keys for transient input persistence across tab navigation
+  const STORAGE_KEY_PHONE = 'ariaprop_wa_draft_phone_id';
+  const STORAGE_KEY_WABA = 'ariaprop_wa_draft_waba_id';
+  const STORAGE_KEY_TOKEN = 'ariaprop_wa_draft_access_token';
+
+  // Manual Form States initialized from sessionStorage if present
+  const [manualPhoneId, setManualPhoneId] = useState<string>(() => {
+    return typeof window !== 'undefined' ? (sessionStorage.getItem(STORAGE_KEY_PHONE) || '') : '';
+  });
+  const [manualWabaId, setManualWabaId] = useState<string>(() => {
+    return typeof window !== 'undefined' ? (sessionStorage.getItem(STORAGE_KEY_WABA) || '') : '';
+  });
+  const [manualAccessToken, setManualAccessToken] = useState<string>(() => {
+    return typeof window !== 'undefined' ? (sessionStorage.getItem(STORAGE_KEY_TOKEN) || '') : '';
+  });
   const [verifiedInfo, setVerifiedInfo] = useState<VerifiedCredentialsInfo | null>(null);
+
+  // Ref to prevent subsequent background re-fetches from overriding user modifications
+  const hasLoadedInitialData = useRef<boolean>(false);
+  const userHasModifiedInputs = useRef<boolean>(false);
 
   const webhookUrl = 'https://ariaprop.online/api/webhook/whatsapp';
   const webhookVerifyToken = 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
@@ -94,7 +109,7 @@ export const WhatsAppSettings: React.FC = () => {
   };
 
   // 1. Fetch current WhatsApp connection status and credentials from Supabase
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (isInitialMount: boolean = false) => {
     setLoading(true);
     setErrorMsg(null);
     try {
@@ -114,10 +129,29 @@ export const WhatsAppSettings: React.FC = () => {
           const wabaId = org.meta_waba_id || org.wa_waba_id || '';
           const token = org.meta_access_token || org.wa_access_token || '';
 
-          setManualPhoneId(phoneId);
-          setManualWabaId(wabaId);
-          if (token) {
-            setManualAccessToken(token);
+          // Only populate inputs on initial mount if user hasn't typed in inputs or sessionStorage isn't set
+          if (isInitialMount && !userHasModifiedInputs.current) {
+            const savedDraftPhone = sessionStorage.getItem(STORAGE_KEY_PHONE);
+            const savedDraftWaba = sessionStorage.getItem(STORAGE_KEY_WABA);
+            const savedDraftToken = sessionStorage.getItem(STORAGE_KEY_TOKEN);
+
+            if (savedDraftPhone !== null) {
+              setManualPhoneId(savedDraftPhone);
+            } else if (phoneId) {
+              setManualPhoneId(phoneId);
+            }
+
+            if (savedDraftWaba !== null) {
+              setManualWabaId(savedDraftWaba);
+            } else if (wabaId) {
+              setManualWabaId(wabaId);
+            }
+
+            if (savedDraftToken !== null) {
+              setManualAccessToken(savedDraftToken);
+            } else if (token) {
+              setManualAccessToken(token);
+            }
           }
 
           const hasActiveConn = Boolean(phoneId && (token || org.wa_connected));
@@ -144,7 +178,12 @@ export const WhatsAppSettings: React.FC = () => {
 
   // 2. Load Facebook SDK dynamically for Embedded Signup
   useEffect(() => {
-    fetchStatus();
+    if (!hasLoadedInitialData.current) {
+      hasLoadedInitialData.current = true;
+      fetchStatus(true);
+    } else {
+      fetchStatus(false);
+    }
 
     const appId = import.meta.env.VITE_META_APP_ID || '891096146948509';
 
@@ -294,6 +333,12 @@ export const WhatsAppSettings: React.FC = () => {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.success) {
+        // Clear transient draft storage upon successful connection
+        sessionStorage.removeItem(STORAGE_KEY_PHONE);
+        sessionStorage.removeItem(STORAGE_KEY_WABA);
+        sessionStorage.removeItem(STORAGE_KEY_TOKEN);
+        userHasModifiedInputs.current = false;
+
         setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
         const newOrg = {
           id: data.organization?.id || orgStatus?.id || 'org_active',
@@ -306,7 +351,7 @@ export const WhatsAppSettings: React.FC = () => {
         setIsConnected(true);
         setOrgStatus(newOrg);
         setVerifiedInfo(null);
-        await fetchStatus();
+        await fetchStatus(false);
       } else {
         const errMsg = data.error || data.message || `Error HTTP ${res.status}`;
         setErrorMsg(`Error al guardar: ${errMsg}`);
@@ -421,6 +466,11 @@ export const WhatsAppSettings: React.FC = () => {
       });
 
       if (res.ok) {
+        sessionStorage.removeItem(STORAGE_KEY_PHONE);
+        sessionStorage.removeItem(STORAGE_KEY_WABA);
+        sessionStorage.removeItem(STORAGE_KEY_TOKEN);
+        userHasModifiedInputs.current = false;
+
         setIsConnected(false);
         setOrgStatus(null);
         setManualPhoneId('');
@@ -480,7 +530,7 @@ export const WhatsAppSettings: React.FC = () => {
         </div>
 
         <button
-          onClick={fetchStatus}
+          onClick={() => fetchStatus(false)}
           disabled={loading}
           className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-2 self-start sm:self-auto cursor-pointer transition-all"
         >
@@ -662,7 +712,12 @@ export const WhatsAppSettings: React.FC = () => {
                 <input
                   type="text"
                   value={manualPhoneId}
-                  onChange={(e) => setManualPhoneId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    userHasModifiedInputs.current = true;
+                    setManualPhoneId(val);
+                    sessionStorage.setItem(STORAGE_KEY_PHONE, val);
+                  }}
                   placeholder="Ej: 106592837461928"
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-all"
                 />
@@ -677,7 +732,12 @@ export const WhatsAppSettings: React.FC = () => {
                 <input
                   type="text"
                   value={manualWabaId}
-                  onChange={(e) => setManualWabaId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    userHasModifiedInputs.current = true;
+                    setManualWabaId(val);
+                    sessionStorage.setItem(STORAGE_KEY_WABA, val);
+                  }}
                   placeholder="Ej: 198273645102938"
                   className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-all"
                 />
@@ -692,7 +752,12 @@ export const WhatsAppSettings: React.FC = () => {
                 <textarea
                   rows={3}
                   value={manualAccessToken}
-                  onChange={(e) => setManualAccessToken(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    userHasModifiedInputs.current = true;
+                    setManualAccessToken(val);
+                    sessionStorage.setItem(STORAGE_KEY_TOKEN, val);
+                  }}
                   placeholder="EAAG..."
                   className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-all resize-none"
                 />
