@@ -10,6 +10,7 @@ export interface Lead {
   name: string;
   email: string;
   phone: string;
+  handled_by?: 'ia' | 'human';
   temperature: LeadTemperature;
   status: LeadStatus;
   budgetMin: number;

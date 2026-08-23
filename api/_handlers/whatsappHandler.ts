@@ -173,52 +173,87 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const bookingUrl = org?.calendar_booking_url || '';
         const accessToken = org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '';
 
-        // 3. Recuperar memoria de conversación previa (últimos 5 mensajes)
+        // 3. Buscar o crear Lead y chequear handled_by & Memoria persistente (últimos 15 mensajes)
         let conversationHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
         let existingConvId: string | null = null;
+        let leadRecord: any = null;
 
         if (supabase && orgId) {
           try {
-            const { data: conv } = await supabase
-              .from('wa_conversations')
-              .select('id')
-              .eq('organization_id', orgId)
-              .eq('user_phone', fromNumber)
+            // Buscar en tabla leads
+            const { data: foundLead } = await supabase
+              .from('leads')
+              .select('*')
+              .or(`organization_id.eq.${orgId},user_id.eq.${orgId}`)
+              .or(`phone.eq.${fromNumber},user_phone.eq.${fromNumber}`)
               .maybeSingle();
 
-            if (conv) {
-              existingConvId = conv.id;
-              const { data: pastMsgs } = await supabase
-                .from('wa_messages')
-                .select('sender_type, message_text')
-                .eq('conversation_id', existingConvId)
-                .order('created_at', { ascending: false })
-                .limit(5);
-
-              if (pastMsgs && pastMsgs.length > 0) {
-                conversationHistory = pastMsgs.reverse().map((m: any) => ({
-                  sender: m.sender_type === 'user' ? 'user' : 'assistant',
-                  content: m.message_text || '',
-                }));
-              }
+            if (foundLead) {
+              leadRecord = foundLead;
+              existingConvId = foundLead.id;
             } else {
-              const { data: newConv } = await supabase
-                .from('wa_conversations')
+              // Crear lead automáticamente
+              const { data: newLead } = await supabase
+                .from('leads')
                 .insert({
                   organization_id: orgId,
+                  user_id: orgId,
                   user_phone: fromNumber,
+                  phone: fromNumber,
+                  user_name: `WhatsApp ${fromNumber.slice(-4)}`,
+                  name: `WhatsApp ${fromNumber.slice(-4)}`,
                   status: 'active',
+                  handled_by: 'ia',
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                 })
-                .select('id')
+                .select('*')
                 .single();
 
-              if (newConv) existingConvId = newConv.id;
+              if (newLead) {
+                leadRecord = newLead;
+                existingConvId = newLead.id;
+              }
+            }
+
+            // Persistir mensaje entrante del usuario en chat_messages
+            if (existingConvId) {
+              await supabase.from('chat_messages').insert({
+                lead_id: existingConvId,
+                sender: 'user',
+                sender_type: 'user',
+                content: messageText,
+                message_text: messageText,
+                created_at: new Date().toISOString(),
+              });
+            }
+
+            // Recuperar últimos 15 mensajes de chat_messages cronológicamente (created_at ASC)
+            if (existingConvId) {
+              const { data: pastMsgs } = await supabase
+                .from('chat_messages')
+                .select('sender, content, message_text, created_at')
+                .eq('lead_id', existingConvId)
+                .order('created_at', { ascending: true })
+                .limit(15);
+
+              if (pastMsgs && pastMsgs.length > 0) {
+                conversationHistory = pastMsgs.map((m: any) => ({
+                  sender: (m.sender === 'user' || m.sender_type === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+                  content: m.content || m.message_text || '',
+                }));
+              }
             }
           } catch (convErr) {
-            console.warn('Error fetching or creating wa_conversation:', convErr);
+            console.warn('Error fetching or creating lead / chat_messages:', convErr);
           }
+        }
+
+        // Si el lead está asignado a humano ('human'), NO generar respuesta automática
+        const isHumanTakeover = leadRecord?.handled_by === 'human' || leadRecord?.status === 'handover';
+        if (isHumanTakeover) {
+          console.log(`ℹ️ Lead ${fromNumber} está en modo Intervención Humana. Mensaje guardado en chat_messages sin respuesta de IA.`);
+          return res.status(200).json({ status: 'HUMAN_TAKEOVER_ACTIVE_MESSAGE_RECORDED' });
         }
 
         // 4. Buscar propiedades activas de la inmobiliaria

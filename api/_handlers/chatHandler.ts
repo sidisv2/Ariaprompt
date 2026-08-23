@@ -153,6 +153,10 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
     const {
       message,
       history = [],
+      leadId,
+      lead_id,
+      phone,
+      user_phone,
       agencyId,
       agency_id,
       orgId,
@@ -163,6 +167,9 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
       faqList = [],
       bookingUrl,
     } = body;
+
+    const activeLeadId = leadId || lead_id;
+    const clientPhone = phone || user_phone;
 
     const targetId = agencyId || agency_id || orgId;
 
@@ -223,11 +230,79 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
       )
       .join('\n');
 
-    // Adapt history for OpenRouter
-    const adaptedHistory = history.map((h: any) => ({
-      sender: (h.sender === 'user' || h.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-      content: h.content || h.text || (h.parts && h.parts[0]?.text) || '',
-    }));
+    // 1. Check if lead is handled by Human or IA & Retrieve persistent memory
+    let leadRecord: any = null;
+    let persistentHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
+
+    if (supabase && (activeLeadId || clientPhone)) {
+      try {
+        let leadQuery = supabase.from('leads').select('*');
+        if (activeLeadId) {
+          leadQuery = leadQuery.eq('id', activeLeadId);
+        } else if (clientPhone) {
+          leadQuery = leadQuery.or(`phone.eq.${clientPhone},user_phone.eq.${clientPhone}`);
+        }
+        const { data: foundLead } = await leadQuery.maybeSingle();
+        if (foundLead) {
+          leadRecord = foundLead;
+        }
+
+        // Fetch last 15 messages from chat_messages ordered chronologically (created_at ASC)
+        const targetLeadIdentifier = leadRecord?.id || activeLeadId;
+        if (targetLeadIdentifier) {
+          const { data: dbChatMsgs } = await supabase
+            .from('chat_messages')
+            .select('sender, content, created_at')
+            .eq('lead_id', targetLeadIdentifier)
+            .order('created_at', { ascending: true })
+            .limit(15);
+
+          if (dbChatMsgs && dbChatMsgs.length > 0) {
+            persistentHistory = dbChatMsgs.map((m: any) => ({
+              sender: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+              content: m.content || '',
+            }));
+          }
+        }
+      } catch (leadCheckErr) {
+        console.warn('Error checking lead state / chat_messages memory:', leadCheckErr);
+      }
+    }
+
+    // Persist user incoming message into chat_messages
+    if (supabase && (leadRecord?.id || activeLeadId)) {
+      try {
+        await supabase.from('chat_messages').insert({
+          lead_id: leadRecord?.id || activeLeadId,
+          sender: 'user',
+          content: message,
+          created_at: new Date().toISOString(),
+        });
+      } catch (insertUserMsgErr) {
+        console.warn('Error persisting incoming user message in chat_messages:', insertUserMsgErr);
+      }
+    }
+
+    // 2. If handled_by is human -> Do NOT invoke LLM, allow human takeover
+    const isHumanHandled = leadRecord?.handled_by === 'human' || leadRecord?.status === 'handover';
+    if (isHumanHandled) {
+      return res.status(200).json({
+        success: true,
+        handled_by: 'human',
+        reply: null,
+        message: 'Mensaje recibido. Un asesor humano te responderá en breve.',
+        text: 'Mensaje recibido. Un asesor humano te responderá en breve.',
+        source: 'human_takeover_queue',
+      });
+    }
+
+    // Adapt history (combining persistent DB memory with any client passed history)
+    const adaptedHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = persistentHistory.length > 0
+      ? persistentHistory
+      : history.map((h: any) => ({
+          sender: (h.sender === 'user' || h.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: h.content || h.text || (h.parts && h.parts[0]?.text) || '',
+        }));
 
     try {
       const response = await generateStructuredAriaRealEstateResponse({
@@ -243,8 +318,21 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
 
       const latencyMs = Date.now() - startTime;
 
+      // Persist assistant message in chat_messages
+      if (supabase && (leadRecord?.id || activeLeadId)) {
+        try {
+          await supabase.from('chat_messages').insert({
+            lead_id: leadRecord?.id || activeLeadId,
+            sender: 'assistant',
+            content: response.replyText,
+            created_at: new Date().toISOString(),
+          });
+        } catch (_) {}
+      }
+
       return res.status(200).json({
         success: true,
+        handled_by: 'ia',
         reply: response.replyText,
         replyText: response.replyText,
         text: response.replyText,

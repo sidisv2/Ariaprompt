@@ -35,6 +35,7 @@ export interface CrmLead {
   organization_id?: string;
   user_phone: string;
   user_name: string | null;
+  handled_by?: 'ia' | 'human';
   status: 'active' | 'qualified' | 'handover' | 'closed';
   budget_max_usd: number | null;
   preferred_zone: string | null;
@@ -387,6 +388,22 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     }
   };
 
+  const getHandledByBadge = (handledBy?: 'ia' | 'human', status?: CrmLead['status']) => {
+    const isHuman = handledBy === 'human' || status === 'handover';
+    if (isHuman) {
+      return (
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 w-fit shadow-sm">
+          <User className="w-3 h-3 text-amber-400" /> Modo Humano
+        </span>
+      );
+    }
+    return (
+      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 w-fit shadow-sm">
+        <Sparkles className="w-3 h-3 text-emerald-400" /> Modo IA
+      </span>
+    );
+  };
+
   const getStatusBadge = (status: CrmLead['status']) => {
     switch (status) {
       case 'qualified':
@@ -617,10 +634,13 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                      <p className="text-[11px] text-slate-400 truncate max-w-[170px]">
                         {lead.last_message || lead.preferred_zone || 'Sin mensajes registrados'}
                       </p>
-                      {getStatusBadge(lead.status)}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {getHandledByBadge(lead.handled_by, lead.status)}
+                        {getStatusBadge(lead.status)}
+                      </div>
                     </div>
                   </div>
                 );
@@ -667,6 +687,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                       <h3 className="font-black text-white text-base">
                         {selectedLead.user_name || `Lead ${selectedLead.user_phone}`}
                       </h3>
+                      {getHandledByBadge(selectedLead.handled_by, selectedLead.status)}
                       {getStatusBadge(selectedLead.status)}
                     </div>
                     <p className="text-xs text-emerald-400 font-mono flex items-center gap-1 mt-0.5">

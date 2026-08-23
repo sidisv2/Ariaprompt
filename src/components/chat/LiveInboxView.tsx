@@ -33,6 +33,7 @@ export interface InboxLeadItem {
   last_message_at: string;
   total_messages: number;
   channel: 'whatsapp' | 'webchat';
+  handled_by?: 'ia' | 'human';
   is_bot_active: boolean;
 }
 
@@ -105,7 +106,8 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
             last_message_at: item.updated_at || item.created_at || new Date().toISOString(),
             total_messages: item.total_messages || (item.lead_messages ? item.lead_messages.length : 0),
             channel: item.channel || 'whatsapp',
-            is_bot_active: item.is_bot_active !== false,
+            handled_by: item.handled_by || (item.is_bot_active === false || item.status === 'handover' ? 'human' : 'ia'),
+            is_bot_active: item.handled_by === 'human' ? false : item.is_bot_active !== false,
           }));
           setLeads(mapped);
           if (!selectedLeadId && mapped.length > 0) {
@@ -164,10 +166,19 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
     try {
       if (supabase) {
         let { data } = await supabase
-          .from('lead_messages')
+          .from('chat_messages')
           .select('*')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: true });
+
+        if (!data || data.length === 0) {
+          const { data: leadData } = await supabase
+            .from('lead_messages')
+            .select('*')
+            .eq('lead_id', leadId)
+            .order('created_at', { ascending: true });
+          data = leadData;
+        }
 
         if (!data || data.length === 0) {
           const { data: waData } = await supabase
@@ -199,23 +210,37 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
   const handleToggleTakeover = async () => {
     if (!selectedLeadId) return;
     const newBotActiveState = !isBotActive;
+    const nextHandledBy: 'ia' | 'human' = newBotActiveState ? 'ia' : 'human';
+    const nextStatus = newBotActiveState ? 'active' : 'handover';
     setIsBotActive(newBotActiveState);
 
     // Update local state list
     setLeads((prev) =>
-      prev.map((l) => (l.id === selectedLeadId ? { ...l, is_bot_active: newBotActiveState } : l))
+      prev.map((l) => (l.id === selectedLeadId ? { ...l, is_bot_active: newBotActiveState, handled_by: nextHandledBy, status: nextStatus } : l))
     );
 
     try {
       if (supabase) {
         await supabase
-          .from('conversations')
+          .from('leads')
           .update({
+            handled_by: nextHandledBy,
             is_bot_active: newBotActiveState,
-            status: newBotActiveState ? 'active' : 'handover',
+            status: nextStatus,
             updated_at: new Date().toISOString(),
           })
           .eq('id', selectedLeadId);
+
+        try {
+          await supabase
+            .from('wa_conversations')
+            .update({
+              handled_by: nextHandledBy,
+              status: nextStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', selectedLeadId);
+        } catch (_) {}
       }
     } catch (e) {
       console.error('Error updating bot takeover mode:', e);
@@ -241,9 +266,11 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
 
     try {
       if (supabase) {
-        await supabase.from('messages').insert({
-          conversation_id: selectedLeadId,
+        await supabase.from('chat_messages').insert({
+          lead_id: selectedLeadId,
+          sender: 'human_agent',
           sender_type: 'human_agent',
+          content: userText,
           message_text: userText,
           created_at: new Date().toISOString(),
         });
