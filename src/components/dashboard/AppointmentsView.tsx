@@ -56,31 +56,7 @@ export const AppointmentsView: React.FC = () => {
       if (!error && data) {
         setAppointments(data as PropertyAppointment[]);
       } else {
-        // Fallback demo mock if DB table empty or building schema
-        setAppointments([
-          {
-            id: 'app-1',
-            user_phone: '5491123456789',
-            user_name: 'Mateo Rossi',
-            preferred_zone: 'Palermo Soho, CABA',
-            property_title: 'Depto 2 Ambientes c/ Balcón',
-            status: 'pending',
-            appointment_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            notes: 'Consulta registrada automáticamente desde WhatsApp.',
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 'app-2',
-            user_phone: '5491198765432',
-            user_name: 'Camila Benítez',
-            preferred_zone: 'Barrio Castores, Nordelta',
-            property_title: 'Casa Moderna 4 Amb c/ Piscina',
-            status: 'confirmed',
-            appointment_date: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-            notes: 'Confirmada telefónicamente.',
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        setAppointments([]);
       }
     } catch (err) {
       console.error('❌ Error fetching property appointments:', err);
