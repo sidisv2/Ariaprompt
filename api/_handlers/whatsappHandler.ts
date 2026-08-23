@@ -460,7 +460,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
   }
 
   // SUB-ROUTE: STATUS & OAUTH CONFIG (/api/whatsapp/oauth, /api/whatsapp/connect, etc.)
-  if (subRoute === 'oauth' || subRoute === 'connect' || subRoute === 'verify' || subRoute === 'disconnect') {
+  if (subRoute === 'oauth' || subRoute === 'connect' || subRoute === 'verify' || subRoute === 'disconnect' || subRoute.includes('connect') || subRoute.includes('oauth')) {
     let targetOrgId = req.query.orgId || (req.query as any)?.organization_id || '';
     let userId = '';
 
