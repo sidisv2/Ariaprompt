@@ -191,6 +191,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
           .select('*, lead_messages(*)');
 
         if (!(user as any)?.isDemoAccount) {
+          // Fetch leads for this user or their organization
           query = query.or(`user_id.eq.${user.id},organization_id.eq.${user.id}`);
         }
 

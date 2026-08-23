@@ -219,17 +219,17 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             if (orgData) {
               org = orgData;
             } else {
-              // B) Fallback: Buscar la primera organización activa conectada a WhatsApp
+              // B) Buscar por organización con WhatsApp activo o de Valentin
               const { data: fallbackOrg } = await supabase
                 .from('organizations')
                 .select('*')
-                .eq('wa_connected', true)
+                .or('wa_connected.eq.true,email.eq.valentinlautaromorales@gmail.com')
                 .order('updated_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
               if (fallbackOrg) {
-                console.log('ℹ️ Usando organización activa fallback conectada:', fallbackOrg.id);
+                console.log('ℹ️ Usando organización activa identificada:', fallbackOrg.id);
                 org = fallbackOrg;
               }
             }
