@@ -82,7 +82,7 @@ export const AssistantPlaygroundView: React.FC<AssistantPlaygroundViewProps> = (
   const defaultWelcomeMessage: ChatMessage = {
     id: 'welcome-1',
     sender: 'bot',
-    text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'}, la asesora IA comercial de ${botConfig?.agencyName || 'Aria Prop'}. ¿En qué tipo de propiedad o zona estás interesado hoy?`,
+    text: `¡Hola! 👋 Soy ${botConfig?.agentName || 'Aria'} de ${botConfig?.agencyName || 'Aria Prop'}. Contame, ¿qué tipo de propiedad estás buscando o en qué zona?`,
     timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
   };
 

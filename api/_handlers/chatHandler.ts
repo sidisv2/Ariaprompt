@@ -90,7 +90,7 @@ function generateCommercialFallbackResponse(
   // 3. Greetings
   if (query.includes('hola') || query.includes('buenas') || query.includes('buenos dias') || query.includes('buenas tardes')) {
     return {
-      replyText: `¡Hola! Soy ${agentName}, el asesor virtual de ${agencyName}. ¿Qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar tu próximo inmueble?`,
+      replyText: `¡Hola! 👋 Soy ${agentName} de ${agencyName}. Contame, ¿qué tipo de propiedad estás buscando o en qué zona te gustaría encontrar?`,
       extractedData: {
         budget_max_usd: null,
         preferred_zone: null,
@@ -120,7 +120,7 @@ function generateCommercialFallbackResponse(
   }
 
   return {
-    replyText: `Gracias por comunicarte con ${agencyName}. Soy ${agentName}. He registrado tu consulta sobre "${message}". Si nos compartís tu número de WhatsApp o correo, nuestro equipo comercial te enviará las opciones disponibles de inmediato.`,
+    replyText: `¡Hola! Tomé nota de lo que estás buscando. Dejame tu número de WhatsApp o contame qué zona y presupuesto manejás así te paso las mejores opciones que tenemos disponibles.`,
     extractedData: {
       budget_max_usd: null,
       preferred_zone: null,
