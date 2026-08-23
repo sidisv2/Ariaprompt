@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Property, RentalPeriod } from '../../types';
-import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock, Calendar } from 'lucide-react';
+import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock, Calendar, Lock, MapPin, DollarSign, Percent, Navigation, EyeOff } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface EditPropertyModalProps {
@@ -25,8 +25,21 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
     property.rental_period || (operationType === 'temporary_rent' ? 'nightly' : 'monthly')
   );
   const [price, setPrice] = useState<number>(property.price || 0);
+  const [priceMax, setPriceMax] = useState<number | ''>(property.price_max || '');
   const [currency, setCurrency] = useState<'USD' | 'ARS'>(property.currency === 'ARS' ? 'ARS' : 'USD');
   const [expenses, setExpenses] = useState<number>((property as any).expenses || 0);
+
+  // Advanced Commercial & Location Fields
+  const [googleMapsUrl, setGoogleMapsUrl] = useState<string>(property.google_maps_url || property.location?.googleMapsUrl || '');
+  const [financingScheme, setFinancingScheme] = useState<string>(property.financing_scheme || '');
+  const [acceptsTradeIn, setAcceptsTradeIn] = useState<boolean>(property.accepts_trade_in ?? false);
+  const [tradeInDetails, setTradeInDetails] = useState<string>(property.trade_in_details || '');
+  const [keyDistances, setKeyDistances] = useState<string>(property.key_distances || '');
+  const [estimatedRoi, setEstimatedRoi] = useState<string>(property.estimated_roi || '');
+  const [masterplanUrl, setMasterplanUrl] = useState<string>(property.masterplan_url || '');
+
+  // AI Private Context
+  const [aiPrivateContext, setAiPrivateContext] = useState<string>(property.ai_private_context || '');
 
   // Location
   const [address, setAddress] = useState(property.location?.address || '');

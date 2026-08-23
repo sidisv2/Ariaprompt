@@ -56,7 +56,16 @@ export interface Property {
   status: 'available' | 'reserved' | 'sold' | 'rented' | string;
   is_public?: boolean;
   price: number;
+  price_max?: number | null;
   currency?: string;
+  google_maps_url?: string;
+  financing_scheme?: string | null;
+  accepts_trade_in?: boolean;
+  trade_in_details?: string | null;
+  key_distances?: string | null;
+  estimated_roi?: string | null;
+  masterplan_url?: string | null;
+  ai_private_context?: string | null;
   location: {
     address: string;
     city: string;
