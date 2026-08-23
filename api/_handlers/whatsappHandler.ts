@@ -1,7 +1,6 @@
-import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
-﻿import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { generateStructuredAriaRealEstateResponse } from '../_lib/openrouterService.js';
+import { generateStructuredAriaRealEstateResponse, PropertyForPrompt } from '../_lib/openrouterService.js';
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -39,28 +38,26 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
   if (subRoute === 'webhook' || subRoute === 'whatsapp-webhook') {
     // A) GET: Meta Verification Handshake
     if (req.method === 'GET') {
-      const mode = req.query['hub.mode'] || (req.query as any)?.mode;
-      const verifyToken = req.query['hub.verify_token'] || (req.query as any)?.verify_token;
-      const challenge = req.query['hub.challenge'] || (req.query as any)?.challenge;
+      const mode = req.query['hub.mode'];
+      const token = req.query['hub.verify_token'];
+      const challenge = req.query['hub.challenge'];
 
-      if (mode === 'subscribe') {
-        const globalToken = (
-          process.env.META_WEBHOOK_VERIFY_TOKEN ||
-          process.env.WHATSAPP_VERIFY_TOKEN ||
-          process.env.WEBHOOK_VERIFY_TOKEN ||
-          'aria_prop_whatsapp_webhook_secret_verify_token_2026'
-        ).trim();
+      const expectedToken = (
+        process.env.WHATSAPP_VERIFY_TOKEN ||
+        process.env.META_WEBHOOK_VERIFY_TOKEN ||
+        'aria_prop_whatsapp_webhook_secret_verify_token_2026'
+      ).trim();
 
-        // Verificar si coincide con el global o si alguna organización configuró un verify token específico
-        let isValid = verifyToken === globalToken;
+      if (mode === 'subscribe' && token) {
+        const verifyToken = String(token).trim();
+        let isValid = verifyToken === expectedToken;
 
-        if (!isValid && supabase && verifyToken) {
+        if (!isValid && supabase) {
           try {
             const { data: orgWithToken } = await supabase
               .from('organizations')
               .select('id')
               .or(`meta_webhook_verify_token.eq.${verifyToken},wa_verify_token.eq.${verifyToken}`)
-              .limit(1)
               .maybeSingle();
 
             if (orgWithToken) {
@@ -70,11 +67,11 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         }
 
         if (isValid) {
-          console.log('✓ Meta WhatsApp Webhook Handshake verificado exitosamente.');
+          console.log('✅ Meta WhatsApp Webhook Handshake verificado exitosamente.');
           res.setHeader('Content-Type', 'text/plain; charset=utf-8');
           return res.status(200).send(challenge || '');
         } else {
-          console.error(`✗ Meta Webhook Verification Fallida. Token recibido: "${verifyToken}"`);
+          console.error(`❌ Meta Webhook Verification Fallida. Token recibido: "${verifyToken}"`);
           return res.status(403).send('Forbidden');
         }
       }
@@ -88,43 +85,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         let body = req.body || {};
         if (typeof body === 'string') {
           try { body = JSON.parse(body); } catch { body = {}; }
-        }
-
-        // Soporte unificado para Webhooks de Meta Lead Ads (Instagram / Facebook Ads)
-        if (body.object === 'page' || body.object === 'instagram') {
-          const leadgenEntry = body.entry?.[0];
-          const leadgenChange = leadgenEntry?.changes?.[0];
-
-          if (leadgenChange?.field === 'leadgen' && supabase) {
-            try {
-              const leadgenId = leadgenChange.value?.leadgen_id;
-              const pageId = leadgenChange.value?.page_id;
-              const formId = leadgenChange.value?.form_id;
-
-              // Insertar lead pendiente en CRM con source instagram_ads
-              const { data: newLead } = await supabase
-                .from('leads')
-                .insert({
-                  user_name: 'Lead de Instagram Ads',
-                  name: 'Lead de Instagram Ads',
-                  source: 'instagram_ads',
-                  outbound_status: 'pending',
-                  status: 'new',
-                  handled_by: 'ia',
-                  notes: `Lead captado vía Instagram Ads (Leadgen ID: ${leadgenId}, Form: ${formId})`,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                })
-                .select('*')
-                .single();
-
-              return res.status(200).json({ status: 'INSTAGRAM_LEAD_INGESTED', lead: newLead });
-            } catch (leadgenErr) {
-              console.error('Error ingesting Instagram Leadgen:', leadgenErr);
-              return res.status(200).json({ status: 'LEADGEN_ERROR' });
-            }
-          }
-          return res.status(200).json({ status: 'PAGE_EVENT_ACKNOWLEDGED' });
         }
 
         if (body.object !== 'whatsapp_business_account') {
@@ -153,10 +113,10 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           phone_number_id: businessPhoneNumberId,
           type: msgType,
           wamid: wamid,
+          pushName,
         });
 
         if (!fromNumber || !businessPhoneNumberId) {
-          console.warn('⚠️ Webhook omitido: Falta remitente (from) o phone_number_id');
           return res.status(200).json({ status: 'MISSING_SENDER_OR_PHONE_ID' });
         }
 
@@ -167,17 +127,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
 
         if (msgType === 'text' && incomingMsg.text?.body) {
           messageText = incomingMsg.text.body;
-        } else if (msgType === 'image') {
-          messageType = 'image';
-          messageText = incomingMsg.image?.caption || 'Foto enviada';
-          mediaUrl = incomingMsg.image?.link || (incomingMsg.image?.id ? `https://graph.facebook.com/v21.0/${incomingMsg.image.id}` : null);
-        } else if (msgType === 'audio' || msgType === 'voice') {
-          messageType = 'audio';
-          messageText = 'Mensaje de voz';
-          mediaUrl = incomingMsg.audio?.link || incomingMsg.voice?.link || (incomingMsg.audio?.id ? `https://graph.facebook.com/v21.0/${incomingMsg.audio.id}` : null);
-        } else if (msgType === 'button' && incomingMsg.button?.text) {
-          messageText = incomingMsg.button.text;
-        } else if (incomingMsg.interactive?.button_reply?.title) {
+        } else if (msgType === 'interactive' && incomingMsg.interactive?.button_reply?.title) {
           messageText = incomingMsg.interactive.button_reply.title;
         } else if (incomingMsg.interactive?.list_reply?.title) {
           messageText = incomingMsg.interactive.list_reply.title;
@@ -219,17 +169,17 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             if (orgData) {
               org = orgData;
             } else {
-              // B) Buscar por organización con WhatsApp activo o de Valentin
+              // B) Fallback: Buscar organización activa con wa_connected o por usuario Valentin
               const { data: fallbackOrg } = await supabase
                 .from('organizations')
                 .select('*')
-                .or('wa_connected.eq.true,email.eq.valentinlautaromorales@gmail.com')
+                .or('wa_connected.eq.true,id.eq.13d92ac1-1b4a-4d3f-8418-abff914b0500,user_id.eq.13d92ac1-1b4a-4d3f-8418-abff914b0500')
                 .order('updated_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
               if (fallbackOrg) {
-                console.log('ℹ️ Usando organización activa identificada:', fallbackOrg.id);
+                console.log('ℹ️ Usando organización identificada:', fallbackOrg.id);
                 org = fallbackOrg;
               }
             }
@@ -238,20 +188,8 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           }
         }
 
-        // 🔒 Verificación de Suscripción Activa (Paywall Backend & Protección de Cuota de IA)
-        if (org) {
-          const subStatus = (org.subscription_status || org.status || 'active').toLowerCase();
-          const isTrial = org.is_trial_active === true || (org.trial_ends_at && new Date(org.trial_ends_at).getTime() > Date.now());
-          
-          if (subStatus === 'canceled' || subStatus === 'expired' || subStatus === 'unpaid' || subStatus === 'past_due') {
-            if (!isTrial) {
-              console.warn(`⚠️ Mensaje de WhatsApp omitido: Organización ${org.id} tiene la suscripción inactiva (${subStatus}).`);
-              return res.status(200).json({ status: 'SUBSCRIPTION_INACTIVE_SKIPPED', organizationId: org.id });
-            }
-          }
-        }
-
-        const orgId = org?.id || 'org-default';
+        const orgId = org?.id || '13d92ac1-1b4a-4d3f-8418-abff914b0500';
+        const userId = org?.user_id || orgId;
         const botName = org?.bot_name || 'Aria';
         const agencyName = org?.name || 'Inmobiliaria';
         const customRules = org?.custom_prompt_instructions || org?.system_prompt || '';
@@ -259,18 +197,19 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const bookingUrl = org?.calendar_booking_url || '';
         const accessToken = (org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
 
-        // 3. Buscar o crear Lead y chequear handled_by & Memoria persistente (últimos 15 mensajes)
+        // 3. Buscar o crear Lead y chequear handled_by & Memoria persistente
         let conversationHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
         let existingConvId: string | null = null;
         let leadRecord: any = null;
 
-        if (supabase && orgId) {
+        if (supabase) {
           try {
-            // Buscar en tabla leads
+            const clientName = pushName ? pushName.trim() : `WhatsApp (${fromNumber.slice(-4)})`;
+
+            // Buscar si ya existe el lead
             const { data: foundLead } = await supabase
               .from('leads')
               .select('*')
-              .or(`organization_id.eq.${orgId},user_id.eq.${orgId}`)
               .or(`phone.eq.${fromNumber},user_phone.eq.${fromNumber}`)
               .maybeSingle();
 
@@ -278,39 +217,52 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               leadRecord = foundLead;
               existingConvId = foundLead.id;
 
-              // Si el lead tenía outbound_status pending o contacted, marcar como replied
-              if (foundLead.outbound_status === 'contacted' || foundLead.outbound_status === 'pending') {
-                await supabase
-                  .from('leads')
-                  .update({ outbound_status: 'replied', updated_at: new Date().toISOString() })
-                  .eq('id', foundLead.id);
-              }
+              const { data: updatedLead, error: upErr } = await supabase
+                .from('leads')
+                .update({
+                  last_message: messageText,
+                  organization_id: foundLead.organization_id || orgId,
+                  user_id: foundLead.user_id || userId,
+                  name: foundLead.name && !foundLead.name.includes('WhatsApp') ? foundLead.name : clientName,
+                  user_name: foundLead.user_name && !foundLead.user_name.includes('WhatsApp') ? foundLead.user_name : clientName,
+                  channel: 'WHATSAPP',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', foundLead.id)
+                .select('*')
+                .single();
+
+              console.log('[whatsappHandler] Lead actualizado:', { id: updatedLead?.id, error: upErr });
             } else {
-              // Crear lead automáticamente
-              const { data: newLead } = await supabase
+              // Insertar nuevo lead
+              const { data: newLead, error: insErr } = await supabase
                 .from('leads')
                 .insert({
                   organization_id: orgId,
-                  user_id: orgId,
-                  user_phone: fromNumber,
+                  user_id: userId,
                   phone: fromNumber,
-                  user_name: `WhatsApp ${fromNumber.slice(-4)}`,
-                  name: `WhatsApp ${fromNumber.slice(-4)}`,
-                  status: 'active',
+                  user_phone: fromNumber,
+                  name: clientName,
+                  user_name: clientName,
+                  channel: 'WHATSAPP',
+                  source: 'whatsapp',
+                  status: 'new',
                   handled_by: 'ia',
+                  last_message: messageText,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                 })
                 .select('*')
                 .single();
 
+              console.log('[whatsappHandler] Nuevo lead insertado:', { id: newLead?.id, error: insErr });
               if (newLead) {
                 leadRecord = newLead;
                 existingConvId = newLead.id;
               }
             }
 
-            // Persistir mensaje entrante del usuario en chat_messages con soporte multimedia
+            // Persistir mensaje entrante del usuario en chat_messages y wa_messages
             if (existingConvId) {
               await supabase.from('chat_messages').insert({
                 lead_id: existingConvId,
@@ -325,7 +277,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               });
             }
 
-            // Recuperar últimos 15 mensajes de chat_messages cronológicamente (created_at ASC)
+            // Recuperar últimos 15 mensajes de chat_messages
             if (existingConvId) {
               const { data: pastMsgs } = await supabase
                 .from('chat_messages')
@@ -342,63 +294,88 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               }
             }
           } catch (convErr) {
-            console.warn('Error fetching or creating lead / chat_messages:', convErr);
+            console.error('Error fetching or creating lead / chat_messages:', convErr);
           }
         }
 
         // Si el lead está asignado a humano ('human'), NO generar respuesta automática
         const isHumanTakeover = leadRecord?.handled_by === 'human' || leadRecord?.status === 'handover';
         if (isHumanTakeover) {
-          console.log(`ℹ️ Lead ${fromNumber} está en modo Intervención Humana. Mensaje guardado en chat_messages sin respuesta de IA.`);
+          console.log(`👤 Lead ${fromNumber} está en modo Intervención Humana.`);
           return res.status(200).json({ status: 'HUMAN_TAKEOVER_ACTIVE_MESSAGE_RECORDED' });
         }
 
-        // 4. Buscar todas las propiedades activas y públicas de la inmobiliaria
-        let properties: any[] = [];
+        // 4. Buscar TODAS las propiedades activas de la organización/usuario (SIN FILTROS QUE EXCLUYAN ALQUILERES NI LÍMITE RESTRICTIVO)
+        let rawProperties: any[] = [];
         if (supabase) {
           try {
+            // Traer todas las propiedades disponibles del catálogo
             let propQuery = supabase
               .from('properties')
               .select('*')
-              .neq('is_public', false)
-              .in('status', ['available', 'disponible', 'published']);
+              .in('status', ['available', 'active', 'disponible', 'published', 'Disponible', 'Publicada']);
 
             if (orgId && orgId !== 'org-default') {
-              propQuery = propQuery.or(`organization_id.eq.${orgId},user_id.eq.${orgId}`);
+              propQuery = propQuery.or(`organization_id.eq.${orgId},user_id.eq.${userId},organization_id.is.null`);
             }
 
-            const { data: propsData } = await propQuery.limit(100);
-            if (propsData && propsData.length > 0) {
-              properties = propsData;
+            const { data: propsData, error: propErr } = await propQuery;
+            if (!propErr && propsData && propsData.length > 0) {
+              rawProperties = propsData;
             } else {
-              const { data: fallbackProps } = await supabase
+              const { data: allAvailable } = await supabase
                 .from('properties')
                 .select('*')
-                .neq('is_public', false)
-                .in('status', ['available', 'disponible'])
-                .limit(100);
-              if (fallbackProps) properties = fallbackProps;
+                .in('status', ['available', 'active', 'disponible', 'Disponible']);
+              if (allAvailable && allAvailable.length > 0) {
+                rawProperties = allAvailable;
+              }
             }
           } catch (e) {
-            console.warn('Error fetching properties in whatsappHandler:', e);
+            console.error('[whatsappHandler] Error trayendo propiedades de Supabase:', e);
           }
         }
 
-        const propertyCatalogText = properties
-          .map((p) => {
-            const coverImage = (Array.isArray(p.images) && p.images[0]) || p.image_url || null;
-            const imgNote = coverImage ? ` [Foto Portada: ${coverImage}]` : '';
-            return `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation_type || p.operation || 'VENTA').toUpperCase()}) en ${p.zone || p.location?.zone || 'Zona'}. Precio: ${p.price} USD. ${p.bedrooms || 2} hab.${imgNote} Ficha Interactiva y Galería: https://ariaprop.online/p/${p.id}`;
-          })
-          .join('\n');
+        console.log(`📦 [RAG Realtime] Total propiedades activas inyectadas a la IA (${rawProperties.length}):`, 
+          rawProperties.map(p => `[${p.id}] ${p.title} (${p.operation_type || 'venta'}) - ${p.zone || p.city} - USD ${p.price}`)
+        );
 
-        // 5. Generar respuesta con IA
+        // Mapear a formato PropertyForPrompt estructurado
+        const propertiesListForPrompt: PropertyForPrompt[] = rawProperties.map((p) => {
+          let displayType = p.type || 'Inmueble';
+          if (p.type === 'house') displayType = 'Casa';
+          else if (p.type === 'apartment' || p.type === 'depto') displayType = 'Departamento';
+          else if (p.type === 'land' || p.type === 'lote') displayType = 'Lote / Terreno';
+
+          const opType = p.operation_type === 'rent' ? 'Alquiler' : (p.operation_type || 'Venta');
+
+          return {
+            id: p.id,
+            title: p.title || 'Propiedad disponible',
+            type: displayType,
+            operation_type: opType,
+            price_usd: Number(p.price || p.price_usd || 0),
+            currency: p.currency || 'USD',
+            province: p.state || p.province || 'Mendoza',
+            department: p.city || p.department || 'San Rafael',
+            locality: p.zone || p.locality || null,
+            zone: p.zone || null,
+            city: p.city || null,
+            address: p.address || null,
+            bedrooms: p.bedrooms ?? p.rooms ?? null,
+            bathrooms: p.bathrooms ?? null,
+            area_m2: p.area_m2 ?? p.surface_m2 ?? p.surface_total ?? null,
+            description: p.description || null,
+          };
+        });
+
+        // 5. Generar respuesta con IA inyectando el array estructurado y fresco
         let botReplyText = '';
         try {
           const aiResponse = await generateStructuredAriaRealEstateResponse({
             message: messageText,
             history: conversationHistory,
-            propertyContext: propertyCatalogText,
+            propertiesList: propertiesListForPrompt,
             agentName: botName,
             agencyName,
             customInstructions: customRules,
@@ -416,10 +393,9 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           }
         }
 
-        // 6. Guardar mensaje del usuario y respuesta en el CRM (Supabase)
+        // 6. Guardar respuesta del bot en CRM (chat_messages, wa_messages y leads)
         if (supabase && existingConvId) {
           try {
-            // A) Insertar respuesta del bot en chat_messages
             await supabase.from('chat_messages').insert({
               lead_id: existingConvId,
               sender: 'assistant',
@@ -430,28 +406,24 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               created_at: new Date().toISOString(),
             });
 
-            // B) Insertar en wa_messages para historial de WhatsApp
-            try {
-              await supabase.from('wa_messages').insert([
-                {
-                  conversation_id: existingConvId,
-                  organization_id: orgId,
-                  wamid: wamid || undefined,
-                  sender_type: 'user',
-                  message_text: messageText,
-                  created_at: new Date().toISOString(),
-                },
-                {
-                  conversation_id: existingConvId,
-                  organization_id: orgId,
-                  sender_type: 'bot',
-                  message_text: botReplyText,
-                  created_at: new Date().toISOString(),
-                },
-              ]);
-            } catch (_) {}
+            await supabase.from('wa_messages').insert([
+              {
+                conversation_id: existingConvId,
+                organization_id: orgId,
+                wamid: wamid || undefined,
+                sender_type: 'user',
+                message_text: messageText,
+                created_at: new Date().toISOString(),
+              },
+              {
+                conversation_id: existingConvId,
+                organization_id: orgId,
+                sender_type: 'bot',
+                message_text: botReplyText,
+                created_at: new Date().toISOString(),
+              },
+            ]);
 
-            // C) Actualizar last_message y updated_at en tabla leads
             await supabase
               .from('leads')
               .update({
@@ -460,7 +432,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               })
               .eq('id', existingConvId);
           } catch (dbLogErr) {
-            console.warn('Error saving messages to CRM:', dbLogErr);
+            console.error('Error saving bot messages to CRM:', dbLogErr);
           }
         }
 
@@ -486,7 +458,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               const metaErr = await sendRes.json().catch(() => ({}));
               console.error('Error sending message via Meta Cloud API:', metaErr);
             } else {
-              console.log(`✓ WhatsApp response sent successfully to ${fromNumber}`);
+              console.log(`✅ WhatsApp response sent successfully to ${fromNumber}`);
             }
           } catch (sendEx) {
             console.error('Exception sending WhatsApp message to Meta:', sendEx);
@@ -575,111 +547,55 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 meta_waba_id: null,
                 meta_access_token: null,
                 meta_webhook_verify_token: null,
-                wa_phone_number_id: null,
-                wa_waba_id: null,
-                wa_access_token: null,
                 wa_connected: false,
                 updated_at: new Date().toISOString(),
               })
               .or(`id.eq.${targetOrgId || userId},user_id.eq.${userId || targetOrgId}`);
-          } catch {}
+
+            return res.status(200).json({ success: true, message: 'WhatsApp disconnected successfully' });
+          } catch (err: any) {
+            return res.status(500).json({ error: err.message });
+          }
         }
-        return res.status(200).json({ success: true, message: 'WhatsApp desconectado correctamente' });
+        return res.status(200).json({ success: true });
       }
 
-      // ACTION 2: VERIFY CREDENTIALS
-      if (action === 'verify-credentials') {
-        const phoneId = (body.phoneNumberId || body.meta_phone_number_id || body.phone_number_id || '').trim();
-        const token = (body.accessToken || body.meta_access_token || body.access_token || '').trim();
+      // ACTION 2: CONNECT / SAVE
+      if (action === 'connect') {
+        const phoneId = body.phone_number_id || body.phoneNumberId;
+        const wabaId = body.waba_id || body.wabaId;
+        const accessToken = body.access_token || body.accessToken;
 
-        if (!phoneId || !token) {
-          return res.status(400).json({ success: false, error: 'Phone Number ID y Access Token son requeridos' });
-        }
+        if (supabase && (targetOrgId || userId)) {
+          try {
+            const { data: updatedOrg, error: updErr } = await supabase
+              .from('organizations')
+              .update({
+                meta_phone_number_id: phoneId,
+                meta_waba_id: wabaId,
+                meta_access_token: accessToken,
+                wa_connected: true,
+                updated_at: new Date().toISOString(),
+              })
+              .or(`id.eq.${targetOrgId || userId},user_id.eq.${userId || targetOrgId}`)
+              .select()
+              .single();
 
-        try {
-          const metaRes = await fetch(`https://graph.facebook.com/v20.0/${phoneId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const metaData = await metaRes.json().catch(() => ({}));
+            if (updErr) {
+              return res.status(400).json({ error: updErr.message });
+            }
 
-          if (metaRes.ok && (metaData.id || metaData.verified_name || metaData.display_phone_number)) {
             return res.status(200).json({
               success: true,
-              verified: true,
-              phoneNumberId: metaData.id || phoneId,
-              verifiedName: metaData.verified_name || 'Línea de WhatsApp Business Verificada',
-              displayPhoneNumber: metaData.display_phone_number || phoneId,
-              qualityRating: metaData.quality_rating || 'GREEN',
+              message: 'WhatsApp connected successfully',
+              organization: updatedOrg,
             });
-          } else {
-            return res.status(400).json({
-              success: false,
-              verified: false,
-              error: metaData.error?.message || 'Meta Graph API no pudo verificar las credenciales.',
-              details: metaData.error,
-            });
+          } catch (err: any) {
+            return res.status(500).json({ error: err.message });
           }
-        } catch (verifyEx: any) {
-          return res.status(500).json({ success: false, error: verifyEx.message });
         }
+        return res.status(200).json({ success: true });
       }
-
-      // ACTION 3: CONNECT / SAVE
-      const phoneId = (body.meta_phone_number_id || body.phoneNumberId || body.phone_number_id || '').trim();
-      const wabaId = (body.meta_waba_id || body.wabaId || body.waba_id || '').trim();
-      const token = (body.meta_access_token || body.accessToken || body.access_token || '').trim();
-      const verifyToken = (body.meta_webhook_verify_token || body.webhook_verify_token || 'aria_prop_whatsapp_webhook_secret_verify_token_2026').trim();
-
-      if (!phoneId || !token) {
-        return res.status(400).json({ success: false, error: 'Phone Number ID y Access Token son requeridos' });
-      }
-
-      const payload = {
-        meta_phone_number_id: phoneId,
-        meta_waba_id: wabaId || null,
-        meta_access_token: token,
-        meta_webhook_verify_token: verifyToken,
-        wa_phone_number_id: phoneId,
-        wa_waba_id: wabaId || null,
-        wa_access_token: token,
-        wa_connected: true,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (supabase && (targetOrgId || userId)) {
-        try {
-          const { data: existing } = await supabase
-            .from('organizations')
-            .select('id')
-            .or(`id.eq.${targetOrgId || userId},user_id.eq.${userId || targetOrgId}`)
-            .maybeSingle();
-
-          if (existing?.id) {
-            await supabase.from('organizations').update(payload).eq('id', existing.id);
-            targetOrgId = existing.id;
-          } else {
-            const { data: inserted } = await supabase
-              .from('organizations')
-              .insert([{ ...payload, id: userId || undefined, user_id: userId || undefined }])
-              .select('id')
-              .single();
-            if (inserted?.id) targetOrgId = inserted.id;
-          }
-        } catch (saveErr) {
-          console.warn('Error saving organization credentials:', saveErr);
-        }
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: 'Credenciales de Meta WhatsApp Cloud API guardadas exitosamente',
-        organization: {
-          id: targetOrgId || 'org_active',
-          meta_phone_number_id: phoneId,
-          meta_waba_id: wabaId,
-          wa_connected: true,
-        },
-      });
     }
   }
 
