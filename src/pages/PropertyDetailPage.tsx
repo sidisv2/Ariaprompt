@@ -99,9 +99,11 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
               id: dbProp.id,
               title: dbProp.title || 'Propiedad Inmobiliaria',
               code: dbProp.code || `PROP-${dbProp.id.slice(0, 4)}`,
-              price: dbProp.price || 150000,
+              price: Number(dbProp.price) || 0,
               currency: dbProp.currency || 'USD',
               type: dbProp.type || 'departamento',
+              operation_type: dbProp.operation_type || (Number(dbProp.price) < 5000 ? 'rent' : 'sale'),
+              rental_period: dbProp.rental_period || (dbProp.operation_type === 'temporary_rent' ? 'nightly' : dbProp.operation_type === 'rent' ? 'monthly' : null),
               status: dbProp.status || 'available',
               featured: dbProp.featured || false,
               location: {
@@ -346,9 +348,16 @@ export const PropertyDetailPage: React.FC<PropertyDetailPageProps> = ({
                 </div>
 
                 <div className="text-left sm:text-right bg-slate-900/80 p-4 rounded-2xl border border-emerald-500/30 shrink-0">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Precio de Lista</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    {propData.operation_type === 'sale' ? 'Precio de Venta' : propData.operation_type === 'temporary_rent' ? 'Alquiler Temporal' : 'Precio de Alquiler'}
+                  </p>
                   <p className="text-3xl font-black text-emerald-400 font-mono">
-                    {propData.currency || 'USD'} ${propData.price.toLocaleString('en-US')}
+                    {propData.currency || 'USD'} ${Number(propData.price).toLocaleString('en-US')}
+                    {propData.operation_type !== 'sale' && (
+                      <span className="text-sm font-bold text-slate-300 ml-1.5">
+                        {propData.rental_period === 'nightly' ? '/ noche' : propData.rental_period === 'yearly' ? '/ año' : '/ mes'}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
