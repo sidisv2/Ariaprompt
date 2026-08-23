@@ -302,15 +302,10 @@ export const WhatsAppSettings: React.FC = () => {
         throw new Error('Debes iniciar sesión para guardar la configuración.');
       }
 
-      const updatePayload: any = {
+      const updatePayload: Record<string, any> = {
         meta_phone_number_id: cleanPhoneId,
-        wa_phone_number_id: cleanPhoneId,
         meta_waba_id: cleanWabaId || null,
-        wa_waba_id: cleanWabaId || null,
         meta_access_token: cleanToken,
-        wa_access_token: cleanToken,
-        meta_webhook_verify_token: webhookVerifyToken,
-        wa_verify_token: webhookVerifyToken,
         wa_connected: true,
         updated_at: new Date().toISOString(),
       };
