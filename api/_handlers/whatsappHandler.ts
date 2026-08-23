@@ -237,6 +237,8 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const bookingUrl = org?.calendar_booking_url || '';
         const accessToken = (org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
 
+        console.log('[whatsappHandler] organizationId resuelto:', orgId, 'userId:', userId);
+
         // 3. Buscar o crear Lead y chequear handled_by & Memoria persistente
         let conversationHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
         let existingConvId: string | null = null;
@@ -250,7 +252,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             const { data: foundLead } = await supabase
               .from('leads')
               .select('*')
-              .or(`phone.eq.${fromNumber},user_phone.eq.${fromNumber}`)
+              .eq('phone', fromNumber)
               .maybeSingle();
 
             if (foundLead) {
@@ -264,7 +266,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                   organization_id: foundLead.organization_id || orgId,
                   user_id: foundLead.user_id || userId,
                   name: foundLead.name && !foundLead.name.includes('WhatsApp') ? foundLead.name : clientName,
-                  user_name: foundLead.user_name && !foundLead.user_name.includes('WhatsApp') ? foundLead.user_name : clientName,
                   channel: 'WHATSAPP',
                   updated_at: new Date().toISOString(),
                 })
@@ -272,18 +273,16 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 .select('*')
                 .single();
 
-              console.log('[whatsappHandler] Lead actualizado:', { id: updatedLead?.id, error: upErr });
+              console.log('[whatsappHandler] upsert lead resultado (update):', { leadData: updatedLead, leadError: upErr });
             } else {
-              // Insertar nuevo lead
+              // Insertar nuevo lead con columnas válidas del schema
               const { data: newLead, error: insErr } = await supabase
                 .from('leads')
                 .insert({
                   organization_id: orgId,
                   user_id: userId,
                   phone: fromNumber,
-                  user_phone: fromNumber,
                   name: clientName,
-                  user_name: clientName,
                   channel: 'WHATSAPP',
                   source: 'whatsapp',
                   status: 'new',
@@ -295,16 +294,16 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 .select('*')
                 .single();
 
-              console.log('[whatsappHandler] Nuevo lead insertado:', { id: newLead?.id, error: insErr });
+              console.log('[whatsappHandler] upsert lead resultado (insert):', { leadData: newLead, leadError: insErr });
               if (newLead) {
                 leadRecord = newLead;
                 existingConvId = newLead.id;
               }
             }
 
-            // Persistir mensaje entrante del usuario en chat_messages y wa_messages
+            // Persistir mensaje entrante del usuario en chat_messages
             if (existingConvId) {
-              await supabase.from('chat_messages').insert({
+              const { error: msgErr } = await supabase.from('chat_messages').insert({
                 lead_id: existingConvId,
                 sender: 'user',
                 sender_type: 'user',
@@ -315,22 +314,26 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 message_text: messageText,
                 created_at: new Date().toISOString(),
               });
+              console.log('[whatsappHandler] insert incoming message resultado:', { messagesError: msgErr });
             }
 
-            // Recuperar últimos 15 mensajes de chat_messages
+            // Recuperar los últimos 15 mensajes del historial de conversación (user y assistant)
             if (existingConvId) {
               const { data: pastMsgs } = await supabase
                 .from('chat_messages')
-                .select('sender, content, message_text, created_at')
+                .select('sender, sender_type, content, message_text, created_at')
                 .eq('lead_id', existingConvId)
                 .order('created_at', { ascending: true })
-                .limit(15);
+                .limit(20);
 
               if (pastMsgs && pastMsgs.length > 0) {
-                conversationHistory = pastMsgs.map((m: any) => ({
-                  sender: (m.sender === 'user' || m.sender_type === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-                  content: m.content || m.message_text || '',
-                }));
+                conversationHistory = pastMsgs
+                  .filter((m: any) => (m.content || m.message_text) && (m.content || m.message_text) !== messageText)
+                  .map((m: any) => ({
+                    sender: (m.sender === 'user' || m.sender_type === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+                    content: m.content || m.message_text || '',
+                  }));
+                console.log(`[whatsappHandler] Historial cargado (${conversationHistory.length} turnos previos).`);
               }
             }
           } catch (convErr) {
@@ -375,11 +378,11 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           }
         }
 
-        console.log(`📦 [RAG Realtime] Total propiedades activas inyectadas a la IA (${rawProperties.length}):`, 
+        console.log(`[whatsappHandler] properties fetched: ${rawProperties.length}`, 
           rawProperties.map(p => `[${p.id}] ${p.title} (${p.operation_type || 'venta'}) - ${p.zone || p.city} - USD ${p.price}`)
         );
 
-        // Mapear a formato PropertyForPrompt estructurado
+        // Mapear a formato PropertyForPrompt estructurado (1 a 1 sin mezclar campos)
         const propertiesListForPrompt: PropertyForPrompt[] = rawProperties.map((p) => {
           let displayType = p.type || 'Inmueble';
           if (p.type === 'house') displayType = 'Casa';
@@ -423,6 +426,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           });
 
           botReplyText = aiResponse.replyText;
+          console.log(`[whatsappHandler] AI response generada, longitud: ${botReplyText?.length}`);
         } catch (aiErr) {
           console.warn('Fallback local para WhatsApp Meta:', aiErr);
           if (messageText.toLowerCase().includes('visita') && bookingUrl) {
@@ -435,7 +439,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         // 6. Guardar respuesta del bot en CRM (chat_messages, wa_messages y leads)
         if (supabase && existingConvId) {
           try {
-            await supabase.from('chat_messages').insert({
+            const { error: botMsgErr } = await supabase.from('chat_messages').insert({
               lead_id: existingConvId,
               sender: 'assistant',
               sender_type: 'assistant',
@@ -463,13 +467,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               },
             ]);
 
-            await supabase
+            const { error: leadUpdateErr } = await supabase
               .from('leads')
               .update({
                 last_message: botReplyText,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existingConvId);
+
+            console.log('[whatsappHandler] insert bot message resultado:', { botMsgErr, leadUpdateErr });
           } catch (dbLogErr) {
             console.error('Error saving bot messages to CRM:', dbLogErr);
           }
@@ -497,7 +503,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               const metaErr = await sendRes.json().catch(() => ({}));
               console.error('Error sending message via Meta Cloud API:', metaErr);
             } else {
-              console.log(`✅ WhatsApp response sent successfully to ${fromNumber}`);
+              console.log(`✅ [whatsappHandler] WhatsApp response sent successfully to ${fromNumber}`);
             }
           } catch (sendEx) {
             console.error('Exception sending WhatsApp message to Meta:', sendEx);
