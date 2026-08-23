@@ -419,7 +419,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         // 6. Guardar mensaje del usuario y respuesta en el CRM (Supabase)
         if (supabase && existingConvId) {
           try {
-            // Guardar respuesta del bot en chat_messages
+            // A) Insertar respuesta del bot en chat_messages
             await supabase.from('chat_messages').insert({
               lead_id: existingConvId,
               sender: 'assistant',
@@ -430,29 +430,35 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               created_at: new Date().toISOString(),
             });
 
-            // Guardar en wa_messages y actualizar timestamp de la conversación
-            await supabase.from('wa_messages').insert([
-              {
-                conversation_id: existingConvId,
-                organization_id: orgId,
-                wamid: wamid || undefined,
-                sender_type: 'user',
-                message_text: messageText,
-                created_at: new Date().toISOString(),
-              },
-              {
-                conversation_id: existingConvId,
-                organization_id: orgId,
-                sender_type: 'bot',
-                message_text: botReplyText,
-                created_at: new Date().toISOString(),
-              },
-            ]);
+            // B) Insertar en wa_messages para historial de WhatsApp
+            try {
+              await supabase.from('wa_messages').insert([
+                {
+                  conversation_id: existingConvId,
+                  organization_id: orgId,
+                  wamid: wamid || undefined,
+                  sender_type: 'user',
+                  message_text: messageText,
+                  created_at: new Date().toISOString(),
+                },
+                {
+                  conversation_id: existingConvId,
+                  organization_id: orgId,
+                  sender_type: 'bot',
+                  message_text: botReplyText,
+                  created_at: new Date().toISOString(),
+                },
+              ]);
+            } catch (_) {}
 
-            await supabase.from('wa_conversations').update({
-              last_message_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }).eq('id', existingConvId);
+            // C) Actualizar last_message y updated_at en tabla leads
+            await supabase
+              .from('leads')
+              .update({
+                last_message: botReplyText,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', existingConvId);
           } catch (dbLogErr) {
             console.warn('Error saving messages to CRM:', dbLogErr);
           }
