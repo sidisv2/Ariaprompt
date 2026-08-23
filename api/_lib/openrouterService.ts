@@ -38,6 +38,7 @@ export interface ExtractedLeadData {
   operation_type?: string | null;
   status: 'active' | 'qualified' | 'handover' | 'human_handoff' | 'closed';
   lead_name: string | null;
+  preferred_contact_slot?: string | null;
   requested_pdf_property_id?: string | null;
   requested_pdf_property_title?: string | null;
   appointment?: {

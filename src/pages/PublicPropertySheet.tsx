@@ -86,7 +86,7 @@ export const PublicPropertySheet: React.FC<PublicPropertySheetProps> = ({ onRout
               key_distances: data.key_distances,
               estimated_roi: data.estimated_roi,
               masterplan_url: data.masterplan_url,
-              // IMPORTANT SECURITY: ai_private_context is purposefully omitted and NEVER exposed here
+              // Confidencial: Datos privados de negocio jamas se asignan aqui
               location: {
                 address: data.address || '',
                 zone: data.zone || '',
