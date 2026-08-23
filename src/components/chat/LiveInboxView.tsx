@@ -65,6 +65,7 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
   const [isBotActive, setIsBotActive] = useState(true);
   const [inputMessage, setInputMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [takeoverNotice, setTakeoverNotice] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -220,12 +221,15 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
     const newBotActiveState = !isBotActive;
     const nextHandledBy: 'ia' | 'human' = newBotActiveState ? 'ia' : 'human';
     const nextStatus = newBotActiveState ? 'active' : 'handover';
+    
+    // Immediate React state update
     setIsBotActive(newBotActiveState);
-
-    // Update local state list
     setLeads((prev) =>
       prev.map((l) => (l.id === selectedLeadId ? { ...l, is_bot_active: newBotActiveState, handled_by: nextHandledBy, status: nextStatus } : l))
     );
+
+    setTakeoverNotice(newBotActiveState ? 'Modo de atención actualizado: 🤖 IA Respondiendo 24/7' : 'Modo de atención actualizado: 👤 Intervención Humana (IA Pausada)');
+    setTimeout(() => setTakeoverNotice(null), 3500);
 
     try {
       if (supabase) {
@@ -263,10 +267,21 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
     setInputMessage('');
     setSending(true);
 
+    // 1. Inmediata transición a Modo Humano (Auto-Switch)
+    setIsBotActive(false);
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === selectedLeadId
+          ? { ...l, handled_by: 'human', is_bot_active: false, status: 'handover', last_message: userText, last_message_at: new Date().toISOString() }
+          : l
+      )
+    );
+
     const newMsg: ChatMessage = {
       id: 'human-' + Date.now(),
       sender_type: 'human_agent',
       message_text: userText,
+      content: userText,
       created_at: new Date().toISOString(),
     };
 
@@ -274,6 +289,7 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
 
     try {
       if (supabase) {
+        // 2. Persistir mensaje manual del operador en chat_messages
         await supabase.from('chat_messages').insert({
           lead_id: selectedLeadId,
           sender: 'human_agent',
@@ -282,6 +298,31 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
           message_text: userText,
           created_at: new Date().toISOString(),
         });
+
+        // 3. Mutación en Supabase: UPDATE leads SET handled_by = 'human'
+        await supabase
+          .from('leads')
+          .update({
+            handled_by: 'human',
+            is_bot_active: false,
+            status: 'handover',
+            last_message: userText,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', selectedLeadId);
+
+        try {
+          await supabase
+            .from('wa_conversations')
+            .update({
+              handled_by: 'human',
+              status: 'handover',
+              last_message: userText,
+              last_message_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', selectedLeadId);
+        } catch (_) {}
       }
     } catch (err) {
       console.error('Error sending human response:', err);
@@ -469,27 +510,37 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                 {/* Human Takeover Toggle Switch */}
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={handleToggleTakeover}
+                    title="Alternar entre IA 24/7 e Intervención Humana"
                     className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-md ${
                       isBotActive
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20'
                     }`}
                   >
                     {isBotActive ? (
                       <>
-                        <Bot className="w-4 h-4 text-emerald-400" />
+                        <Bot className="w-4 h-4 text-emerald-400 animate-pulse" />
                         <span>🤖 IA Respondiendo 24/7</span>
                       </>
                     ) : (
                       <>
                         <UserCheck className="w-4 h-4 text-amber-400" />
-                        <span>👤 Intervención Humana (Silenciada)</span>
+                        <span>👤 Intervención Humana (IA Pausada)</span>
                       </>
                     )}
                   </button>
                 </div>
               </div>
+
+              {/* Takeover Notice Toast */}
+              {takeoverNotice && (
+                <div className="px-4 py-2 bg-slate-900 border-b border-white/10 text-xs font-bold text-slate-200 flex items-center justify-between animate-fadeIn">
+                  <span>{takeoverNotice}</span>
+                  <button onClick={() => setTakeoverNotice(null)} className="text-slate-400 hover:text-white text-xs">✕</button>
+                </div>
+              )}
 
               {/* Message Timeline */}
               <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#0b141a] scrollbar-thin">
