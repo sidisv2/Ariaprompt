@@ -146,6 +146,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const msgType = incomingMsg.type;
         const wamid = incomingMsg.id;
         const businessPhoneNumberId = metadata?.phone_number_id;
+        const pushName = change?.contacts?.[0]?.profile?.name || '';
 
         console.log('📩 [WhatsApp Webhook Inbound]:', {
           from: fromNumber,
@@ -418,6 +419,18 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         // 6. Guardar mensaje del usuario y respuesta en el CRM (Supabase)
         if (supabase && existingConvId) {
           try {
+            // Guardar respuesta del bot en chat_messages
+            await supabase.from('chat_messages').insert({
+              lead_id: existingConvId,
+              sender: 'assistant',
+              sender_type: 'assistant',
+              message_type: 'text',
+              content: botReplyText,
+              message_text: botReplyText,
+              created_at: new Date().toISOString(),
+            });
+
+            // Guardar en wa_messages y actualizar timestamp de la conversación
             await supabase.from('wa_messages').insert([
               {
                 conversation_id: existingConvId,
