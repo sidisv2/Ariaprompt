@@ -11,6 +11,9 @@ export interface Lead {
   email: string;
   phone: string;
   handled_by?: 'ia' | 'human';
+  source?: 'instagram_ads' | 'facebook_ads' | 'website' | 'whatsapp' | 'manual' | string;
+  outbound_status?: 'pending' | 'contacted' | 'replied' | string;
+  property_interest?: string;
   temperature: LeadTemperature;
   status: LeadStatus;
   budgetMin: number;

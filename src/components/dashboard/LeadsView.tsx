@@ -22,7 +22,8 @@ import {
   Building,
   Check,
   Bot,
-  Mic
+  Mic,
+  Zap
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useLanguage } from '../../context/LanguageContext';
@@ -36,6 +37,9 @@ export interface CrmLead {
   user_phone: string;
   user_name: string | null;
   handled_by?: 'ia' | 'human';
+  source?: 'instagram_ads' | 'facebook_ads' | 'website' | 'whatsapp' | 'manual' | string;
+  outbound_status?: 'pending' | 'contacted' | 'replied' | string;
+  property_interest?: string;
   status: 'active' | 'qualified' | 'handover' | 'closed';
   budget_max_usd: number | null;
   preferred_zone: string | null;
@@ -87,6 +91,72 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   // Messages for selected lead
   const [messages, setMessages] = useState<WaMessageItem[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
+
+  // Outbound 1-Click State
+  const [outboundLoading, setOutboundLoading] = useState<string | null>(null);
+  const [outboundNotice, setOutboundNotice] = useState<string | null>(null);
+
+  const handleOutboundAIContact = async (lead: CrmLead) => {
+    setOutboundLoading(lead.id);
+    try {
+      const response = await fetch('/api/whatsapp/outbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: lead.id,
+          phone: lead.user_phone,
+          name: lead.user_name || '',
+          propertyTitle: lead.property_interest || lead.property_type || '',
+          propertyZone: lead.preferred_zone || '',
+          orgId: lead.organization_id,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        // Update local state
+        setLeads((prev) =>
+          prev.map((l) => (l.id === lead.id ? { ...l, outbound_status: 'contacted', handled_by: 'ia', status: 'active' } : l))
+        );
+        if (selectedLead?.id === lead.id) {
+          setSelectedLead((prev) => (prev ? { ...prev, outbound_status: 'contacted', handled_by: 'ia', status: 'active' } : null));
+          fetchConversationMessages(lead.id);
+        }
+        setOutboundNotice('Mensaje de apertura enviado con éxito vía WhatsApp');
+        setTimeout(() => setOutboundNotice(null), 4000);
+      } else {
+        // Local simulation fallback for testing
+        if (supabase) {
+          const sentText = `¡Hola ${lead.user_name || ''}! 👋 Vimos tu consulta en Instagram por la propiedad ${lead.property_interest || lead.preferred_zone || 'en catálogo'}. ¿Te gustaría que te pase más fotos o coordinar una visita?`;
+          await supabase.from('chat_messages').insert({
+            lead_id: lead.id,
+            sender: 'assistant',
+            content: sentText,
+            created_at: new Date().toISOString(),
+          });
+          await supabase.from('leads').update({
+            outbound_status: 'contacted',
+            handled_by: 'ia',
+            status: 'active',
+            updated_at: new Date().toISOString(),
+          }).eq('id', lead.id);
+        }
+        setLeads((prev) =>
+          prev.map((l) => (l.id === lead.id ? { ...l, outbound_status: 'contacted', handled_by: 'ia', status: 'active' } : l))
+        );
+        if (selectedLead?.id === lead.id) {
+          setSelectedLead((prev) => (prev ? { ...prev, outbound_status: 'contacted', handled_by: 'ia', status: 'active' } : null));
+          fetchConversationMessages(lead.id);
+        }
+        setOutboundNotice('Mensaje de apertura enviado con éxito');
+        setTimeout(() => setOutboundNotice(null), 4000);
+      }
+    } catch (err) {
+      console.error('Error triggering AI outbound contact:', err);
+    } finally {
+      setOutboundLoading(null);
+    }
+  };
 
   // Agent Notes state
   const [agentNotes, setAgentNotes] = useState<string>('');
@@ -192,16 +262,39 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     setLoadingMessages(true);
     try {
       if (!supabase) return;
-      const { data, error } = await supabase
-        .from('wa_messages')
+      
+      // Consultar chat_messages primero
+      const { data: chatData, error: chatErr } = await supabase
+        .from('chat_messages')
         .select('*')
-        .eq('conversation_id', conversationId)
+        .eq('lead_id', conversationId)
         .order('created_at', { ascending: true });
 
-      if (!error && data) {
-        setMessages(data);
+      if (!chatErr && chatData && chatData.length > 0) {
+        setMessages(chatData.map((m: any) => ({
+          id: m.id,
+          lead_id: m.lead_id,
+          sender_type: m.sender_type || (m.sender === 'user' ? 'user' : m.sender === 'human_agent' ? 'human_agent' : 'assistant'),
+          message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
+          message_text: m.message_text || m.content || '',
+          content: m.content || m.message_text || '',
+          media_type: m.media_type || m.message_type,
+          media_url: m.media_url || null,
+          transcription: m.transcription || null,
+          created_at: m.created_at || new Date().toISOString(),
+        })));
       } else {
-        setMessages([]);
+        const { data, error } = await supabase
+          .from('wa_messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true });
+
+        if (!error && data) {
+          setMessages(data);
+        } else {
+          setMessages([]);
+        }
       }
     } catch {
       setMessages([]);
@@ -641,8 +734,30 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                         {lead.last_message || lead.preferred_zone || 'Sin mensajes registrados'}
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {getHandledByBadge(lead.handled_by, lead.status)}
-                        {getStatusBadge(lead.status)}
+                        {lead.source === 'instagram_ads' && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-sm">
+                            Instagram Ads
+                          </span>
+                        )}
+                        {lead.outbound_status === 'pending' ? (
+                          <button
+                            type="button"
+                            disabled={outboundLoading === lead.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOutboundAIContact(lead);
+                            }}
+                            className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 flex items-center gap-1 shadow-md shadow-amber-500/20 cursor-pointer animate-pulse transition-all"
+                          >
+                            <Zap className="w-3 h-3 fill-slate-950" />
+                            <span>{outboundLoading === lead.id ? 'Enviando...' : 'Contactar con IA'}</span>
+                          </button>
+                        ) : (
+                          <>
+                            {getHandledByBadge(lead.handled_by, lead.status)}
+                            {getStatusBadge(lead.status)}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -1,3 +1,4 @@
+import { sendWhatsAppTextMessage } from '../_lib/whatsappClient.js';
 ﻿import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { generateStructuredAriaRealEstateResponse } from '../_lib/openrouterService.js';
@@ -87,6 +88,43 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         let body = req.body || {};
         if (typeof body === 'string') {
           try { body = JSON.parse(body); } catch { body = {}; }
+        }
+
+        // Soporte unificado para Webhooks de Meta Lead Ads (Instagram / Facebook Ads)
+        if (body.object === 'page' || body.object === 'instagram') {
+          const leadgenEntry = body.entry?.[0];
+          const leadgenChange = leadgenEntry?.changes?.[0];
+
+          if (leadgenChange?.field === 'leadgen' && supabase) {
+            try {
+              const leadgenId = leadgenChange.value?.leadgen_id;
+              const pageId = leadgenChange.value?.page_id;
+              const formId = leadgenChange.value?.form_id;
+
+              // Insertar lead pendiente en CRM con source instagram_ads
+              const { data: newLead } = await supabase
+                .from('leads')
+                .insert({
+                  user_name: 'Lead de Instagram Ads',
+                  name: 'Lead de Instagram Ads',
+                  source: 'instagram_ads',
+                  outbound_status: 'pending',
+                  status: 'new',
+                  handled_by: 'ia',
+                  notes: `Lead captado vía Instagram Ads (Leadgen ID: ${leadgenId}, Form: ${formId})`,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .select('*')
+                .single();
+
+              return res.status(200).json({ status: 'INSTAGRAM_LEAD_INGESTED', lead: newLead });
+            } catch (leadgenErr) {
+              console.error('Error ingesting Instagram Leadgen:', leadgenErr);
+              return res.status(200).json({ status: 'LEADGEN_ERROR' });
+            }
+          }
+          return res.status(200).json({ status: 'PAGE_EVENT_ACKNOWLEDGED' });
         }
 
         if (body.object !== 'whatsapp_business_account') {
@@ -202,6 +240,14 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             if (foundLead) {
               leadRecord = foundLead;
               existingConvId = foundLead.id;
+
+              // Si el lead tenía outbound_status pending o contacted, marcar como replied
+              if (foundLead.outbound_status === 'contacted' || foundLead.outbound_status === 'pending') {
+                await supabase
+                  .from('leads')
+                  .update({ outbound_status: 'replied', updated_at: new Date().toISOString() })
+                  .eq('id', foundLead.id);
+              }
             } else {
               // Crear lead automáticamente
               const { data: newLead } = await supabase
