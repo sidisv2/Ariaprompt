@@ -113,10 +113,21 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           return res.status(200).json({ status: 'MISSING_SENDER_OR_PHONE_ID' });
         }
 
-        // Extraer texto del mensaje
+        // Extraer texto y multimedia del mensaje
         let messageText = '';
+        let mediaUrl: string | null = null;
+        let messageType = 'text';
+
         if (msgType === 'text' && incomingMsg.text?.body) {
           messageText = incomingMsg.text.body;
+        } else if (msgType === 'image') {
+          messageType = 'image';
+          messageText = incomingMsg.image?.caption || 'Foto enviada';
+          mediaUrl = incomingMsg.image?.link || (incomingMsg.image?.id ? `https://graph.facebook.com/v21.0/${incomingMsg.image.id}` : null);
+        } else if (msgType === 'audio' || msgType === 'voice') {
+          messageType = 'audio';
+          messageText = 'Mensaje de voz';
+          mediaUrl = incomingMsg.audio?.link || incomingMsg.voice?.link || (incomingMsg.audio?.id ? `https://graph.facebook.com/v21.0/${incomingMsg.audio.id}` : null);
         } else if (msgType === 'button' && incomingMsg.button?.text) {
           messageText = incomingMsg.button.text;
         } else if (incomingMsg.interactive?.button_reply?.title) {
@@ -216,12 +227,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
               }
             }
 
-            // Persistir mensaje entrante del usuario en chat_messages
+            // Persistir mensaje entrante del usuario en chat_messages con soporte multimedia
             if (existingConvId) {
               await supabase.from('chat_messages').insert({
                 lead_id: existingConvId,
                 sender: 'user',
                 sender_type: 'user',
+                message_type: messageType,
+                media_type: messageType,
+                media_url: mediaUrl,
                 content: messageText,
                 message_text: messageText,
                 created_at: new Date().toISOString(),

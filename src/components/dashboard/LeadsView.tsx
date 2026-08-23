@@ -48,10 +48,13 @@ export interface CrmLead {
 
 export interface WaMessageItem {
   id: string;
-  conversation_id: string;
-  organization_id: string;
-  sender_type: 'user' | 'assistant' | 'system';
+  conversation_id?: string;
+  lead_id?: string;
+  organization_id?: string;
+  sender_type: 'user' | 'assistant' | 'system' | 'human_agent';
+  message_type?: string;
   message_text: string;
+  content?: string;
   media_type?: string;
   media_url?: string;
   transcription?: string;
@@ -819,7 +822,8 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                   ) : (
                     messages.map((msg) => {
                       const isUser = msg.sender_type === 'user';
-                      const isAudio = msg.media_type === 'audio' || msg.media_type === 'voice' || msg.message_text.includes('🎙️') || !!msg.transcription || !!msg.media_url;
+                      const isImage = msg.message_type === 'image' || msg.media_type === 'image' || (msg.media_url && (msg.media_url.match(/\.(jpeg|jpg|png|webp|gif)/i) || msg.message_text.toLowerCase().includes('foto')));
+                      const isAudio = !isImage && (msg.media_type === 'audio' || msg.media_type === 'voice' || msg.message_text.includes('🎙️') || !!msg.transcription);
 
                       return (
                         <div
@@ -833,6 +837,20 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                                 : 'bg-slate-900 text-slate-200 border border-white/10 rounded-tl-none'
                             }`}
                           >
+                            {/* Image Thumbnail / Attachment Preview */}
+                            {isImage && msg.media_url && (
+                              <div className="mt-1 rounded-xl overflow-hidden border border-black/20 max-w-xs cursor-pointer hover:opacity-95 transition shadow-md bg-slate-950">
+                                <a href={msg.media_url} target="_blank" rel="noopener noreferrer" title="Ver imagen en tamaño completo">
+                                  <img 
+                                    src={msg.media_url} 
+                                    alt="Adjunto del cliente" 
+                                    className="w-full h-auto object-cover max-h-60 rounded-lg hover:scale-105 transition-transform duration-300"
+                                    loading="lazy"
+                                  />
+                                </a>
+                              </div>
+                            )}
+
                             {isAudio && (
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-1">
@@ -860,9 +878,11 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                               </div>
                             )}
 
-                            <p className={isAudio && isUser ? 'text-slate-900/90 font-normal italic' : ''}>
-                              {msg.transcription ? `"${msg.transcription}"` : msg.message_text}
-                            </p>
+                            {(msg.message_text || msg.content) && (
+                              <p className={isAudio && isUser ? 'text-slate-900/90 font-normal italic' : ''}>
+                                {msg.transcription ? `"${msg.transcription}"` : (msg.message_text || msg.content)}
+                              </p>
+                            )}
                           </div>
                           <span className="text-[9px] text-slate-500 mt-1 font-mono px-1">
                             {new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}

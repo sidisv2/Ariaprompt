@@ -152,6 +152,10 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
     const {
       message,
+      message_type,
+      messageType,
+      media_url,
+      mediaUrl,
       history = [],
       leadId,
       lead_id,
@@ -167,6 +171,9 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
       faqList = [],
       bookingUrl,
     } = body;
+
+    const activeMediaType = message_type || messageType || (media_url || mediaUrl ? 'image' : 'text');
+    const activeMediaUrl = media_url || mediaUrl || null;
 
     const activeLeadId = leadId || lead_id;
     const clientPhone = phone || user_phone;
@@ -305,13 +312,18 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Persist user incoming message into chat_messages
+    // Persist user incoming message into chat_messages with media_url support
     if (supabase && (leadRecord?.id || activeLeadId)) {
       try {
         await supabase.from('chat_messages').insert({
           lead_id: leadRecord?.id || activeLeadId,
           sender: 'user',
-          content: message,
+          sender_type: 'user',
+          message_type: activeMediaType,
+          media_type: activeMediaType,
+          media_url: activeMediaUrl,
+          content: message || (activeMediaType === 'image' ? 'Foto adjunta' : ''),
+          message_text: message || (activeMediaType === 'image' ? 'Foto adjunta' : ''),
           created_at: new Date().toISOString(),
         });
       } catch (insertUserMsgErr) {

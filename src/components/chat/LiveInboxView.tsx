@@ -40,7 +40,11 @@ export interface InboxLeadItem {
 export interface ChatMessage {
   id: string;
   sender_type: 'user' | 'assistant' | 'human_agent' | 'system';
+  message_type?: string;
+  media_type?: string;
+  media_url?: string | null;
   message_text: string;
+  content?: string;
   created_at: string;
 }
 
@@ -193,7 +197,11 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
           const mappedMsgs: ChatMessage[] = data.map((m: any) => ({
             id: m.id,
             sender_type: m.sender_type || (m.role === 'user' ? 'user' : 'assistant'),
+            message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
+            media_type: m.media_type || m.message_type,
+            media_url: m.media_url || null,
             message_text: m.message_text || m.content || '',
+            content: m.content || m.message_text || '',
             created_at: m.created_at || new Date().toISOString(),
           }));
           setMessages(mappedMsgs);
@@ -532,7 +540,22 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                             })}
                           </span>
                         </div>
-                        <p className="pt-0.5 whitespace-pre-wrap">{msg.message_text}</p>
+                        {/* Image Thumbnail / Attachment Preview */}
+                        {(msg.message_type === 'image' || msg.media_type === 'image' || msg.media_url) && msg.media_url && (
+                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-700 max-w-xs cursor-pointer hover:opacity-95 transition shadow-lg bg-slate-950">
+                            <a href={msg.media_url} target="_blank" rel="noopener noreferrer" title="Ver imagen completa">
+                              <img 
+                                src={msg.media_url} 
+                                alt="Adjunto del cliente" 
+                                className="w-full h-auto object-cover max-h-60 rounded-md hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                            </a>
+                          </div>
+                        )}
+                        {(msg.message_text || msg.content) && (
+                          <p className="pt-0.5 whitespace-pre-wrap">{msg.message_text || msg.content}</p>
+                        )}
                       </div>
                     </div>
                   );
