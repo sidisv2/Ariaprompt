@@ -35,6 +35,32 @@ export const PublicPropertySheet: React.FC<PublicPropertySheetProps> = ({ onRout
   const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = (imgCount: number) => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setActiveImgIndex((prev) => (prev < imgCount - 1 ? prev + 1 : 0));
+    } else if (isRightSwipe) {
+      setActiveImgIndex((prev) => (prev > 0 ? prev - 1 : imgCount - 1));
+    }
+  };
 
   useEffect(() => {
     async function fetchProperty() {
@@ -227,7 +253,12 @@ export const PublicPropertySheet: React.FC<PublicPropertySheetProps> = ({ onRout
 
         {/* 1. Fast Mobile Gallery */}
         <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-white/10 shadow-2xl group">
-          <div className="aspect-[16/10] sm:aspect-[21/9] w-full relative overflow-hidden bg-slate-950">
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={() => onTouchEnd(images.length)}
+            className="aspect-[16/10] sm:aspect-[21/9] w-full relative overflow-hidden bg-slate-950 select-none"
+          >
             <img
               src={images[activeImgIndex]}
               alt={property.title}

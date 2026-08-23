@@ -348,10 +348,11 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         }
 
         const propertyCatalogText = properties
-          .map(
-            (p) =>
-              `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation || 'ALQUILER').toUpperCase()}) en ${p.zone || 'Zona'}. Precio: $${p.price} USD. ${p.bedrooms || 2} hab. Ficha Interactiva: https://ariaprop.online/p/${p.id}`
-          )
+          .map((p) => {
+            const coverImage = (Array.isArray(p.images) && p.images[0]) || p.image_url || null;
+            const imgNote = coverImage ? ` [Foto Portada: ${coverImage}]` : '';
+            return `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation_type || p.operation || 'VENTA').toUpperCase()}) en ${p.zone || p.location?.zone || 'Zona'}. Precio: ${p.price} USD. ${p.bedrooms || 2} hab.${imgNote} Ficha Interactiva y Galería: https://ariaprop.online/p/${p.id}`;
+          })
           .join('\n');
 
         // 5. Generar respuesta con IA

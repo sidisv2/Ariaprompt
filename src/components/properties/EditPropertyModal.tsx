@@ -1,6 +1,7 @@
+import { supabase } from '../../lib/supabaseClient';
 import React, { useState } from 'react';
 import { Property, RentalPeriod } from '../../types';
-import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock, Calendar, Lock, MapPin, DollarSign, Percent, Navigation, EyeOff } from 'lucide-react';
+import { X, Sparkles, Upload, Save, Loader2, Image as ImageIcon, Plus, Trash2, Tag, Home, Clock, Calendar, Lock, MapPin, DollarSign, Percent, Navigation, EyeOff, Star, ArrowUp, ArrowDown, Check } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface EditPropertyModalProps {
@@ -66,17 +67,113 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (reader.result && typeof reader.result === 'string') {
-        setImages((prev) => [reader.result as string, ...prev]);
+  const uploadFiles = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    setUploadingImages(true);
+
+    const newUrls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.type.startsWith('image/')) continue;
+
+      let uploadedUrl: string | null = null;
+
+      // Try uploading to Supabase Storage bucket 'properties' or 'property-images'
+      if (supabase) {
+        try {
+          const fileExt = file.name.split('.').pop() || 'jpg';
+          const fileName = `prop_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+          const filePath = `property_images/${fileName}`;
+
+          const { data: storageData, error: storageErr } = await supabase.storage
+            .from('properties')
+            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+          if (!storageErr && storageData) {
+            const { data: publicUrlData } = supabase.storage
+              .from('properties')
+              .getPublicUrl(filePath);
+
+            if (publicUrlData?.publicUrl) {
+              uploadedUrl = publicUrlData.publicUrl;
+            }
+          }
+        } catch (e) {
+          console.warn('Supabase storage upload fallback to Base64:', e);
+        }
       }
-    };
-    reader.readAsDataURL(file);
+
+      // Fallback to Data URL if storage bucket is not configured
+      if (!uploadedUrl) {
+        uploadedUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            if (reader.result && typeof reader.result === 'string') {
+              resolve(reader.result);
+            } else {
+              resolve('');
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (uploadedUrl) {
+        newUrls.push(uploadedUrl);
+      }
+    }
+
+    if (newUrls.length > 0) {
+      setImages((prev) => [...prev, ...newUrls]);
+    }
+    setUploadingImages(false);
+  };
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      uploadFiles(e.target.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files) {
+      uploadFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleSetMainCover = (index: number) => {
+    if (index === 0) return;
+    setImages((prev) => {
+      const selected = prev[index];
+      const rest = prev.filter((_, idx) => idx !== index);
+      return [selected, ...rest];
+    });
+  };
+
+  const handleMoveImage = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= images.length) return;
+    setImages((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, item);
+      return copy;
+    });
   };
 
   const handleAddImageUrl = () => {
@@ -387,50 +484,155 @@ export const EditPropertyModal: React.FC<EditPropertyModalProps> = ({
             </div>
 
             {/* Images Upload / Gallery Section */}
-            <div>
-              <label className="block text-slate-300 font-semibold mb-2">Galería de Imágenes</label>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-                {images.map((imgUrl, idx) => (
-                  <div key={idx} className="relative rounded-xl overflow-hidden h-24 bg-slate-950 border border-white/10 group">
-                    <img src={imgUrl} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(idx)}
-                      className="absolute top-1 right-1 p-1 rounded-lg bg-rose-600 text-white opacity-80 group-hover:opacity-100 transition-opacity cursor-pointer"
-                      title="Eliminar foto"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    {idx === 0 && (
-                      <span className="absolute bottom-1 left-1 px-2 py-0.5 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase">
-                        Principal
-                      </span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-slate-300 font-semibold text-xs">
+                  Galería Multimedia ({images.length} fotos cargadas)
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  La foto #1 es la <strong className="text-emerald-400">Portada Principal</strong>
+                </span>
+              </div>
+
+              {/* Drag & Drop Zone */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative p-6 rounded-2xl border-2 border-dashed transition-all text-center flex flex-col items-center justify-center gap-2 ${
+                  isDragging
+                    ? 'border-emerald-400 bg-emerald-500/10'
+                    : 'border-white/10 hover:border-emerald-500/40 bg-slate-900/50'
+                }`}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageFileUpload}
+                  id="multi-image-upload"
+                  className="hidden"
+                />
+                <label
+                  htmlFor="multi-image-upload"
+                  className="flex flex-col items-center gap-2 cursor-pointer w-full"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-lg">
+                    {uploadingImages ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <Upload className="w-6 h-6" />
                     )}
                   </div>
-                ))}
-
-                {/* Upload Trigger Card */}
-                <label className="h-24 rounded-xl border border-dashed border-emerald-500/40 hover:border-emerald-400 bg-slate-950 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-center p-2">
-                  <Upload className="w-5 h-5 text-emerald-400" />
-                  <span className="text-[10px] font-bold text-slate-300">Subir Imagen</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileUpload}
-                    className="hidden"
-                  />
+                  <div>
+                    <p className="text-xs font-bold text-white">
+                      {uploadingImages ? 'Subiendo imágenes a Supabase Storage...' : 'Haz clic o arrastra múltiples fotos aquí'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      JPG, PNG, WebP permitidos. Puedes subir varias fotos a la vez.
+                    </p>
+                  </div>
                 </label>
               </div>
 
-              {/* Add by URL */}
-              <div className="flex items-center gap-2">
+              {/* Interactive Thumbnail Gallery */}
+              {images.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                  {images.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      className={`relative rounded-2xl overflow-hidden aspect-[4/3] bg-slate-950 border transition-all group ${
+                        idx === 0
+                          ? 'border-emerald-500 ring-2 ring-emerald-500/30'
+                          : 'border-white/10 hover:border-white/25'
+                      }`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Foto ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+
+                      {/* Overlay Controls */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => handleSetMainCover(idx)}
+                            className={`p-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                              idx === 0
+                                ? 'bg-emerald-500 text-slate-950'
+                                : 'bg-black/60 hover:bg-emerald-500 hover:text-slate-950 text-white'
+                            }`}
+                            title="Marcar como portada"
+                          >
+                            <Star className={`w-3 h-3 ${idx === 0 ? 'fill-current' : ''}`} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="p-1.5 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                            title="Eliminar foto"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1">
+                            {idx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleMoveImage(idx, idx - 1)}
+                                className="p-1 rounded bg-black/60 hover:bg-white/20 text-white"
+                                title="Mover hacia adelante"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                            )}
+                            {idx < images.length - 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleMoveImage(idx, idx + 1)}
+                                className="p-1 rounded bg-black/60 hover:bg-white/20 text-white"
+                                title="Mover hacia atrás"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-slate-300">
+                            #{idx + 1}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Main Badge */}
+                      {idx === 0 && (
+                        <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" /> Portada
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add by URL Input */}
+              <div className="flex items-center gap-2 pt-1">
                 <input
-                  type="text"
+                  type="url"
                   value={newImageUrl}
                   onChange={(e) => setNewImageUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddImageUrl();
+                    }
+                  }}
                   placeholder="O pega una URL directa de imagen (https://...)"
-                  className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white text-xs"
+                  className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500"
                 />
                 <button
                   type="button"
