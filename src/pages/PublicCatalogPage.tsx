@@ -46,8 +46,8 @@ export const PublicCatalogPage: React.FC<PublicCatalogPageProps> = ({
           const { data, error } = await supabase
             .from('properties')
             .select('*')
-            .or('is_public.eq.true,is_public.is.null')
-            .or('status.eq.available,status.is.null')
+            .neq('is_public', false)
+            .in('status', ['available', 'disponible'])
             .order('created_at', { ascending: false });
 
           if (!error && data && data.length > 0) {

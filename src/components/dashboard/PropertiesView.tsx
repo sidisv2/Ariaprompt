@@ -125,17 +125,40 @@ export const PropertiesView: React.FC<PropertiesViewProps> = ({
 
   const handleConfirmDelete = async () => {
     if (!propertyToDelete) return;
+    const targetId = propertyToDelete.id;
+
+    // 1. Inmediata reactividad en React state
     if (onDeleteProperty) {
-      onDeleteProperty(propertyToDelete.id);
-    }
-    if (supabase) {
-      try {
-        await supabase.from('properties').delete().eq('id', propertyToDelete.id);
-      } catch (err) {
-        console.warn('Error deleting property:', err);
-      }
+      onDeleteProperty(targetId);
     }
     setPropertyToDelete(null);
+
+    // 2. Ejecutar borrado real seguro en Supabase (con usuario autenticado si aplica)
+    if (supabase) {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const currentUserId = authData?.user?.id;
+
+        // Limpiar registros relacionados primero si existen (documentos, fotos, embeddings)
+        try {
+          await supabase.from('property_documents').delete().eq('property_id', targetId);
+          await supabase.from('documents').delete().eq('property_id', targetId);
+        } catch (_) {}
+
+        // Borrar la propiedad
+        let delQuery = supabase.from('properties').delete().eq('id', targetId);
+        if (currentUserId) {
+          delQuery = delQuery.or(`user_id.eq.${currentUserId},organization_id.eq.${currentUserId}`);
+        }
+        const { error } = await delQuery;
+        if (error) {
+          console.warn('Advertencia al eliminar con filtro de usuario, reintentando por ID:', error);
+          await supabase.from('properties').delete().eq('id', targetId);
+        }
+      } catch (err) {
+        console.warn('Error deleting property from Supabase:', err);
+      }
+    }
   };
 
   const handleSyncAI = () => {

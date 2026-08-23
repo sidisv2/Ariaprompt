@@ -204,8 +204,8 @@ export async function processAriaMessage({
         .from('properties')
         .select('*')
         .eq('organization_id', organizationId)
-        .or('is_public.eq.true,is_public.is.null')
-        .or('status.eq.available,status.eq.published,status.is.null')
+        .neq('is_public', false)
+        .in('status', ['available', 'disponible'])
         .limit(20);
 
       if (dbProps && dbProps.length > 0) {

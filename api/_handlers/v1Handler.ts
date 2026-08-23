@@ -167,7 +167,12 @@ async function syncOrganizationSubscription(supabase: any, {
     const supabase = getBackendSupabaseClient();
     if (!supabase) return res.status(500).json({ error: 'Supabase client unavailable' });
 
-    const { data: properties } = await supabase.from('properties').select('*').limit(50);
+    const { data: properties } = await supabase
+      .from('properties')
+      .select('*')
+      .neq('is_public', false)
+      .in('status', ['available', 'disponible'])
+      .limit(50);
     return res.status(200).json({ success: true, properties: properties || [] });
   }
 
