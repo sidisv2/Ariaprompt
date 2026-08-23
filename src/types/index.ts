@@ -14,6 +14,7 @@ export interface Lead {
   source?: 'instagram_ads' | 'facebook_ads' | 'website' | 'whatsapp' | 'manual' | string;
   outbound_status?: 'pending' | 'contacted' | 'replied' | string;
   property_interest?: string;
+  preferred_contact_slot?: string | null;
   temperature: LeadTemperature;
   status: LeadStatus;
   budgetMin: number;

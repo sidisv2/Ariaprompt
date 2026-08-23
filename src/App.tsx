@@ -1,3 +1,4 @@
+import { PublicPropertySheet } from './pages/PublicPropertySheet';
 ﻿import React, { useState, useEffect } from 'react';
 import { AppRoute, Property, Lead, BotConfig } from './types';
 import { INITIAL_PROPERTIES, INITIAL_LEADS, INITIAL_BOT_CONFIG } from './data/mockData';
@@ -33,7 +34,7 @@ const getRouteFromPath = (): AppRoute => {
   if (path.includes('ia-para-inmobiliarias')) return 'ia-para-inmobiliarias';
   if (path.includes('whatsapp-para-inmobiliarias') || path.includes('automatizar-whatsapp-inmobiliaria')) return 'whatsapp-para-inmobiliarias';
   if (path.includes('chatbot-inmobiliario') || path.includes('chatbot-vs-agente-ia')) return 'chatbot-inmobiliario';
-  if (path.includes('properties/') || path.includes('propiedades/')) return 'property-detail';
+  if (path.includes('/p/') || path.includes('properties/') || path.includes('propiedades/')) return 'property-detail';
   if (path.includes('dashboard/properties')) return 'dashboard-properties';
   if (path.includes('dashboard/leads')) return 'dashboard-leads';
   if (path.includes('dashboard/bot-config')) return 'dashboard-bot-config';
@@ -82,7 +83,7 @@ const getPathFromRoute = (route: AppRoute): string => {
     case 'dashboard-vault': return '/user/vault';
     case 'embed-chat': return '/embed/chat';
     case 'embed-preview': return '/embed-preview';
-    case 'property-detail': return window.location.pathname.startsWith('/properties/') ? window.location.pathname : '/properties/detail';
+    case 'property-detail': return window.location.pathname.startsWith('/p/') ? window.location.pathname : window.location.pathname.startsWith('/properties/') ? window.location.pathname : '/properties/detail';
     default: return '/';
   }
 };

@@ -269,7 +269,7 @@ export async function handleChatRoute(req: VercelRequest, res: VercelResponse) {
         const area = p.surface_m2 ?? p.area_m2 ?? p.features?.areaM2 ?? 60;
         const desc = p.description ? ` - ${p.description.slice(0, 120)}` : '';
 
-        return `- [ID: ${p.id} | Código: ${p.code || p.id}] ${opTag} "${p.title}" (${(p.type || 'Inmueble').toUpperCase()}) en ${loc}. Precio: ${Number(p.price).toLocaleString('en-US')} ${p.currency || 'USD'}${periodStr}. ${dorms} hab, ${baths} baños, ${area} m².${desc} Ficha: https://ariaprop.online/properties/${p.id}`;
+        return `- [ID: ${p.id} | Código: ${p.code || p.id}] ${opTag} "${p.title}" (${(p.type || 'Inmueble').toUpperCase()}) en ${loc}. Precio: ${Number(p.price).toLocaleString('en-US')} ${p.currency || 'USD'}${periodStr}. ${dorms} hab, ${baths} baños, ${area} m².${desc} Ficha Interactiva: https://ariaprop.online/p/${p.id}`;
       })
       .join('\n');
 

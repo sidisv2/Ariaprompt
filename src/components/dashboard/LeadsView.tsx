@@ -40,6 +40,7 @@ export interface CrmLead {
   source?: 'instagram_ads' | 'facebook_ads' | 'website' | 'whatsapp' | 'manual' | string;
   outbound_status?: 'pending' | 'contacted' | 'replied' | string;
   property_interest?: string;
+  preferred_contact_slot?: string | null;
   status: 'active' | 'qualified' | 'handover' | 'closed';
   budget_max_usd: number | null;
   preferred_zone: string | null;
@@ -851,6 +852,9 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                       {getSourceBadge(selectedLead)}
                       {getHandledByBadge(selectedLead.handled_by, selectedLead.status)}
                       {getStatusBadge(selectedLead.status)}
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 shadow-sm">
+                        ⏰ {selectedLead.preferred_contact_slot || 'Franja: Por coordinar'}
+                      </span>
                     </div>
                     <p className="text-xs text-emerald-400 font-mono flex items-center gap-1 mt-0.5">
                       <Phone className="w-3.5 h-3.5" />

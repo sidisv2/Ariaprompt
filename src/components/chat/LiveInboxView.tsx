@@ -29,6 +29,7 @@ export interface InboxLeadItem {
   status: 'active' | 'qualified' | 'handover' | 'closed';
   preferred_zone?: string | null;
   budget_max_usd?: number | null;
+  preferred_contact_slot?: string | null;
   last_message: string | null;
   last_message_at: string;
   total_messages: number;

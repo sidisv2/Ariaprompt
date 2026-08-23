@@ -350,7 +350,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const propertyCatalogText = properties
           .map(
             (p) =>
-              `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation || 'ALQUILER').toUpperCase()}) en ${p.zone || 'Zona'}. Precio: $${p.price} USD. ${p.bedrooms || 2} hab. Ficha: https://ariaprop.online/properties/${p.id}`
+              `- [ID: ${p.id}] "${p.title}" (${(p.type || 'Inmueble').toUpperCase()} - ${(p.operation || 'ALQUILER').toUpperCase()}) en ${p.zone || 'Zona'}. Precio: $${p.price} USD. ${p.bedrooms || 2} hab. Ficha Interactiva: https://ariaprop.online/p/${p.id}`
           )
           .join('\n');
 
