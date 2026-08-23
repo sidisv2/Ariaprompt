@@ -261,9 +261,12 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   const fetchConversationMessages = useCallback(async (conversationId: string) => {
     setLoadingMessages(true);
     try {
-      if (!supabase) return;
+      if (!supabase) {
+        setMessages([]);
+        return;
+      }
       
-      // Consultar chat_messages primero
+      // 1. Consultar chat_messages por lead_id
       const { data: chatData, error: chatErr } = await supabase
         .from('chat_messages')
         .select('*')
@@ -284,19 +287,32 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
           created_at: m.created_at || new Date().toISOString(),
         })));
       } else {
-        const { data, error } = await supabase
+        // 2. Fallback a wa_messages
+        const { data: waData } = await supabase
           .from('wa_messages')
           .select('*')
           .eq('conversation_id', conversationId)
           .order('created_at', { ascending: true });
 
-        if (!error && data) {
-          setMessages(data);
+        if (waData && waData.length > 0) {
+          setMessages(waData.map((m: any) => ({
+            id: m.id,
+            conversation_id: m.conversation_id,
+            sender_type: m.sender_type || (m.sender === 'user' ? 'user' : 'assistant'),
+            message_type: m.media_type || 'text',
+            message_text: m.message_text || '',
+            content: m.message_text || '',
+            media_type: m.media_type,
+            media_url: m.media_url || null,
+            transcription: m.transcription || null,
+            created_at: m.created_at || new Date().toISOString(),
+          })));
         } else {
           setMessages([]);
         }
       }
-    } catch {
+    } catch (e) {
+      console.warn('Error fetching conversation messages:', e);
       setMessages([]);
     } finally {
       setLoadingMessages(false);
@@ -948,33 +964,65 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
 
               {/* Chat Messages History */}
               <div className="flex-1 flex flex-col space-y-2 min-h-[220px]">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Historial de Conversación</span>
-                <div className="flex-1 bg-slate-950 border border-white/5 rounded-2xl p-3 overflow-y-auto max-h-[260px] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                    HISTORIAL DE CONVERSACIÓN
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {messages.length} {messages.length === 1 ? 'mensaje' : 'mensajes'}
+                  </span>
+                </div>
+
+                <div className="flex-1 bg-slate-950 border border-white/5 rounded-2xl p-3.5 overflow-y-auto max-h-[300px] space-y-3 scrollbar-thin">
                   {loadingMessages ? (
-                    <div className="p-4 text-center text-xs text-slate-500">Cargando mensajes...</div>
+                    <div className="p-6 text-center text-xs text-slate-400 space-y-2">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-emerald-400" />
+                      <p>Cargando historial de mensajes...</p>
+                    </div>
                   ) : messages.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-500">Sin mensajes registrados en la base de datos</div>
+                    <div className="p-6 text-center text-xs text-slate-500 bg-slate-900/30 rounded-xl border border-white/5">
+                      No hay mensajes registrados para este lead.
+                    </div>
                   ) : (
                     messages.map((msg) => {
                       const isUser = msg.sender_type === 'user';
-                      const isImage = msg.message_type === 'image' || msg.media_type === 'image' || (msg.media_url && (msg.media_url.match(/\.(jpeg|jpg|png|webp|gif)/i) || msg.message_text.toLowerCase().includes('foto')));
-                      const isAudio = !isImage && (msg.media_type === 'audio' || msg.media_type === 'voice' || msg.message_text.includes('🎙️') || !!msg.transcription);
+                      const isHumanAgent = msg.sender_type === 'human_agent';
+                      const isImage = msg.message_type === 'image' || msg.media_type === 'image' || (msg.media_url && (msg.media_url.match(/\.(jpeg|jpg|png|webp|gif)/i) || (msg.message_text && msg.message_text.toLowerCase().includes('foto'))));
+                      const isAudio = !isImage && (msg.media_type === 'audio' || msg.media_type === 'voice' || (msg.message_text && msg.message_text.includes('🎙️')) || !!msg.transcription);
+
+                      const authorLabel = isUser
+                        ? (selectedLead?.user_name || 'Cliente')
+                        : isHumanAgent
+                        ? 'Operador Humano'
+                        : 'Aria IA';
+
+                      const timeStr = msg.created_at
+                        ? new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+                        : '';
 
                       return (
                         <div
                           key={msg.id}
-                          className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
+                          className={`flex flex-col ${isUser ? 'items-start' : 'items-end'}`}
                         >
                           <div
-                            className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed space-y-2 ${
+                            className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed space-y-1.5 shadow-md ${
                               isUser
-                                ? 'bg-emerald-500 text-slate-950 font-medium rounded-tr-none'
-                                : 'bg-slate-900 text-slate-200 border border-white/10 rounded-tl-none'
+                                ? 'bg-slate-900 text-slate-100 border border-white/10 rounded-tl-none'
+                                : isHumanAgent
+                                ? 'bg-amber-500/20 text-amber-100 border border-amber-500/30 rounded-tr-none'
+                                : 'bg-emerald-600 text-slate-950 font-medium rounded-tr-none'
                             }`}
                           >
+                            <div className="flex items-center justify-between gap-3 text-[10px] font-black pb-1 border-b border-black/10 opacity-80">
+                              <span>{authorLabel}</span>
+                              <span className="font-mono">{timeStr}</span>
+                            </div>
+
                             {/* Image Thumbnail / Attachment Preview */}
                             {isImage && msg.media_url && (
-                              <div className="mt-1 rounded-xl overflow-hidden border border-black/20 max-w-xs cursor-pointer hover:opacity-95 transition shadow-md bg-slate-950">
+                              <div className="mt-1.5 rounded-xl overflow-hidden border border-black/20 max-w-xs cursor-pointer hover:opacity-95 transition shadow-lg bg-slate-950">
                                 <a href={msg.media_url} target="_blank" rel="noopener noreferrer" title="Ver imagen en tamaño completo">
                                   <img 
                                     src={msg.media_url} 
@@ -987,7 +1035,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                             )}
 
                             {isAudio && (
-                              <div className="space-y-2">
+                              <div className="space-y-2 pt-1">
                                 <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-1">
                                   <div className="flex items-center gap-1.5 font-bold text-[10px] uppercase tracking-wider text-slate-900">
                                     <Mic className="w-3.5 h-3.5 fill-current" />
@@ -1014,14 +1062,11 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                             )}
 
                             {(msg.message_text || msg.content) && (
-                              <p className={isAudio && isUser ? 'text-slate-900/90 font-normal italic' : ''}>
+                              <p className={`pt-0.5 whitespace-pre-wrap ${isAudio && isUser ? 'text-slate-900/90 font-normal italic' : ''}`}>
                                 {msg.transcription ? `"${msg.transcription}"` : (msg.message_text || msg.content)}
                               </p>
                             )}
                           </div>
-                          <span className="text-[9px] text-slate-500 mt-1 font-mono px-1">
-                            {new Date(msg.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
                         </div>
                       );
                     })
