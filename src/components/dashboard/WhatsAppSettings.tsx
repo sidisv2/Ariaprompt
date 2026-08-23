@@ -1,29 +1,63 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   MessageSquare,
-  KeyRound,
-  Phone,
-  Building2,
   CheckCircle2,
   AlertCircle,
-  Loader2,
-  LogOut,
-  ShieldCheck,
-  Sparkles,
   ExternalLink,
-  Copy,
-  Check,
-  HelpCircle,
+  ShieldCheck,
   RefreshCw,
-  Lock
+  Loader2,
+  Phone,
+  Building2,
+  HelpCircle,
+  LogOut,
+  Sparkles,
+  KeyRound,
+  Layers,
+  Send,
+  Check,
+  Copy,
+  Info,
+  Lock,
+  Globe,
+  Crown,
+  ArrowRight
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+
+declare global {
+  interface Window {
+    FB?: any;
+    fbAsyncInit?: () => void;
+  }
+}
+
+export interface WhatsAppOrgStatus {
+  id: string;
+  name: string;
+  wa_phone_number_id: string | null;
+  wa_waba_id: string | null;
+  wa_connected: boolean;
+  updated_at?: string;
+  meta_access_token?: string | null;
+  subscription_status?: string | null;
+  plan_id?: string | null;
+}
+
+export interface VerifiedCredentialsInfo {
+  verifiedName: string;
+  displayPhoneNumber: string | null;
+  qualityRating?: string;
+  phoneNumberId: string;
+}
 
 export const WhatsAppSettings: React.FC = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<'manual' | 'embedded'>('manual');
+  const [orgStatus, setOrgStatus] = useState<WhatsAppOrgStatus | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [connecting, setConnecting] = useState<boolean>(false);
   const [verifying, setVerifying] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -31,77 +65,146 @@ export const WhatsAppSettings: React.FC = () => {
   const [copiedWebhook, setCopiedWebhook] = useState<boolean>(false);
   const [copiedToken, setCopiedToken] = useState<boolean>(false);
 
-  // Form Fields for Meta Official API
-  const [metaPhoneId, setMetaPhoneId] = useState<string>('');
-  const [metaWabaId, setMetaWabaId] = useState<string>('');
-  const [metaAccessToken, setMetaAccessToken] = useState<string>('');
-  const [metaWebhookVerifyToken, setMetaWebhookVerifyToken] = useState<string>('aria_prop_whatsapp_webhook_secret_verify_token_2026');
-  
-  const [orgData, setOrgData] = useState<any>(null);
-  const [verifiedInfo, setVerifiedInfo] = useState<{
-    verifiedName?: string;
-    displayPhoneNumber?: string;
-    qualityRating?: string;
-  } | null>(null);
+  // Manual Form States
+  const [manualPhoneId, setManualPhoneId] = useState<string>('');
+  const [manualWabaId, setManualWabaId] = useState<string>('');
+  const [manualAccessToken, setManualAccessToken] = useState<string>('');
+  const [verifiedInfo, setVerifiedInfo] = useState<VerifiedCredentialsInfo | null>(null);
 
   const webhookUrl = 'https://ariaprop.online/api/webhook/whatsapp';
+  const webhookVerifyToken = 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
 
-  // 1. Cargar estado de conexión de la organización
+  // Helper for safe JSON parsing
+  const safeFetchJson = async (url: string, options?: RequestInit) => {
+    const res = await fetch(url, options);
+    const contentType = res.headers.get('content-type') || '';
+    let data: any = {};
+    if (contentType.includes('application/json')) {
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = {};
+      }
+    } else {
+      const text = await res.text().catch(() => '');
+      data = { text };
+    }
+    return { ok: res.ok, status: res.status, data };
+  };
+
+  // 1. Fetch current WhatsApp connection status and credentials from Supabase
   const fetchStatus = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
-
     try {
       if (!supabase) return;
       const { data: authData } = await supabase.auth.getUser();
       const currentUserId = authData?.user?.id || user?.id;
 
-      if (!currentUserId) return;
+      if (currentUserId) {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('*')
+          .or(`user_id.eq.${currentUserId},id.eq.${currentUserId}`)
+          .maybeSingle();
 
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('*')
-        .or(`user_id.eq.${currentUserId},id.eq.${currentUserId}`)
-        .maybeSingle();
+        if (org) {
+          const phoneId = org.meta_phone_number_id || org.wa_phone_number_id || '';
+          const wabaId = org.meta_waba_id || org.wa_waba_id || '';
+          const token = org.meta_access_token || org.wa_access_token || '';
 
-      if (org) {
-        setOrgData(org);
-        const phoneId = org.meta_phone_number_id || org.wa_phone_number_id || '';
-        const wabaId = org.meta_waba_id || org.wa_waba_id || '';
-        const verifyTok = org.meta_webhook_verify_token || org.wa_verify_token || 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
+          setManualPhoneId(phoneId);
+          setManualWabaId(wabaId);
+          if (token) {
+            setManualAccessToken(token);
+          }
 
-        setMetaPhoneId(phoneId);
-        setMetaWabaId(wabaId);
-        setMetaWebhookVerifyToken(verifyTok);
-
-        if (phoneId && (org.meta_access_token || org.wa_access_token || org.wa_connected)) {
-          setIsConnected(true);
-        } else {
-          setIsConnected(false);
+          const hasActiveConn = Boolean(phoneId && (token || org.wa_connected));
+          setIsConnected(hasActiveConn);
+          setOrgStatus({
+            id: org.id,
+            name: org.name || 'Inmobiliaria',
+            wa_phone_number_id: phoneId || null,
+            wa_waba_id: wabaId || null,
+            wa_connected: hasActiveConn,
+            meta_access_token: token || null,
+            subscription_status: org.subscription_status,
+            plan_id: org.plan_id,
+            updated_at: org.updated_at,
+          });
         }
       }
-    } catch (err: any) {
-      console.warn('Error al cargar estado de WhatsApp:', err);
+    } catch (err) {
+      console.warn('⚠️ Error al consultar estado de WhatsApp:', err);
     } finally {
       setLoading(false);
     }
   }, [user]);
 
+  // 2. Load Facebook SDK dynamically for Embedded Signup
   useEffect(() => {
     fetchStatus();
+
+    const appId = import.meta.env.VITE_META_APP_ID || '891096146948509';
+
+    if (!document.getElementById('facebook-jssdk')) {
+      const js = document.createElement('script');
+      js.id = 'facebook-jssdk';
+      js.src = 'https://connect.facebook.net/es_LA/sdk.js';
+      js.async = true;
+      js.defer = true;
+      document.body.appendChild(js);
+
+      window.fbAsyncInit = () => {
+        if (window.FB) {
+          window.FB.init({
+            appId,
+            cookie: true,
+            xfbml: true,
+            version: 'v20.0',
+          });
+        }
+      };
+    }
+
+    // 3. Listen for Meta Embedded Signup postMessage events
+    const handleMessageEvent = (event: MessageEvent) => {
+      if (!event.origin.includes('facebook.com')) return;
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (data.type === 'WA_EMBEDDED_SIGNUP') {
+          if (data.data?.waba_id && data.data?.phone_number_id) {
+            handleCompleteSignup({
+              wabaId: data.data.waba_id,
+              phoneNumberId: data.data.phone_number_id,
+            });
+          }
+        }
+      } catch {}
+    };
+
+    window.addEventListener('message', handleMessageEvent);
+    return () => window.removeEventListener('message', handleMessageEvent);
   }, [fetchStatus]);
 
-  // 2. Verificar credenciales con Meta Graph API
-  const handleVerifyCredentials = async () => {
-    const cleanPhoneId = metaPhoneId.trim();
-    const cleanToken = metaAccessToken.trim();
+  // 4. Verify Manual Credentials with Meta Graph API
+  const handleVerifyManualCredentials = async () => {
+    const cleanPhoneId = manualPhoneId.trim();
+    const cleanToken = manualAccessToken.trim();
 
     if (!cleanPhoneId) {
-      setErrorMsg('Ingresá el Phone Number ID proporcionado por Meta Developers.');
+      setErrorMsg('Por favor, ingresa el Phone Number ID asignado por Meta.');
       return;
     }
-    if (!cleanToken) {
-      setErrorMsg('Ingresá el Token de acceso permanente de Meta.');
+
+    if (!/^\d{12,20}$/.test(cleanPhoneId)) {
+      setErrorMsg('El Phone Number ID debe ser un identificador numérico de Meta (15-17 dígitos), no ingreses tu número telefónico.');
+      return;
+    }
+
+    if (!cleanToken || cleanToken.length < 20) {
+      setErrorMsg('Por favor, ingresa un Access Token permanente o de System User de Meta válido.');
       return;
     }
 
@@ -117,7 +220,7 @@ export const WhatsAppSettings: React.FC = () => {
         authToken = sessionData.session?.access_token || '';
       }
 
-      const res = await fetch('/api/whatsapp/oauth', {
+      const { ok, data } = await safeFetchJson('/api/whatsapp/oauth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,40 +228,38 @@ export const WhatsAppSettings: React.FC = () => {
         },
         body: JSON.stringify({
           action: 'verify-credentials',
-          meta_phone_number_id: cleanPhoneId,
-          meta_access_token: cleanToken,
+          phoneNumberId: cleanPhoneId,
+          accessToken: cleanToken,
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
-
-      if (res.ok && data.success && data.verified) {
+      if (ok && data.success && data.verified) {
         setVerifiedInfo({
           verifiedName: data.verifiedName,
           displayPhoneNumber: data.displayPhoneNumber,
           qualityRating: data.qualityRating,
+          phoneNumberId: data.phoneNumberId,
         });
-        setSuccessMsg(`✓ Línea verificada con éxito: ${data.verifiedName} (${data.displayPhoneNumber})`);
+        setSuccessMsg(`✅ ¡Credenciales verificadas con Meta! Línea: ${data.verifiedName} (${data.displayPhoneNumber || cleanPhoneId})`);
       } else {
-        setErrorMsg(data.error || 'Meta no pudo verificar las credenciales. Revisá el Phone ID y el Token.');
+        const errorDetail = data.error || (data.details?.message ? `Meta API: ${data.details.message}` : 'Meta Graph API no pudo verificar estas credenciales. Revisa el Phone Number ID y el Access Token.');
+        setErrorMsg(errorDetail);
       }
     } catch (err: any) {
-      setErrorMsg(`Error de conexión con Meta: ${err.message || err}`);
+      setErrorMsg(`Error al verificar credenciales con Meta: ${err.message || String(err)}`);
     } finally {
       setVerifying(false);
     }
   };
 
-  // 3. Guardar configuración en Supabase y activar bot
-  const handleSaveConnection = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanPhoneId = metaPhoneId.trim();
-    const cleanWabaId = metaWabaId.trim();
-    const cleanToken = metaAccessToken.trim();
-    const cleanVerifyToken = metaWebhookVerifyToken.trim() || 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
+  // 5. Save & Connect Manual Credentials
+  const handleSaveManualConnection = async () => {
+    const cleanPhoneId = manualPhoneId.trim();
+    const cleanWabaId = manualWabaId.trim();
+    const cleanToken = manualAccessToken.trim();
 
-    if (!cleanPhoneId) {
-      setErrorMsg('El campo Phone Number ID es obligatorio.');
+    if (!cleanPhoneId || !cleanToken) {
+      setErrorMsg('Debes ingresar el Phone Number ID y el Access Token antes de guardar.');
       return;
     }
 
@@ -181,344 +282,492 @@ export const WhatsAppSettings: React.FC = () => {
         },
         body: JSON.stringify({
           action: 'connect',
-          meta_phone_number_id: cleanPhoneId,
-          meta_waba_id: cleanWabaId || undefined,
-          meta_access_token: cleanToken,
-          meta_webhook_verify_token: cleanVerifyToken,
+          phone_number_id: cleanPhoneId,
+          phoneNumberId: cleanPhoneId,
+          waba_id: cleanWabaId || undefined,
+          wabaId: cleanWabaId || undefined,
+          access_token: cleanToken,
+          accessToken: cleanToken,
         }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.success) {
-        setSuccessMsg('¡WhatsApp Cloud API oficial conectada y activa! El bot ya está atendiendo.');
+        setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
+        const newOrg = {
+          id: data.organization?.id || orgStatus?.id || 'org_active',
+          name: data.organization?.name || orgStatus?.name || 'Mi Inmobiliaria',
+          wa_phone_number_id: cleanPhoneId,
+          wa_waba_id: cleanWabaId || null,
+          wa_connected: true,
+          updated_at: new Date().toISOString(),
+        };
         setIsConnected(true);
-        setMetaAccessToken('');
+        setOrgStatus(newOrg);
+        setVerifiedInfo(null);
         await fetchStatus();
       } else {
-        setErrorMsg(data.error || 'No se pudo guardar la conexión.');
+        const errMsg = data.error || data.message || `Error HTTP ${res.status}`;
+        setErrorMsg(`Error al guardar: ${errMsg}`);
       }
     } catch (err: any) {
-      setErrorMsg(`Error al conectar: ${err.message || err}`);
+      setErrorMsg(`Excepción al conectar: ${err.message || 'Error de red o conexión'}`);
     } finally {
       setConnecting(false);
     }
   };
 
-  // 4. Desconectar cuenta
-  const handleDisconnect = async () => {
-    if (!window.confirm('¿Seguro que deseas desconectar WhatsApp Cloud API? El bot dejará de responder automáticamente en esta línea.')) {
-      return;
-    }
-
+  // 6. Complete Embedded Signup flow by posting code/IDs to backend
+  const handleCompleteSignup = async (payload: { code?: string; wabaId?: string; phoneNumberId?: string }) => {
     setConnecting(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
     try {
-      let authToken = '';
+      let token = '';
       if (supabase) {
         const { data: sessionData } = await supabase.auth.getSession();
-        authToken = sessionData.session?.access_token || '';
+        token = sessionData.session?.access_token || '';
       }
 
-      await fetch('/api/whatsapp/disconnect', {
+      const res = await fetch('/api/whatsapp/connect', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ action: 'disconnect' }),
+        body: JSON.stringify({
+          action: 'connect',
+          ...payload,
+        }),
       });
 
-      setIsConnected(false);
-      setOrgData(null);
-      setVerifiedInfo(null);
-      setMetaPhoneId('');
-      setMetaWabaId('');
-      setMetaAccessToken('');
-      setSuccessMsg('Línea de WhatsApp desconectada.');
-      await fetchStatus();
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setSuccessMsg('🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.');
+        if (data.organization) {
+          setIsConnected(true);
+          setOrgStatus(data.organization);
+        }
+        await fetchStatus();
+      } else {
+        setErrorMsg(data.error || 'No se pudo vincular la cuenta mediante Meta Login.');
+      }
     } catch (err: any) {
-      setErrorMsg(`Error al desconectar: ${err.message || err}`);
+      setErrorMsg(`Error al vincular cuenta: ${err.message || String(err)}`);
     } finally {
       setConnecting(false);
     }
   };
 
-  const handleCopyWebhook = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopiedWebhook(true);
-    setTimeout(() => setCopiedWebhook(false), 2500);
+  // 7. Trigger FB.login Embedded Signup Popup
+  const handleLaunchEmbeddedSignup = () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const appId = import.meta.env.VITE_META_APP_ID || '891096146948509';
+    const configId = import.meta.env.VITE_META_CONFIG_ID || '';
+
+    if (!window.FB) {
+      setErrorMsg('El SDK de Meta se está inicializando o está bloqueado por tu navegador. Recarga la página o usa la Configuración Manual.');
+      return;
+    }
+
+    try {
+      const loginOptions: any = {
+        scope: 'whatsapp_business_management,whatsapp_business_messaging',
+        response_type: 'code',
+      };
+
+      if (configId && configId !== 'null') {
+        loginOptions.config_id = configId;
+      }
+
+      window.FB.login((response: any) => {
+        if (response.authResponse) {
+          const code = response.authResponse.code;
+          handleCompleteSignup({ code });
+        } else {
+          setErrorMsg('El proceso de vinculación con Meta fue cancelado o no otorgó los permisos requeridos.');
+        }
+      }, loginOptions);
+    } catch (e: any) {
+      setErrorMsg(`Error al abrir popup de Meta: ${e.message || String(e)}`);
+    }
   };
 
-  const handleCopyToken = () => {
-    navigator.clipboard.writeText(metaWebhookVerifyToken);
-    setCopiedToken(true);
-    setTimeout(() => setCopiedToken(false), 2500);
+  // 8. Disconnect WhatsApp
+  const handleDisconnect = async () => {
+    if (!confirm('¿Estás seguro de desconectar WhatsApp oficial? Aria dejará de responder automáticamente en este canal.')) return;
+    setConnecting(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      let token = '';
+      if (supabase) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        token = sessionData.session?.access_token || '';
+      }
+
+      const res = await fetch('/api/whatsapp/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (res.ok) {
+        setIsConnected(false);
+        setOrgStatus(null);
+        setManualPhoneId('');
+        setManualWabaId('');
+        setManualAccessToken('');
+        setVerifiedInfo(null);
+        setSuccessMsg('Línea de WhatsApp desconectada correctamente.');
+      } else {
+        setErrorMsg('No se pudo desconectar la línea en este momento.');
+      }
+    } catch (err: any) {
+      setErrorMsg(`Error al desconectar: ${err.message || String(err)}`);
+    } finally {
+      setConnecting(false);
+    }
   };
+
+  const copyToClipboard = (text: string, isTok: boolean = false) => {
+    navigator.clipboard.writeText(text);
+    if (isTok) {
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
+    } else {
+      setCopiedWebhook(true);
+      setTimeout(() => setCopiedWebhook(false), 2000);
+    }
+  };
+
+  // Check Subscription / Plan access
+  const hasActivePlan = (() => {
+    if (!orgStatus) return true;
+    const plan = (orgStatus.plan_id || '').toLowerCase();
+    const status = (orgStatus.subscription_status || '').toLowerCase();
+    if (plan.includes('pro') || plan.includes('business') || plan.includes('agency') || plan.includes('scale')) {
+      return status !== 'canceled' && status !== 'expired' && status !== 'unpaid';
+    }
+    if (status === 'past_due' || status === 'canceled' || status === 'expired') {
+      return false;
+    }
+    return true;
+  })();
+
+  const isFreePlanBlocked = orgStatus && !hasActivePlan;
 
   return (
-    <div className="space-y-6">
-      
-      {/* Header Info */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="space-y-6 max-w-4xl animate-fadeIn">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <MessageSquare className="w-5 h-5 text-emerald-400" />
-            Integración Oficial Meta WhatsApp Cloud API
+          <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+            <MessageSquare className="w-6 h-6 text-emerald-400" />
+            Integración con WhatsApp Business API
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Conecta la API oficial de Meta para atención automatizada con IA 24/7, sincronización directa con el CRM y cero riesgo de bloqueos.
+            Conecta tu número oficial de Meta Cloud API para que Aria atienda y cualifique a tus prospectos 24/7.
           </p>
         </div>
 
-        {isConnected && (
-          <div className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Estado: Conectado y Activo</span>
-          </div>
-        )}
+        <button
+          onClick={fetchStatus}
+          disabled={loading}
+          className="px-3.5 py-2 rounded-xl bg-slate-900 border border-white/10 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-2 self-start sm:self-auto cursor-pointer transition-all"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+          <span>Actualizar</span>
+        </button>
       </div>
 
-      {/* Webhook Configuration Box for Meta Developers */}
-      <div className="p-5 rounded-3xl bg-slate-900/90 border border-white/10 space-y-4 backdrop-blur-xl shadow-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            Paso 1: Configurar Webhook en Meta for Developers
-          </h3>
-          <a
-            href="https://developers.facebook.com/apps/"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 cursor-pointer"
+      {/* Connected State Banner */}
+      {isConnected && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-4 animate-fadeIn shadow-lg shadow-emerald-500/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-emerald-300">
+                🎉 ¡WhatsApp Business oficial conectado y activo! Aria responderá automáticamente.
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Phone Number ID: <strong className="text-slate-200 font-mono">{orgStatus?.wa_phone_number_id || manualPhoneId}</strong>
+                {orgStatus?.wa_waba_id && (
+                  <span> · WABA ID: <strong className="text-slate-200 font-mono">{orgStatus.wa_waba_id}</strong></span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDisconnect}
+            disabled={connecting}
+            className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <span>Ir a Meta Developers</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
+            {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
+            <span>Desconectar</span>
+          </button>
         </div>
+      )}
 
-        <p className="text-xs text-slate-300 leading-relaxed">
-          En el panel de tu App de Meta, ve a <strong>WhatsApp &gt; Configuración &gt; Webhook</strong>, haz clic en <strong>Editar</strong> e ingresa estos valores:
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-          <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/10 space-y-1.5">
-            <div className="flex items-center justify-between text-slate-400 text-[11px]">
-              <span>URL de devolución de llamada (Callback URL):</span>
-              <button
-                type="button"
-                onClick={handleCopyWebhook}
-                className="text-emerald-400 hover:text-emerald-300 font-sans font-bold flex items-center gap-1 cursor-pointer"
-              >
-                {copiedWebhook ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedWebhook ? 'Copiado' : 'Copiar'}</span>
-              </button>
+      {/* Paywall Banner Overlay if Subscription is Inactive */}
+      {isFreePlanBlocked && (
+        <div className="p-6 rounded-3xl bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-emerald-500/15 border border-amber-500/30 shadow-2xl relative overflow-hidden space-y-4 animate-fadeIn">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30 shadow-lg">
+              <Crown className="w-6 h-6" />
             </div>
-            <p className="text-emerald-300 text-xs break-all font-bold select-all">
-              {webhookUrl}
-            </p>
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950">
+                  Plan Pro & Business
+                </span>
+                <span className="text-xs text-amber-300 font-bold flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Función Bloqueada
+                </span>
+              </div>
+              <h3 className="text-base font-black text-white">
+                Conexión con WhatsApp Business API disponible en Planes de Pago
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Para conectar tu número oficial de WhatsApp con Meta Cloud API y activar a Aria respondiendo automáticamente a tus prospectos 24/7, actualizá tu suscripción a un plan Pro o Business.
+              </p>
+            </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-slate-950 border border-white/10 space-y-1.5">
-            <div className="flex items-center justify-between text-slate-400 text-[11px]">
-              <span>Identificador de verificación (Verify Token):</span>
-              <button
-                type="button"
-                onClick={handleCopyToken}
-                className="text-emerald-400 hover:text-emerald-300 font-sans font-bold flex items-center gap-1 cursor-pointer"
-              >
-                {copiedToken ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedToken ? 'Copiado' : 'Copiar'}</span>
-              </button>
-            </div>
-            <p className="text-emerald-300 text-xs break-all font-bold select-all">
-              {metaWebhookVerifyToken}
-            </p>
+          <div className="flex items-center gap-3 pt-2">
+            <a
+              href="/pricing"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 fill-slate-950" />
+              <span>Ver Planes y Mejorar Suscripción</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
           </div>
         </div>
+      )}
 
-        <p className="text-[11px] text-slate-400">
-          💡 En los campos del webhook en Meta, asegúrate de suscribirte al evento <strong>messages</strong>.
-        </p>
+      {/* Alert Messages */}
+      {errorMsg && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 animate-fadeIn">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5 animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+
+      {/* Two Top Selection Tabs */}
+      <div className="flex items-center gap-3 p-1.5 rounded-2xl bg-slate-900/90 border border-white/10 w-full sm:w-fit">
+        <button
+          onClick={() => setActiveTab('manual')}
+          className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'manual'
+              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <KeyRound className="w-4 h-4" />
+          <span>🔑 Configuración Manual (Avanzado)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('embedded')}
+          className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'embedded'
+              ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Globe className="w-4 h-4" />
+          <span>🌐 Meta Embedded Signup (1 Clic)</span>
+        </button>
       </div>
 
-      {/* Credentials Form Box */}
-      <div className="p-6 sm:p-8 rounded-3xl bg-slate-900/90 border border-white/10 space-y-6 backdrop-blur-xl shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div>
-            <h3 className="font-bold text-white text-base flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-emerald-400" />
-              Paso 2: Credenciales de WhatsApp Cloud API
+      {/* Tab 1: Manual Configuration */}
+      {activeTab === 'manual' && (
+        <div className={`space-y-6 ${isFreePlanBlocked ? 'opacity-50 pointer-events-none filter blur-[1px]' : ''}`}>
+          
+          {/* Step 1: Webhook Configuration Info */}
+          <div className="p-5 rounded-3xl bg-slate-900/90 border border-white/10 space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" />
+              Paso 1: Configurar Webhook en Meta Developers
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Ingresa los identificadores y el token permanente de tu System User de Meta.
+            <p className="text-xs text-slate-300 leading-relaxed">
+              En tu aplicación de Meta for Developers (WhatsApp &gt; Configuration), copia y pega la URL de Callback y el Verify Token:
             </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Callback URL (Webhook)</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono text-emerald-300 truncate">{webhookUrl}</span>
+                  <button
+                    onClick={() => copyToClipboard(webhookUrl, false)}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors cursor-pointer shrink-0"
+                    title="Copiar URL"
+                  >
+                    {copiedWebhook ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-950 border border-white/5 space-y-1">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Verify Token</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-mono text-emerald-300 truncate">{webhookVerifyToken}</span>
+                  <button
+                    onClick={() => copyToClipboard(webhookVerifyToken, true)}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition-colors cursor-pointer shrink-0"
+                    title="Copiar Token"
+                  >
+                    {copiedToken ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {isConnected && (
-            <button
-              type="button"
-              disabled={connecting}
-              onClick={handleDisconnect}
-              className="px-3.5 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 font-bold text-xs border border-red-500/30 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {connecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
-              <span>Desconectar Línea</span>
-            </button>
-          )}
+          {/* Step 2: Meta Credentials Form */}
+          <div className="p-6 rounded-3xl bg-slate-900/90 border border-white/10 space-y-4 shadow-xl">
+            <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+              <KeyRound className="w-4 h-4" />
+              Paso 2: Credenciales de Meta Cloud API
+            </h3>
+
+            <div className="space-y-4 text-xs">
+              {/* Phone Number ID */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                  <span>Phone Number ID <strong className="text-rose-400">*</strong></span>
+                  <span className="text-[10px] text-slate-500 font-normal">Identificador numérico de 15 a 17 dígitos</span>
+                </label>
+                <input
+                  type="text"
+                  value={manualPhoneId}
+                  onChange={(e) => setManualPhoneId(e.target.value)}
+                  placeholder="Ej: 106592837461928"
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-all"
+                />
+              </div>
+
+              {/* WABA ID */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                  <span>WABA ID (Opcional)</span>
+                  <span className="text-[10px] text-slate-500 font-normal">WhatsApp Business Account ID</span>
+                </label>
+                <input
+                  type="text"
+                  value={manualWabaId}
+                  onChange={(e) => setManualWabaId(e.target.value)}
+                  placeholder="Ej: 198273645102938"
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-all"
+                />
+              </div>
+
+              {/* Meta Access Token */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                  <span>Meta Access Token (System User / Permanent Token) <strong className="text-rose-400">*</strong></span>
+                  <span className="text-[10px] text-slate-500 font-normal">Token con permisos whatsapp_business_messaging</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={manualAccessToken}
+                  onChange={(e) => setManualAccessToken(e.target.value)}
+                  placeholder="EAAG..."
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono transition-all resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Verified Info Card */}
+            {verifiedInfo && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-3 animate-fadeIn">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div>
+                  <p className="font-bold">Línea Verificada: {verifiedInfo.verifiedName}</p>
+                  <p className="text-[11px] text-slate-300 font-mono">Número: {verifiedInfo.displayPhoneNumber || verifiedInfo.phoneNumberId}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={handleVerifyManualCredentials}
+                disabled={verifying || !manualPhoneId.trim() || !manualAccessToken.trim()}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {verifying ? <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> : <ShieldCheck className="w-4 h-4 text-emerald-400" />}
+                <span>1. Probar y Verificar Credenciales</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveManualConnection}
+                disabled={connecting || !manualPhoneId.trim() || !manualAccessToken.trim()}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
+                <span>2. Guardar y Activar WhatsApp</span>
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Alerts */}
-        {successMsg && (
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSaveConnection} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
-            {/* Phone Number ID */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                Phone Number ID (Identificador de Número) <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={metaPhoneId}
-                onChange={(e) => { setMetaPhoneId(e.target.value); setVerifiedInfo(null); }}
-                placeholder="Ej. 104829472918472 (15-17 dígitos numéricos)"
-                className="w-full bg-slate-950 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-600"
-              />
-              <p className="text-[11px] text-slate-500">
-                Se obtiene en WhatsApp &gt; Configuración de la API en Meta for Developers.
-              </p>
-            </div>
-
-            {/* WABA ID */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-emerald-400" />
-                WABA ID (WhatsApp Business Account ID)
-              </label>
-              <input
-                type="text"
-                value={metaWabaId}
-                onChange={(e) => setMetaWabaId(e.target.value)}
-                placeholder="Ej. 1092837465987123"
-                className="w-full bg-slate-950 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-600"
-              />
-              <p className="text-[11px] text-slate-500">
-                Identificador de la cuenta de WhatsApp Business.
-              </p>
-            </div>
-
+      {/* Tab 2: Meta Embedded Signup (1 Clic) */}
+      {activeTab === 'embedded' && (
+        <div className={`p-8 rounded-3xl bg-slate-900/90 border border-white/10 text-center space-y-6 shadow-xl ${isFreePlanBlocked ? 'opacity-50 pointer-events-none filter blur-[1px]' : ''}`}>
+          <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/20 shadow-xl">
+            <Globe className="w-8 h-8" />
           </div>
 
-          {/* Access Token */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-emerald-400" />
-              Meta Access Token (System User / Token Permanente) <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="password"
-              value={metaAccessToken}
-              onChange={(e) => { setMetaAccessToken(e.target.value); setVerifiedInfo(null); }}
-              placeholder={isConnected ? '•••••••••••••••••••••••••••••••• (Guardado encriptado)' : 'EAAG...'}
-              className="w-full bg-slate-950 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition-all placeholder:text-slate-600"
-            />
-            <p className="text-[11px] text-slate-500">
-              Token de usuario del sistema con permisos `whatsapp_business_messaging` y `whatsapp_business_management`.
+          <div className="max-w-md mx-auto space-y-2">
+            <h3 className="text-base font-black text-white">
+              Conexión Automática con Meta Login
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Inicia sesión con tu cuenta de Facebook/Meta para vincular tu WhatsApp Business oficial en un solo clic, sin copiar IDs manualmente.
             </p>
           </div>
 
-          {/* Webhook Verify Token (Editable) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              Webhook Verify Token Personalizado
-            </label>
-            <input
-              type="text"
-              value={metaWebhookVerifyToken}
-              onChange={(e) => setMetaWebhookVerifyToken(e.target.value)}
-              placeholder="aria_prop_whatsapp_webhook_secret_verify_token_2026"
-              className="w-full bg-slate-950 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white font-mono focus:outline-none focus:border-emerald-500 transition-all"
-            />
-          </div>
-
-          {/* Verified Badge */}
-          {verifiedInfo && (
-            <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>Línea Verificada con Meta Graph API</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[11px]">Nombre Registrado:</span>
-                  <p className="font-semibold text-white">{verifiedInfo.verifiedName}</p>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[11px]">Número Visible:</span>
-                  <p className="font-semibold text-white">{verifiedInfo.displayPhoneNumber}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Form Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3 pt-3">
+          <div>
             <button
-              type="button"
-              disabled={verifying || !metaPhoneId || !metaAccessToken}
-              onClick={handleVerifyCredentials}
-              className="px-5 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 transition-all border border-white/10 cursor-pointer disabled:opacity-50"
+              onClick={handleLaunchEmbeddedSignup}
+              disabled={connecting}
+              className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2.5 mx-auto cursor-pointer disabled:opacity-50"
             >
-              {verifying ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                  <span>Verificando con Meta...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Probar y Verificar Credenciales</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="submit"
-              disabled={connecting || !metaPhoneId}
-              className="px-7 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 transition-all shadow-xl shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
-            >
-              {connecting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                  <span>Guardando...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 fill-slate-950 text-emerald-500" />
-                  <span>Guardar y Activar WhatsApp Cloud API</span>
-                </>
-              )}
+              {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4 fill-white" />}
+              <span>Conectar con Meta Login</span>
             </button>
           </div>
-        </form>
 
-      </div>
-
+          <p className="text-[11px] text-slate-500">
+            Aria utiliza la API Oficial de Meta for Developers (WhatsApp Cloud API v20.0).
+          </p>
+        </div>
+      )}
     </div>
   );
 };
