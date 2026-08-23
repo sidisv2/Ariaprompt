@@ -15,6 +15,7 @@ import { StandaloneChatWidget } from './components/embed/StandaloneChatWidget';
 const getRouteFromPath = (): AppRoute => {
   // Check pathname first, fallback to legacy hash if user comes from old bookmark
   const path = (window.location.pathname + window.location.hash).toLowerCase();
+  if (path.includes('catalogo') || path.includes('catalog') || path.includes('explorar')) return 'catalog';
   if (path.includes('dashboard/integrations') || path.includes('integraciones')) return 'dashboard-integrations';
   if (path.includes('dashboard/metrics') || path.includes('panel')) return 'dashboard-metrics';
   if (path.includes('app') || path.includes('dashboard/assistant') || path.includes('aria-ai')) return 'app';
@@ -49,6 +50,8 @@ const getRouteFromPath = (): AppRoute => {
 
 const getPathFromRoute = (route: AppRoute): string => {
   switch (route) {
+    case 'catalog':
+    case 'explorar': return '/catalogo';
     case 'dashboard-metrics':
     case 'app': return '/app';
     case 'dashboard-integrations': return '/dashboard/integrations';
@@ -118,9 +121,12 @@ function AppInner() {
   };
 
   useEffect(() => {
+    // Sincronizar ruta inicial con pathname actual
+    const detectedRoute = getRouteFromPath();
+    setCurrentRoute(detectedRoute);
+
     if (window.location.hash) {
-      const initialRoute = getRouteFromPath();
-      const cleanPath = getPathFromRoute(initialRoute);
+      const cleanPath = getPathFromRoute(detectedRoute);
       window.history.replaceState({}, '', cleanPath);
     }
 
