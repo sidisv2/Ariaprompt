@@ -214,6 +214,19 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           }
         }
 
+        // 🔒 Verificación de Suscripción Activa (Paywall Backend & Protección de Cuota de IA)
+        if (org) {
+          const subStatus = (org.subscription_status || org.status || 'active').toLowerCase();
+          const isTrial = org.is_trial_active === true || (org.trial_ends_at && new Date(org.trial_ends_at).getTime() > Date.now());
+          
+          if (subStatus === 'canceled' || subStatus === 'expired' || subStatus === 'unpaid' || subStatus === 'past_due') {
+            if (!isTrial) {
+              console.warn(`⚠️ Mensaje de WhatsApp omitido: Organización ${org.id} tiene la suscripción inactiva (${subStatus}).`);
+              return res.status(200).json({ status: 'SUBSCRIPTION_INACTIVE_SKIPPED', organizationId: org.id });
+            }
+          }
+        }
+
         const orgId = org?.id || 'org-default';
         const botName = org?.bot_name || 'Aria';
         const agencyName = org?.name || 'Inmobiliaria';
