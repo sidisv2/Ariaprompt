@@ -27,6 +27,24 @@ try {
 
 const PUBLIC_ROUTES = [
   {
+    path: '/catalogo',
+    title: 'Catálogo de Propiedades e Inmuebles en Venta y Alquiler | Aria Prop',
+    description: 'Explora nuestro catálogo inmobiliario público y en tiempo real. Atención comercial personalizada 24/7 vía WhatsApp y agendamiento de visitas.',
+    ogTitle: 'Catálogo Oficial de Propiedades | Aria Prop',
+    ogDescription: 'Encuentra departamentos, casas, lotes y locales comerciales con atención y soporte inteligente 24/7.',
+    ogImage: `${BASE_URL}/assets/og-home.jpg`,
+    contentHtml: `<div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans"><main class="max-w-7xl mx-auto px-4 py-8"><h1 class="text-3xl font-black text-white">Catálogo de Propiedades Oficial</h1></main></div>`,
+  },
+  {
+    path: '/catalog',
+    title: 'Catálogo de Propiedades e Inmuebles | Aria Prop',
+    description: 'Explora nuestro catálogo inmobiliario público y en tiempo real.',
+    ogTitle: 'Catálogo Oficial de Propiedades | Aria Prop',
+    ogDescription: 'Encuentra departamentos, casas y locales con atención 24/7.',
+    ogImage: `${BASE_URL}/assets/og-home.jpg`,
+    contentHtml: `<div id="static-prerender-wrapper" class="bg-slate-950 text-slate-100 min-h-screen font-sans"><main class="max-w-7xl mx-auto px-4 py-8"><h1 class="text-3xl font-black text-white">Catálogo de Propiedades</h1></main></div>`,
+  },
+  {
     path: '/',
     title: `Aria Prop - ${es.hero?.badge || 'Agente de IA Inmobiliario 24/7 en América'}`,
     description: es.hero?.subtitle || 'Automatiza la atención de tus inmuebles, cualifica leads de alta intención y agenda visitas 24/7 en WhatsApp y Web con la IA de Aria Prop.',
