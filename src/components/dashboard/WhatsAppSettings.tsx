@@ -227,9 +227,10 @@ export const WhatsAppSettings: React.FC = () => {
     return () => window.removeEventListener('message', handleMessageEvent);
   }, [fetchStatus]);
 
-  // 4. Verify Manual Credentials directly with Meta Graph API
+  // 4. Verify Manual Credentials STRICTLY with Meta Graph API (Phone Number ID + WABA ID)
   const handleVerifyManualCredentials = async () => {
     const cleanPhoneId = manualPhoneId.trim();
+    const cleanWabaId = manualWabaId.trim();
     const cleanToken = manualAccessToken.trim();
 
     if (!cleanPhoneId) {
@@ -237,8 +238,8 @@ export const WhatsAppSettings: React.FC = () => {
       return;
     }
 
-    if (!cleanToken || cleanToken.length < 15) {
-      setErrorMsg('Por favor, ingresa un Access Token permanente o de System User de Meta válido.');
+    if (!cleanToken) {
+      setErrorMsg('Por favor, ingresa el Meta Access Token permanente.');
       return;
     }
 
@@ -248,28 +249,43 @@ export const WhatsAppSettings: React.FC = () => {
     setVerifiedInfo(null);
 
     try {
-      // Direct call to Meta Graph API endpoint
-      const metaUrl = `https://graph.facebook.com/v20.0/${encodeURIComponent(cleanPhoneId)}?access_token=${encodeURIComponent(cleanToken)}`;
-      const res = await fetch(metaUrl);
-      const data = await res.json().catch(() => ({}));
+      // 1. Validar Phone Number ID contra Meta Graph API
+      const phoneUrl = `https://graph.facebook.com/v20.0/${encodeURIComponent(cleanPhoneId)}?fields=verified_name,display_phone_number,quality_rating,code_verification_status&access_token=${encodeURIComponent(cleanToken)}`;
+      const phoneRes = await fetch(phoneUrl);
+      const phoneData = await phoneRes.json().catch(() => ({}));
 
-      if (res.ok && (data.id || data.display_phone_number || data.verified_name)) {
-        const verifiedName = data.verified_name || data.display_phone_number || 'Línea WhatsApp Oficial';
-        const displayPhoneNumber = data.display_phone_number || cleanPhoneId;
-
-        setVerifiedInfo({
-          verifiedName,
-          displayPhoneNumber,
-          qualityRating: data.quality_rating || 'GREEN',
-          phoneNumberId: data.id || cleanPhoneId,
-        });
-        setSuccessMsg(`✅ ¡Credenciales válidas! Línea verificada: ${verifiedName} (${displayPhoneNumber})`);
-      } else {
-        const metaErrorMsg = data.error?.message || 'Meta Graph API rechazó el Phone Number ID o Access Token proporcionado.';
-        setErrorMsg(`Error de verificación Meta: ${metaErrorMsg}`);
+      if (!phoneRes.ok || phoneData.error) {
+        const errorMsg = phoneData.error?.message || 'Credenciales inválidas en Meta Graph API.';
+        throw new Error(`Phone Number ID inválido: ${errorMsg}`);
       }
+
+      // 2. Si se ingresó WABA ID, validar también que el WABA exista y pertenezca al token
+      if (cleanWabaId) {
+        const wabaUrl = `https://graph.facebook.com/v20.0/${encodeURIComponent(cleanWabaId)}?fields=id,name&access_token=${encodeURIComponent(cleanToken)}`;
+        const wabaRes = await fetch(wabaUrl);
+        const wabaData = await wabaRes.json().catch(() => ({}));
+
+        if (!wabaRes.ok || wabaData.error) {
+          const errorMsg = wabaData.error?.message || 'No encontrado o sin permisos.';
+          throw new Error(`WABA ID inválido: ${errorMsg}`);
+        }
+      }
+
+      // Si todo es válido
+      const verifiedName = phoneData.verified_name || phoneData.display_phone_number || 'Línea WhatsApp Oficial';
+      const displayPhoneNumber = phoneData.display_phone_number || cleanPhoneId;
+
+      setVerifiedInfo({
+        verifiedName,
+        displayPhoneNumber,
+        qualityRating: phoneData.quality_rating || 'GREEN',
+        phoneNumberId: phoneData.id || cleanPhoneId,
+      });
+
+      setSuccessMsg(`✅ ¡Credenciales válidas y verificadas con Meta! Línea: ${verifiedName} (${displayPhoneNumber})`);
     } catch (err: any) {
-      setErrorMsg(`Error de conexión al verificar con Meta: ${err.message || String(err)}`);
+      console.error('[Meta Graph Verification Error]:', err);
+      setErrorMsg(err.message || 'Error al verificar con Meta Graph API.');
     } finally {
       setVerifying(false);
     }
@@ -445,7 +461,7 @@ export const WhatsAppSettings: React.FC = () => {
     }
   };
 
-  // 8. Disconnect WhatsApp
+  // 8. Disconnect WhatsApp (Direct Supabase Clean Mutation)
   const handleDisconnect = async () => {
     if (!confirm('¿Estás seguro de desconectar WhatsApp oficial? Aria dejará de responder automáticamente en este canal.')) return;
     setConnecting(true);
@@ -453,38 +469,49 @@ export const WhatsAppSettings: React.FC = () => {
     setSuccessMsg(null);
 
     try {
-      let token = '';
-      if (supabase) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        token = sessionData.session?.access_token || '';
+      if (!supabase) {
+        throw new Error('Cliente de Supabase no disponible.');
       }
 
-      const res = await fetch('/api/whatsapp/disconnect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id || user?.id;
 
-      if (res.ok) {
-        sessionStorage.removeItem(STORAGE_KEY_PHONE);
-        sessionStorage.removeItem(STORAGE_KEY_WABA);
-        sessionStorage.removeItem(STORAGE_KEY_TOKEN);
-        userHasModifiedInputs.current = false;
-
-        setIsConnected(false);
-        setOrgStatus(null);
-        setManualPhoneId('');
-        setManualWabaId('');
-        setManualAccessToken('');
-        setVerifiedInfo(null);
-        setSuccessMsg('Línea de WhatsApp desconectada correctamente.');
-      } else {
-        setErrorMsg('No se pudo desconectar la línea en este momento.');
+      if (!currentUserId) {
+        throw new Error('No hay sesión activa.');
       }
+
+      // Mutación limpia en Supabase sobre la organización
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          meta_phone_number_id: null,
+          meta_waba_id: null,
+          meta_access_token: null,
+          wa_connected: false,
+          updated_at: new Date().toISOString(),
+        })
+        .or(`user_id.eq.${currentUserId},id.eq.${currentUserId}`);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Resetear estado local y sessionStorage de inmediato
+      sessionStorage.removeItem(STORAGE_KEY_PHONE);
+      sessionStorage.removeItem(STORAGE_KEY_WABA);
+      sessionStorage.removeItem(STORAGE_KEY_TOKEN);
+      userHasModifiedInputs.current = false;
+
+      setIsConnected(false);
+      setOrgStatus((prev) => prev ? { ...prev, wa_connected: false, wa_phone_number_id: null, wa_waba_id: null, meta_access_token: null } : null);
+      setManualPhoneId('');
+      setManualWabaId('');
+      setManualAccessToken('');
+      setVerifiedInfo(null);
+      setSuccessMsg('✅ Línea de WhatsApp desconectada correctamente.');
     } catch (err: any) {
-      setErrorMsg(`Error al desconectar: ${err.message || String(err)}`);
+      console.error('[WhatsApp Disconnect Error]:', err);
+      setErrorMsg(`Error al desconectar: ${err.message || 'No se pudo desconectar la línea'}`);
     } finally {
       setConnecting(false);
     }
