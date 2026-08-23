@@ -31,40 +31,26 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
     let isMounted = true;
     async function fetchAccountData() {
       try {
-        // Query leads for this user account or organization
+        // Query all active leads in Supabase
         const { data: leadData } = await supabase
           .from('leads')
           .select('*')
-          .or(`user_id.eq.${user.id},organization_id.eq.${user.id}`);
+          .order('created_at', { ascending: false });
 
-        if (isMounted && leadData) {
+        if (isMounted && leadData && leadData.length > 0) {
           setDbLeads(leadData as any);
         }
 
-        // Query real messages count and response timestamps for this user account
-        const { data: msgData, count: msgCount } = await supabase
+        // Query total messages
+        const { count: msgCount } = await supabase
           .from('chat_messages')
-          .select('response_time_ms, received_at, sent_at', { count: 'exact' })
-          .eq('user_id', user.id);
+          .select('*', { count: 'exact', head: true });
 
         if (isMounted && typeof msgCount === 'number') {
           setDbMessagesCount(msgCount);
         }
-
-        if (isMounted && msgData && msgData.length > 0) {
-          const times: number[] = [];
-          msgData.forEach((m: any) => {
-            if (typeof m.response_time_ms === 'number' && m.response_time_ms > 0) {
-              times.push(m.response_time_ms);
-            } else if (m.received_at && m.sent_at) {
-              const diff = new Date(m.sent_at).getTime() - new Date(m.received_at).getTime();
-              if (diff > 0 && diff < 300000) times.push(diff);
-            }
-          });
-          setDbResponseTimesMs(times);
-        }
       } catch (err) {
-        console.warn('MetricsView Supabase query warning:', err);
+        console.warn('MetricsView Supabase query fallback:', err);
       }
     }
 
@@ -114,9 +100,9 @@ export const MetricsView: React.FC<MetricsViewProps> = ({ leads, onInterveneLead
   }, [accountLeads]);
 
   const conversionRatePercent = useMemo(() => {
-    if (totalLeadsCount === 0) return '0.0%';
-    return `${((scheduledVisitsCount / totalLeadsCount) * 100).toFixed(1)}%`;
-  }, [scheduledVisitsCount, totalLeadsCount]);
+    if (totalLeadsCount === 0) return '0%';
+    return `${Math.round((qualifiedLeadsCount / totalLeadsCount) * 100)}%`;
+  }, [qualifiedLeadsCount, totalLeadsCount]);
 
   // Real Average Response Time calculation from timestamps
   const averageResponseTimeText = useMemo(() => {

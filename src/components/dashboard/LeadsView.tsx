@@ -500,25 +500,33 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     }
   };
 
-  const getSourceBadge = (source?: string) => {
-    const s = (source || 'whatsapp').toLowerCase();
-    if (s.includes('insta')) {
+  const getSourceBadge = (leadOrSource?: any) => {
+    let raw = '';
+    if (typeof leadOrSource === 'string') {
+      raw = leadOrSource.toLowerCase();
+    } else if (leadOrSource && typeof leadOrSource === 'object') {
+      raw = (leadOrSource.source || leadOrSource.origin || leadOrSource.channel || (leadOrSource.notes && leadOrSource.notes.includes('Instagram') ? 'instagram' : '') || 'web').toLowerCase();
+    } else {
+      raw = 'web';
+    }
+
+    if (raw.includes('instagram') || raw.includes('insta')) {
       return (
         <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 flex items-center gap-1 shadow-sm shrink-0 uppercase tracking-wider">
           📸 INSTAGRAM ADS
         </span>
       );
     }
-    if (s.includes('web')) {
+    if (raw.includes('whatsapp') || raw.includes('wa')) {
       return (
-        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
-          🌐 WEBCHAT
+        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+          🟢 WHATSAPP
         </span>
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
-        🟢 WHATSAPP
+      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+        🌐 WEBCHAT
       </span>
     );
   };
@@ -773,7 +781,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                         {lead.last_message || lead.preferred_zone || 'Sin mensajes registrados'}
                       </p>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {getSourceBadge(lead.source)}
+                        {getSourceBadge(lead)}
                         {lead.outbound_status === 'pending' ? (
                           <button
                             type="button"
@@ -840,7 +848,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                       <h3 className="font-black text-white text-base">
                         {selectedLead.user_name || `Lead ${selectedLead.user_phone}`}
                       </h3>
-                      {getSourceBadge(selectedLead.source)}
+                      {getSourceBadge(selectedLead)}
                       {getHandledByBadge(selectedLead.handled_by, selectedLead.status)}
                       {getStatusBadge(selectedLead.status)}
                     </div>

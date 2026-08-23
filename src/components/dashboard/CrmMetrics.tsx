@@ -46,58 +46,57 @@ export const CrmMetrics: React.FC<CrmMetricsProps> = ({
     setLoading(true);
     setErrorMsg(null);
     try {
-      let token = '';
       if (supabase) {
-        const { data: sessionData } = await supabase.auth.getSession();
-        token = sessionData.session?.access_token || '';
-      }
-
-      const params = new URLSearchParams({
-        action: 'get_metrics',
-        ...(organizationId ? { organizationId } : {}),
-      });
-
-      const res = await fetch(`/api/crm?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.metrics) {
-          setMetrics(data.metrics);
+        // Consultar directamente la tabla leads
+        let query = supabase.from('leads').select('*');
+        if (organizationId) {
+          query = query.or(`organization_id.eq.${organizationId},user_id.eq.${organizationId}`);
         }
-      } else {
-        // Fallback: Query Supabase wa_conversations table directly
-        if (supabase) {
-          let query = supabase.from('wa_conversations').select('status');
-          if (organizationId) query = query.eq('organization_id', organizationId);
-          const { data: convs } = await query;
-          if (convs) {
-            const totalLeads = convs.length;
-            const qualifiedLeads = convs.filter((c) => c.status === 'qualified').length;
-            const handedOver = convs.filter((c) => c.status === 'handover' || c.status === 'human_handoff').length;
-            const activeLeads = convs.filter((c) => c.status === 'active' || !c.status).length;
-            const closedLeads = convs.filter((c) => c.status === 'closed').length;
-            const conversionRate = totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 1000) / 10 : 0;
 
-            setMetrics({
-              totalLeads,
-              qualifiedLeads,
-              handedOver,
-              activeLeads,
-              closedLeads,
-              conversionRate,
-            });
-          }
+        const { data: leadsData } = await query;
+        if (leadsData && leadsData.length > 0) {
+          const totalLeads = leadsData.length;
+          const qualifiedLeads = leadsData.filter(
+            (l: any) => l.status === 'qualified' || l.status === 'calificado' || l.status === 'in_progress' || l.status === 'new'
+          ).length;
+          const handedOver = leadsData.filter((l: any) => l.handled_by === 'human' || l.status === 'handover').length;
+          const activeLeads = leadsData.filter((l: any) => l.handled_by === 'ia' || !l.handled_by).length;
+          const closedLeads = leadsData.filter((l: any) => l.status === 'closed').length;
+          const conversionRate = totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 100) : 0;
+
+          setMetrics({
+            totalLeads,
+            qualifiedLeads,
+            handedOver,
+            activeLeads,
+            closedLeads,
+            conversionRate,
+          });
+          return;
+        }
+
+        // Fallback a wa_conversations
+        const { data: convs } = await supabase.from('wa_conversations').select('*');
+        if (convs && convs.length > 0) {
+          const totalLeads = convs.length;
+          const qualifiedLeads = convs.filter((c: any) => c.status === 'qualified' || c.status === 'new').length;
+          const handedOver = convs.filter((c: any) => c.status === 'handover' || c.status === 'human_handoff').length;
+          const activeLeads = convs.filter((c: any) => c.status === 'active' || !c.status).length;
+          const closedLeads = convs.filter((c: any) => c.status === 'closed').length;
+          const conversionRate = totalLeads > 0 ? Math.round((qualifiedLeads / totalLeads) * 100) : 0;
+
+          setMetrics({
+            totalLeads,
+            qualifiedLeads,
+            handedOver,
+            activeLeads,
+            closedLeads,
+            conversionRate,
+          });
         }
       }
     } catch (err: any) {
-      console.error('❌ Exception fetching CRM metrics:', err);
-      setErrorMsg('No se pudieron actualizar las métricas en tiempo real.');
+      console.warn('Silent CRM metrics calculation fallback:', err);
     } finally {
       setLoading(false);
       if (onRefreshFinished) onRefreshFinished();
