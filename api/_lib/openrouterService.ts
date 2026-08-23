@@ -1,34 +1,22 @@
-﻿import OpenAI from 'openai';
+import { OpenAI } from 'openai';
 
-export interface ChatMessage {
-  sender: 'user' | 'bot' | 'model' | 'assistant';
-  content: string;
-}
-
-export interface RealEstateAIOptions {
-  message: string;
-  history?: ChatMessage[];
-  propertyContext?: string;
-  lang?: 'es' | 'en' | 'pt';
-  contextRole?: 'general' | 'finance' | 'rag';
-  agentName?: string;
-  agencyName?: string;
-  botTone?: 'friendly' | 'formal' | 'luxury' | 'direct';
-  customInstructions?: string;
-  faqKnowledge?: Array<{ question: string; answer: string }>;
-  calendarBookingUrl?: string;
-  apiKey?: string;
-}
-
-export interface LeadQualificationResult {
-  qualified: boolean;
-  intent: 'buy' | 'rent' | 'invest' | 'unknown';
-  budgetMaxUsd?: number;
-  zonePreference?: string;
-  propertyType?: string;
-  contactPhone?: string;
-  visitRequested?: boolean;
-  summary: string;
+export interface PropertyForPrompt {
+  id: string;
+  title: string;
+  type: string;
+  operation_type?: string;
+  price_usd: number;
+  currency?: string;
+  province?: string;
+  department?: string;
+  locality?: string | null;
+  zone?: string | null;
+  city?: string | null;
+  address?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  area_m2?: number | null;
+  description?: string | null;
 }
 
 export interface ExtractedLeadData {
@@ -52,6 +40,22 @@ export interface ExtractedLeadData {
 export interface StructuredRealEstateAIResponse {
   replyText: string;
   extractedData: ExtractedLeadData;
+}
+
+export interface RealEstateAIOptions {
+  message: string;
+  history?: Array<{ sender: 'user' | 'assistant' | 'bot'; content: string }>;
+  propertyContext?: string;
+  propertiesList?: PropertyForPrompt[];
+  lang?: 'es' | 'en' | 'pt';
+  contextRole?: 'general' | 'finance' | 'rag';
+  botTone?: 'friendly' | 'formal' | 'luxury' | 'direct';
+  agentName?: string;
+  agencyName?: string;
+  customInstructions?: string;
+  faqKnowledge?: Array<{ question: string; answer: string }>;
+  calendarBookingUrl?: string;
+  apiKey?: string;
 }
 
 const DEFAULT_MODEL = 'google/gemini-2.5-flash';
@@ -90,198 +94,58 @@ export function getOpenAIClient(apiKey?: string): OpenAI {
 }
 
 /**
- * Stream commercial real estate AI response using OpenRouter API
+ * Serializa de forma estructurada e inequívoca las propiedades activas de la organización
  */
-export async function* streamOpenRouterRealEstateResponse(
-  options: RealEstateAIOptions
-): AsyncGenerator<string, void, unknown> {
-  const {
-    message,
-    history = [],
-    propertyContext = '',
-    lang = 'es',
-    contextRole = 'general',
-    agentName = 'Aria',
-    agencyName = 'Aria Prop LATAM',
-    apiKey,
-  } = options;
-
-  const openai = getOpenAIClient(apiKey);
-  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
-  const trimmedMsg = message.trim();
-
-  const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
-  const targetLangName = langNames[lang] || 'Español';
-
-  let roleDescription = 'asesora comercial inmobiliaria 24/7 experta en alta conversión';
-  if (contextRole === 'finance') {
-    roleDescription = 'evaluadora de rentabilidad, ROI, Cap Rate y apreciación de capital inmobiliario';
-  } else if (contextRole === 'rag') {
-    roleDescription = 'especialista en dossiers técnicos, planos, acabados y memorias descriptivas del catálogo';
+export function serializePropertiesForPrompt(properties: PropertyForPrompt[]): string {
+  if (!properties || properties.length === 0) {
+    return 'No hay propiedades activas cargadas actualmente para esta organización.';
   }
 
-  const systemPrompt = `
-Eres "${agentName}", ${roleDescription} para "${agencyName}" en América Latina.
+  return properties
+    .map((p) => {
+      const locParts = [
+        p.address,
+        p.zone,
+        p.locality,
+        p.city,
+        p.department,
+        p.province,
+      ].filter(Boolean);
 
-IDIOMA OBLIGATORIO DE RESPUESTA: ${targetLangName.toUpperCase()}.
-Debes responder SIEMPRE en ${targetLangName}. (Si el usuario habla en otro idioma, responde en ese mismo idioma).
+      const ubicacionCompleta = locParts.length > 0 ? locParts.join(', ') : 'Ubicación a confirmar';
 
-REGLAS DE ACTUACIÓN COMERCIAL:
-1. Actúa como asesora experta, empática y de alta conversión.
-2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Operación (comprar/alquilar) y (d) Número de teléfono/contacto para WhatsApp.
-3. Longitud máxima: Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS (2 a 4 líneas por párrafo).
-4. Recuerda el historial previo y NUNCA repitas preguntas sobre datos ya especificados.
-5. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio y ubicación.
+      const caracteristicas = [
+        p.bedrooms ? `${p.bedrooms} dorm` : null,
+        p.bathrooms ? `${p.bathrooms} baños` : null,
+        p.area_m2 ? `${p.area_m2} m²` : null,
+      ]
+        .filter(Boolean)
+        .join(', ');
 
-## GUARDRAILS DE SEGURIDAD Y PRECISIÓN ESTRICTA:
-- PROHIBICIÓN ESTRICTA: Jamás inventes propiedades, ubicaciones o precios que no figuren explícitamente en el inventario provisto.
-- Si un usuario consulta por una propiedad no disponible o fuera de rango, aclará que no disponés de esa unidad en este momento y ofrecé derivar la búsqueda a un asesor humano.
-- En negociaciones de precio, contraofertas o señas, derivar inmediatamente al asesor comercial sin comprometer rebajas.
+      const formattedPrice = typeof p.price_usd === 'number' 
+        ? p.price_usd.toLocaleString('es-AR') 
+        : String(p.price_usd || 0);
 
-## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
-${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al cliente a especificar sus criterios.'}
-`;
+      const opType = (p.operation_type || 'VENTA').toUpperCase();
 
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt },
-    ...history.map((h) => ({
-      role: (h.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-      content: h.content,
-    })),
-    { role: 'user', content: trimmedMsg },
-  ];
-
-  try {
-    const stream = await openai.chat.completions.create({
-      model,
-      messages,
-      temperature: 0.3,
-      max_tokens: 800,
-      stream: true,
-    });
-
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content || '';
-      if (text) {
-        yield text;
-      }
-    }
-  } catch (err: any) {
-    const status = err?.status || err?.statusCode;
-    const errorMessage = err?.error?.message || err?.message || String(err);
-    console.error(`❌ OpenRouter Streaming API Exception [Status ${status || 'N/A'}]:`, errorMessage);
-
-    if (status === 401) {
-      throw new Error(`Error de autenticación con OpenRouter (401): API Key no válida o expirada. (${errorMessage})`);
-    } else if (status === 402) {
-      throw new Error(`Error de saldo en OpenRouter (402): Cuenta sin créditos disponibles. (${errorMessage})`);
-    } else if (status === 404) {
-      throw new Error(`Modelo no encontrado en OpenRouter (404): '${model}' no existe o no está disponible. (${errorMessage})`);
-    } else if (status === 429) {
-      throw new Error(`Límite de solicitudes en OpenRouter (429): Rate limit excedido. (${errorMessage})`);
-    } else {
-      throw new Error(`Fallo en OpenRouter Streaming API (${status || 'Error'}): ${errorMessage}`);
-    }
-  }
+      return [
+        `- ID: ${p.id}`,
+        `  Título: ${p.title}`,
+        `  Tipo: ${p.type} (${opType})`,
+        `  Ubicación exacta: ${ubicacionCompleta}`,
+        caracteristicas ? `  Características: ${caracteristicas}` : null,
+        `  Precio: ${p.currency || 'USD'} ${formattedPrice}`,
+        p.description ? `  Descripción: ${p.description.slice(0, 150)}` : null,
+        `  Link Ficha Web Oficial: https://ariaprop.online/p/${p.id}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+    })
+    .join('\n\n');
 }
 
 /**
- * Generate commercial real estate AI response using OpenRouter API
- */
-export async function generateOpenRouterRealEstateResponse(
-  options: RealEstateAIOptions
-): Promise<string> {
-  const {
-    message,
-    history = [],
-    propertyContext = '',
-    lang = 'es',
-    contextRole = 'general',
-    agentName = 'Aria',
-    agencyName = 'Aria Prop LATAM',
-    apiKey,
-  } = options;
-
-  const openai = getOpenAIClient(apiKey);
-  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
-  const trimmedMsg = message.trim();
-
-  const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
-  const targetLangName = langNames[lang] || 'Español';
-
-  let roleDescription = 'asesora comercial inmobiliaria 24/7 experta en alta conversión';
-  if (contextRole === 'finance') {
-    roleDescription = 'evaluadora de rentabilidad, ROI, Cap Rate y apreciación de capital inmobiliario';
-  } else if (contextRole === 'rag') {
-    roleDescription = 'especialista en dossiers técnicos, planos, acabados y memorias descriptivas del catálogo';
-  }
-
-  const systemPrompt = `
-Eres "${agentName}", ${roleDescription} para "${agencyName}" en América Latina.
-
-IDIOMA OBLIGATORIO DE RESPUESTA: ${targetLangName.toUpperCase()}.
-Debes responder SIEMPRE en ${targetLangName}. (Si el usuario habla en otro idioma, responde en ese mismo idioma).
-
-REGLAS DE ACTUACIÓN COMERCIAL:
-1. Actúa como asesora experta, empática y de alta conversión.
-2. Califica activamente al cliente: identifica (a) Presupuesto estimado, (b) Zona de interés, (c) Operación (comprar/alquilar) y (d) Número de teléfono/contacto para WhatsApp.
-3. Longitud máxima: Responde de forma directa y concisa en un MÁXIMO DE 3 PÁRRAFOS (2 a 4 líneas por párrafo).
-4. Recuerda el historial previo y NUNCA repitas preguntas sobre datos ya especificados.
-5. Si hay propiedades en la FUENTE DE DATOS que encajen, recomiéndalas por su título, precio y ubicación.
-
-## GUARDRAILS DE SEGURIDAD Y PRECISIÓN ESTRICTA:
-- PROHIBICIÓN ESTRICTA: Jamás inventes propiedades, ubicaciones o precios que no figuren explícitamente en el inventario provisto.
-- Si un usuario consulta por una propiedad no disponible o fuera de rango, aclará que no disponés de esa unidad en este momento y ofrecé derivar la búsqueda a un asesor humano.
-- En negociaciones de precio, contraofertas o señas, derivar inmediatamente al asesor comercial sin comprometer rebajas.
-
-## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
-${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al cliente a especificar sus criterios.'}
-`;
-
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt },
-    ...history.map((h) => ({
-      role: (h.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-      content: h.content,
-    })),
-    { role: 'user', content: trimmedMsg },
-  ];
-
-  try {
-    const completion = await openai.chat.completions.create({
-      model,
-      messages,
-      temperature: 0.3,
-      max_tokens: 800,
-    });
-
-    const reply = completion.choices?.[0]?.message?.content;
-    if (!reply || !reply.trim()) {
-      throw new Error('OpenRouter API devolvió una respuesta vacía.');
-    }
-
-    return reply.trim();
-  } catch (err: any) {
-    const status = err?.status || err?.statusCode;
-    const errorMessage = err?.error?.message || err?.message || String(err);
-    console.error(`❌ OpenRouter API Exception [Status ${status || 'N/A'}]:`, errorMessage);
-
-    if (status === 401) {
-      throw new Error(`Error de autenticación con OpenRouter (401): API Key no válida o expirada. (${errorMessage})`);
-    } else if (status === 402) {
-      throw new Error(`Error de saldo en OpenRouter (402): Cuenta sin créditos disponibles. (${errorMessage})`);
-    } else if (status === 404) {
-      throw new Error(`Modelo no encontrado en OpenRouter (404): '${model}' no existe o no está disponible. (${errorMessage})`);
-    } else if (status === 429) {
-      throw new Error(`Límite de solicitudes en OpenRouter (429): Rate limit excedido. (${errorMessage})`);
-    } else {
-      throw new Error(`Fallo en OpenRouter API (${status || 'Error'}): ${errorMessage}`);
-    }
-  }
-}
-
-/**
- * Generate Structured AI Response containing reply text and extracted lead data
+ * Generate structured real estate AI response using Gemini 2.5 Flash via OpenRouter
  */
 export async function generateStructuredAriaRealEstateResponse(
   options: RealEstateAIOptions
@@ -290,11 +154,9 @@ export async function generateStructuredAriaRealEstateResponse(
     message,
     history = [],
     propertyContext = '',
-    lang = 'es',
-    contextRole = 'general',
+    propertiesList = [],
     agentName = 'Aria',
     agencyName = 'Aria Prop LATAM',
-    botTone = 'friendly',
     customInstructions = '',
     faqKnowledge = [],
     calendarBookingUrl = '',
@@ -320,74 +182,51 @@ export async function generateStructuredAriaRealEstateResponse(
   const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
   const trimmedMsg = message.trim();
 
-  const langNames: Record<string, string> = { es: 'Español', en: 'English', pt: 'Português' };
-  const targetLangName = langNames[lang] || 'Español';
-
-  let roleDescription = 'asesora comercial inmobiliaria 24/7 experta en alta conversión';
-  if (contextRole === 'finance') {
-    roleDescription = 'evaluadora de rentabilidad, ROI, Cap Rate y apreciación de capital inmobiliario';
-  } else if (contextRole === 'rag') {
-    roleDescription = 'especialista en dossiers técnicos, planos, acabados y memorias descriptivas del catálogo';
-  }
-
-  const toneGuides: Record<string, string> = {
-    friendly: 'Adopta un tono cálido, empático, cercano e informal (tuteo cordial).',
-    formal: 'Adopta un tono profesional, ejecutivo, estructurado y respetuoso (trato de usted).',
-    luxury: 'Adopta un tono sumamente elegante, refinado, exclusivo y sofisticado enfocado en propiedades de alta gama.',
-    direct: 'Adopta un tono ultra-rápido, conciso, directo y enfocado en datos técnicos y precios sin rodeos.',
-  };
-  const activeToneGuide = toneGuides[botTone] || toneGuides.friendly;
+  // Construir el bloque estructurado de propiedades
+  const serializedCatalog = propertiesList.length > 0 
+    ? serializePropertiesForPrompt(propertiesList)
+    : (propertyContext || 'No hay propiedades activas cargadas actualmente.');
 
   const formattedFaqs = faqKnowledge.length > 0
     ? faqKnowledge.map((f, i) => `FAQ #${i + 1}: Q: "${f.question}" -> A: "${f.answer}"`).join('\n')
     : 'No hay preguntas frecuentes específicas cargadas.';
 
-  const bookingUrlText = calendarBookingUrl
-    ? `ENLACE OFICIAL DE AGENDAMIENTO EN LÍNEA: ${calendarBookingUrl}`
-    : 'Informa al usuario que un asesor se comunicará para confirmar la fecha exacta.';
-
   const systemPrompt = `
-Eres Aria, un asesor inmobiliario humano, profesional, sobrio y directo de Argentina (trato de 'vos', natural y comercial: "mirá", "fijate", "contame", "tenemos", "querés", "avisame").
+Sos ${agentName}, asesor inmobiliario humano, profesional, sobrio y directo de "${agencyName}" (Argentina).
+Atendés por WhatsApp con voseo argentino natural y profesional ("mirá", "fijate", "contame", "tenemos", "querés", "avisame").
 
-CONOCIMIENTO GEOGRÁFICO INTEGRAL DE ARGENTINA:
-- Comprendes perfectamente la jerarquía: País > Provincia > Departamento / Partido / Municipio > Localidad / Distrito / Barrio.
-- En Mendoza:
-  * San Rafael incluye los distritos: Villa Atuel, Rama Caída, Las Paredes, Cuadro Nacional, etc.
-  * Gran Mendoza incluye: Godoy Cruz, Guaymallén, Maipú, Luján de Cuyo, Capital (Ciudad), Las Heras.
-- En Buenos Aires:
-  * CABA incluye: Palermo, Belgrano, Recoleta, Caballito, etc.
+JERARQUÍA GEOGRÁFICA DE ARGENTINA (Fundamental para interpretar zonas):
+- La estructura geográfica de Argentina es: País > Provincia > Departamento / Partido / Municipio > Localidad / Distrito / Barrio.
+- Equivalencias geográficas clave para este catálogo:
+  * Villa Atuel es un distrito del departamento de San Rafael, en la provincia de Mendoza.
+  * San Rafael y Godoy Cruz son ambos departamentos de la provincia de Mendoza.
+  * Gran Mendoza comprende: Godoy Cruz, Guaymallén, Maipú, Luján de Cuyo, Capital (Ciudad) y Las Heras.
+  * Palermo es un barrio de la Ciudad Autónoma de Buenos Aires (CABA / Buenos Aires).
+- REGLAS DE MATCHING GEOGRÁFICO:
+  * Si te preguntan por una PROVINCIA (ej: "¿tenés algo en Mendoza?"), DEBES considerar y ofrecer TODAS las propiedades de esa provincia (por ejemplo, el lote en Godoy Cruz y la casa en Villa Atuel/San Rafael).
+  * Si te preguntan por un DEPARTAMENTO o LOCALIDAD específica (ej: "¿tenés algo en San Rafael?" o "¿algo en Villa Atuel?"), filtrá y respondé con las propiedades de ese departamento o localidad.
+  * Si te preguntan por una zona genérica (ej: "¿qué tenés en Godoy Cruz?"), ofrecé tanto casas, departamentos, lotes o terrenos disponibles.
 
-REGLAS DE RESPUESTA Y VENTA DIRECTA:
-1. Si el cliente pregunta por una provincia, departamento o zona amplia (ej: "Mendoza", "San Rafael", "Buenos Aires"), presenta de inmediato las opciones disponibles en sus distritos/barrios. NUNCA digas que no hay nada disponible si figura en el catálogo provisto.
-2. Respuestas DIRECTAS y COMPLETAS:
-   - Menciona el título de la propiedad, tipo (casa, lote, depto), ubicación exacta, características clave (ambientes, baños, m²) y el PRECIO en USD.
-   - Incluye SIEMPRE el link a la micro-ficha web interactiva para que el cliente vea la galería de fotos completa: https://ariaprop.online/p/[id]
-3. Tono y Estilo:
+REGLA CRÍTICA — GROUNDING ESTRICTO (PROHIBIDO ALUCINAR):
+1. SOLO podés mencionar y cotizar las propiedades listadas textualmente en "CATÁLOGO DISPONIBLE" más abajo. NUNCA inventes, modifiques, redondees ni mezcles precios, ubicaciones o tipos de propiedades.
+2. Si el usuario pregunta por una zona donde NO hay propiedades cargadas (ej: "Córdoba", "Rosario", "Neuquén"), decilo explícitamente de forma honesta y breve ("Por el momento no me quedó nada disponible en esa zona"). No ofrezcas propiedades inventadas.
+3. Cuando SÍ haya coincidencia en el catálogo:
+   - Presentá la propiedad de inmediato con: Título, Tipo (casa, lote, depto), Ubicación exacta, Características principales (ambientes, m²) y PRECIO EXACTO en USD.
+   - Adjuntá SIEMPRE el link oficial a la micro-ficha web interactiva para ver todas las fotos: https://ariaprop.online/p/[id]
+4. Tono y Estilo:
    - Máximo 1 emoji por mensaje o ninguno.
-   - Cero rodeos robóticos. No preguntes "¿te gustaría ver más detalles?" sin antes haberle dado los datos clave y el enlace.
-   - Respuestas ágiles de 2 a 3 oraciones.
+   - Respuestas concisas de 2 a 3 oraciones. Cero rodeos ni fórmulas robóticas.
 
-PAUTAS OBLIGATORIAS DE LENGUAJE HUMANO:
-- Tono natural y fluido: Usá un español rioplatense/argentino profesional y cercano (voseo suave: "mirá", "fijate", "contame", "tenemos", "querés", "avisame").
-- Respuestas directas y concisas: Máximo 2 a 3 oraciones por mensaje. La gente no lee bloques largos de texto en chat.
-- Prohibidos clichés de robot: NUNCA digas frases como "¡Hola! Soy Aria Prop, tu asistente de Inteligencia Artificial", "Espero que este mensaje te encuentre bien", "¿En qué más puedo ayudarte hoy?" ni desgloses viñetas rígidas con títulos tipo 'Descripción:', 'Características:', 'Superficie:'.
-- Presentación de opciones al grano:
-  * Ejemplo natural: "¡Hola! Sí, en Barrio Buffano tenemos una casa chalet muy linda de 3 dormitorios con 250 m² a $12.000 USD. ¿Querés que te pase más fotos o coordinamos para verla?"
-- Manejo de faltantes: Si no hay disponibilidad exacta en una zona, no pidas disculpas robóticas:
-  * Ejemplo natural: "Por el momento no me quedó nada en esa zona puntual, pero sí tengo opciones similares cerca en Villa Atuel. ¿Te sirve que te muestre o preferís que te tome los datos y te avise ni bien ingrese una?"
-- Emojis: Un emoji por mensaje como máximo (opcional y sutil: 👋, 📍, 🏡).
+CATÁLOGO DISPONIBLE (Única fuente de verdad oficial, no existe nada fuera de esto):
+${serializedCatalog}
 
-CALIFICACIÓN COMERCIAL INTELIGENTE:
-- Identifica de forma orgánica en la conversación: (a) Presupuesto estimado, (b) Zona o barrio de interés, (c) Tipo de operación (venta/alquiler) e inmueble, y (d) Nombre del cliente.
-- Si piden coordinar una visita (Lunes a Viernes 9 a 18 hs, Sábados 9 a 13 hs) o ficha técnica/PDF, propone fecha u horario con naturalidad comercial.
+REGLAS DE NEGOCIO:
+${customInstructions || 'Sin reglas especiales adicionales.'}
 
-## REGLAS DE NEGOCIO DE LA INMOBILIARIA:
-${customInstructions ? customInstructions : 'No hay reglas de negocio especiales especificadas.'}
-
-## PREGUNTAS FRECUENTES (FAQ):
+PREGUNTAS FRECUENTES (FAQ):
 ${formattedFaqs}
 
-FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
+FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN BLOQUES DE CÓDIGO EXTRA):
 {
   "replyText": "Texto de respuesta para el usuario en WhatsApp",
   "extractedData": {
@@ -397,8 +236,8 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
     "status": "active" | "qualified" | "handover" | "closed",
     "lead_name": string | null,
     "preferred_contact_slot": string | null,
-    "requested_pdf_property_id": string | null,
     "requested_room_image": "Fachada" | "Cocina" | "Living" | "Dormitorio" | "Baño" | "Patio/Parque" | "Pileta" | "Plano" | "General" | null,
+    "requested_pdf_property_id": string | null,
     "requested_pdf_property_title": string | null,
     "appointment": {
       "requested_date": string | null,
@@ -407,27 +246,6 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON VÁLIDO SIN MARKDOWN):
     } | null
   }
 }
-
-REGLAS DE EXTRACCIÓN:
-- budget_max_usd: presupuesto numérico en USD si el usuario lo menciona o null.
-- preferred_zone: zona o barrio especificado o null.
-- preferred_contact_slot: si el cliente menciona disponibilidad horaria ("por la tarde", "de 8 a 13 hs", "después de las 15", "mañana a la mañana"), mapealo como franja formal (ej. "Mañana (08:00 - 13:00 hs)", "Tarde (14:00 - 18:00 hs)") o null.
-- requested_room_image: si el cliente pide expresamente ver fotos de un ambiente puntual ("tenés fotos de la cocina?", "mostrame el patio/pileta", "cómo es el living?", "tenés plano?"), mapealo a ("Fachada" | "Cocina" | "Living" | "Dormitorio" | "Baño" | "Patio/Parque" | "Pileta" | "Plano") o null.
-- property_type: tipo de inmueble y operación o null.
-- requested_pdf_property_id: ID exacto de la propiedad en el catálogo si el usuario pide ficha, PDF o brochure (o null).
-- requested_pdf_property_title: Título de la propiedad si se solicita ficha (o null).
-- status:
-  * "handover": SI EL USUARIO PIDE EXPLÍCITAMENTE "hablar con una persona", "un asesor humano", "un agente", "hablar con alguien" o atencion humana.
-  * "qualified": si ya se identificó al menos la zona, el tipo de inmueble y el presupuesto estimado.
-  * "closed": si cerró la operación o no requiere más seguimiento.
-  * "active": en conversación inicial o exploratoria.
-- lead_name: nombre del prospecto si se identifica en el chat o null.
-- appointment:
-  * Si el cliente solicita agendar una visita/cita, especifica fecha u horario hábil (Lunes a Viernes 9 a 18 hs, Sábados 9 a 13 hs):
-    { "requested_date": "2026-08-25 15:00", "property_title": "Nombre de la propiedad", "notes": "Visita coordinada" }
-
-## FUENTE DE DATOS Y CATÁLOGO DE PROPIEDADES (RAG):
-${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al cliente a especificar sus criterios.'}
 `;
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -443,102 +261,130 @@ ${propertyContext || 'No hay propiedades específicas cargadas aún. Invita al c
     const completion = await openai.chat.completions.create({
       model,
       messages,
-      temperature: 0.2,
-      max_tokens: 1000,
+      temperature: 0.1,
+      max_tokens: 700,
       response_format: { type: 'json_object' },
     });
 
-    const rawContent = completion.choices?.[0]?.message?.content || '';
-    const cleanJson = rawContent.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
+    const replyRaw = completion.choices?.[0]?.message?.content;
+    if (!replyRaw || !replyRaw.trim()) {
+      throw new Error('OpenRouter API devolvió una respuesta vacía.');
+    }
 
-    const replyText = parsed.replyText || parsed.message || parsed.response || rawContent;
-    const apptRaw = parsed.extractedData?.appointment || parsed.appointment;
-    const extractedData: ExtractedLeadData = {
-      budget_max_usd: typeof parsed.extractedData?.budget_max_usd === 'number' ? parsed.extractedData.budget_max_usd : null,
-      preferred_zone: typeof parsed.extractedData?.preferred_zone === 'string' ? parsed.extractedData.preferred_zone : null,
-      property_type: typeof parsed.extractedData?.property_type === 'string' ? parsed.extractedData.property_type : null,
-      status: ['active', 'qualified', 'handover', 'closed'].includes(parsed.extractedData?.status) ? parsed.extractedData.status : 'active',
-      lead_name: typeof parsed.extractedData?.lead_name === 'string' ? parsed.extractedData.lead_name : null,
-      requested_pdf_property_id: typeof parsed.extractedData?.requested_pdf_property_id === 'string' ? parsed.extractedData.requested_pdf_property_id : null,
-      requested_pdf_property_title: typeof parsed.extractedData?.requested_pdf_property_title === 'string' ? parsed.extractedData.requested_pdf_property_title : null,
-      appointment: apptRaw ? {
-        requested_date: typeof apptRaw.requested_date === 'string' ? apptRaw.requested_date : null,
-        property_title: typeof apptRaw.property_title === 'string' ? apptRaw.property_title : null,
-        notes: typeof apptRaw.notes === 'string' ? apptRaw.notes : null,
-      } : null,
-    };
-
-    return { replyText, extractedData };
+    try {
+      const parsed = JSON.parse(replyRaw);
+      return {
+        replyText: parsed.replyText || '¡Hola! ¿En qué propiedad o zona estás interesado?',
+        extractedData: parsed.extractedData || {
+          budget_max_usd: null,
+          preferred_zone: null,
+          property_type: null,
+          status: 'active',
+          lead_name: null,
+          appointment: null,
+        },
+      };
+    } catch {
+      return {
+        replyText: replyRaw.replace(/```json|```/g, '').trim(),
+        extractedData: {
+          budget_max_usd: null,
+          preferred_zone: null,
+          property_type: null,
+          status: 'active',
+          lead_name: null,
+          appointment: null,
+        },
+      };
+    }
   } catch (err: any) {
-    console.warn('⚠️ Structured LLM generation fallback, returning standard string response:', err?.message || err);
-    const fallbackText = await generateOpenRouterRealEstateResponse(options);
-    return {
-      replyText: fallbackText,
-      extractedData: {
-        budget_max_usd: null,
-        preferred_zone: null,
-        property_type: null,
-        status: 'active',
-        lead_name: null,
-        requested_pdf_property_id: null,
-        requested_pdf_property_title: null,
-        appointment: null,
-      },
-    };
+    console.error('OpenRouter Exception:', err);
+    throw err;
   }
 }
 
 /**
- * Extract structured lead qualification JSON from conversation using OpenRouter
+ * Backward-compatible generateOpenRouterRealEstateResponse
  */
-export async function extractLeadQualificationOpenRouter(options: {
-  message: string;
-  history?: ChatMessage[];
-  apiKey?: string;
-}): Promise<LeadQualificationResult | null> {
-  try {
-    const openai = getOpenAIClient(options.apiKey);
-    const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
-
-    const conversationText = [
-      ...(options.history || []).map((h) => `${h.sender.toUpperCase()}: ${h.content}`),
-      `USER: ${options.message}`,
-    ].join('\n');
-
-    const systemPrompt = `
-Eres un analizador de datos estructurados para una plataforma inmobiliaria.
-Analiza la conversación y extrae la calificación del cliente en formato JSON estricto.
-
-FORMATO DE SALIDA (JSON ÚNICAMENTE, SIN MARKDOWN NI TEXTO ADICIONAL):
-{
-  "qualified": boolean,
-  "intent": "buy" | "rent" | "invest" | "unknown",
-  "budgetMaxUsd": number o null,
-  "zonePreference": string o null,
-  "propertyType": string o null,
-  "contactPhone": string o null,
-  "visitRequested": boolean,
-  "summary": string
+export async function generateOpenRouterRealEstateResponse(
+  options: RealEstateAIOptions
+): Promise<string> {
+  const res = await generateStructuredAriaRealEstateResponse(options);
+  return res.replyText;
 }
+
+/**
+ * Backward-compatible streamOpenRouterRealEstateResponse
+ */
+export function streamOpenRouterRealEstateResponse(
+  options: RealEstateAIOptions
+): AsyncGenerator<string, void, unknown> {
+  return generateOpenRouterRealEstateStream(options);
+}
+
+/**
+ * Backward-compatible extractLeadQualificationOpenRouter
+ */
+export async function extractLeadQualificationOpenRouter(
+  options: RealEstateAIOptions
+): Promise<ExtractedLeadData> {
+  const res = await generateStructuredAriaRealEstateResponse(options);
+  return res.extractedData;
+}
+
+/**
+ * Generate streaming AI response for playgrounds and live previews
+ */
+export async function* generateOpenRouterRealEstateStream(
+  options: RealEstateAIOptions
+): AsyncGenerator<string, void, unknown> {
+  const {
+    message,
+    history = [],
+    propertyContext = '',
+    propertiesList = [],
+    agentName = 'Aria',
+    agencyName = 'Aria Prop LATAM',
+    apiKey,
+  } = options;
+
+  const openai = getOpenAIClient(apiKey);
+  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  const trimmedMsg = message.trim();
+
+  const serializedCatalog = propertiesList.length > 0 
+    ? serializePropertiesForPrompt(propertiesList)
+    : (propertyContext || 'No hay propiedades activas.');
+
+  const systemPrompt = `
+Sos ${agentName}, asesor inmobiliario de ${agencyName} en Argentina.
+Respondé con voseo argentino natural, conciso y profesional.
+Máximo 1 emoji o ninguno.
+Solo podés mencionar las propiedades de este catálogo:
+${serializedCatalog}
 `;
 
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: conversationText },
-      ],
-      temperature: 0.1,
-      max_tokens: 300,
-      response_format: { type: 'json_object' },
-    });
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    ...history.map((h) => ({
+      role: (h.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: h.content,
+    })),
+    { role: 'user', content: trimmedMsg },
+  ];
 
-    const rawText = completion.choices?.[0]?.message?.content || '';
-    const cleanJson = rawText.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanJson) as LeadQualificationResult;
-  } catch (err: any) {
-    console.warn('Lead qualification extraction exception:', err?.message || err);
-    return null;
+  const stream = await openai.chat.completions.create({
+    model,
+    messages,
+    temperature: 0.1,
+    max_tokens: 800,
+    stream: true,
+  });
+
+  for await (const chunk of stream) {
+    const text = chunk.choices[0]?.delta?.content || '';
+    if (text) {
+      yield text;
+    }
   }
 }
