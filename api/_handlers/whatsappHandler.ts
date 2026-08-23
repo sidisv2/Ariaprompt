@@ -2,6 +2,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { generateStructuredAriaRealEstateResponse, PropertyForPrompt } from '../_lib/openrouterService.js';
 
+// En Vercel Serverless Function, permitir duración de hasta 30 segundos
+export const maxDuration = 30;
+
+// Set en memoria para deduplicación local instantánea entre peticiones simultáneas en la misma instancia
+const inMemoryProcessedWamids = new Set<string>();
+
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
   const supabaseKey = (
@@ -21,6 +27,51 @@ function getBackendSupabaseClient() {
   } catch (err) {
     return null;
   }
+}
+
+/**
+ * Intenta reclamar atómicamente el WAMID.
+ * Devuelve true si este request es el primero y debe procesarse.
+ * Devuelve false si el WAMID ya fue procesado o está siendo procesado (duplicado).
+ */
+async function tryClaimMessage(supabase: any, wamid: string): Promise<boolean> {
+  if (!wamid) return true;
+
+  // 1. Verificación en memoria (cero latencia para requests concurrentes dentro de la misma instancia)
+  if (inMemoryProcessedWamids.has(wamid)) {
+    return false;
+  }
+  inMemoryProcessedWamids.add(wamid);
+
+  // Mantener el Set en un tamaño manejable (últimos 500 wamids)
+  if (inMemoryProcessedWamids.size > 500) {
+    const firstKey = inMemoryProcessedWamids.keys().next().value;
+    if (firstKey) inMemoryProcessedWamids.delete(firstKey);
+  }
+
+  // 2. Verificación atómica en Supabase con UNIQUE INSERT
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from('processed_messages')
+        .insert({
+          wamid,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        // Código 23505 = unique_violation en PostgreSQL (ya existía)
+        if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+          return false;
+        }
+        console.warn('[whatsappHandler] Error al insertar en processed_messages (dejando pasar):', error.message);
+      }
+    } catch (e: any) {
+      console.warn('[whatsappHandler] Excepción en tryClaimMessage:', e.message);
+    }
+  }
+
+  return true;
 }
 
 export async function handleWhatsAppRoute(req: VercelRequest, res: VercelResponse, subRoute: string = 'webhook') {
@@ -120,6 +171,15 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           return res.status(200).json({ status: 'MISSING_SENDER_OR_PHONE_ID' });
         }
 
+        // 🔒 GUARD DE IDEMPOTENCIA ATÓMICO (Evita respuestas duplicadas por reintentos de Meta en <300ms)
+        if (wamid) {
+          const isFirstClaim = await tryClaimMessage(supabase, wamid);
+          if (!isFirstClaim) {
+            console.log('🛑 [whatsappHandler] Mensaje duplicado ignorado (wamid ya procesado o en curso):', wamid);
+            return res.status(200).json({ status: 'DUPLICATE_MESSAGE_SKIPPED', wamid });
+          }
+        }
+
         // Extraer texto y multimedia del mensaje
         let messageText = '';
         let mediaUrl: string | null = null;
@@ -133,26 +193,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           messageText = incomingMsg.interactive.list_reply.title;
         } else {
           messageText = 'Hola';
-        }
-
-        // 1. Deduplicación por WAMID
-        if (supabase && wamid) {
-          try {
-            const { data: existingProc } = await supabase
-              .from('processed_messages')
-              .select('id')
-              .eq('wamid', wamid)
-              .maybeSingle();
-
-            if (existingProc) {
-              return res.status(200).json({ status: 'DUPLICATE_MESSAGE_SKIPPED' });
-            }
-
-            await supabase.from('processed_messages').insert({
-              wamid,
-              created_at: new Date().toISOString(),
-            });
-          } catch {}
         }
 
         // 2. Buscar la inmobiliaria correspondiente en Supabase
@@ -309,7 +349,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         let rawProperties: any[] = [];
         if (supabase) {
           try {
-            // Traer todas las propiedades disponibles del catálogo
             let propQuery = supabase
               .from('properties')
               .select('*')
