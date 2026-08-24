@@ -33,6 +33,7 @@ import { LeadScoringBadge, computeLeadScore } from '../chat/LeadScoringBadge';
 
 export interface CrmLead {
   id: string;
+  channel?: string;
   organization_id?: string;
   user_phone: string;
   user_name: string | null;
@@ -446,16 +447,29 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   const handleUpdateStatus = async (newStatus: CrmLead['status']) => {
     if (!selectedLead || !supabase) return;
     try {
+      const isHandover = newStatus === 'handover';
+      const handledBy = isHandover ? 'human' : 'ia';
+
       const { error } = await supabase
-        .from('wa_conversations')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .from('leads')
+        .update({
+          status: newStatus,
+          handled_by: handledBy,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', selectedLead.id);
 
       if (!error) {
-        setSelectedLead((prev) => (prev ? { ...prev, status: newStatus } : null));
+        setSelectedLead((prev) => (prev ? { ...prev, status: newStatus, handled_by: handledBy } : null));
         setLeads((prev) =>
-          prev.map((l) => (l.id === selectedLead.id ? { ...l, status: newStatus } : l))
+          prev.map((l) => (l.id === selectedLead.id ? { ...l, status: newStatus, handled_by: handledBy } : l))
         );
+        try {
+          await supabase
+            .from('wa_conversations')
+            .update({ status: newStatus, handled_by: handledBy, updated_at: new Date().toISOString() })
+            .eq('id', selectedLead.id);
+        } catch (_) {}
         fetchMetrics();
       }
     } catch (err) {
@@ -468,12 +482,21 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
     setSavingNotes(true);
     try {
       const { error } = await supabase
-        .from('wa_conversations')
-        .update({ agent_notes: agentNotes, updated_at: new Date().toISOString() })
+        .from('leads')
+        .update({ notes: agentNotes, updated_at: new Date().toISOString() })
         .eq('id', selectedLead.id);
 
       if (!error) {
-        setSelectedLead((prev) => (prev ? { ...prev, agent_notes: agentNotes } : null));
+        setSelectedLead((prev) => (prev ? { ...prev, notes: agentNotes, agent_notes: agentNotes } : null));
+        setLeads((prev) =>
+          prev.map((l) => (l.id === selectedLead.id ? { ...l, notes: agentNotes, agent_notes: agentNotes } : l))
+        );
+        try {
+          await supabase
+            .from('wa_conversations')
+            .update({ agent_notes: agentNotes, updated_at: new Date().toISOString() })
+            .eq('id', selectedLead.id);
+        } catch (_) {}
         setNotesSavedNotice(true);
         setTimeout(() => setNotesSavedNotice(false), 3000);
       }
@@ -487,23 +510,30 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   const handleGeneratePdf = () => {
     if (!selectedLead) return;
     const bundle = exportPropertySheetToPdf({
-      title: `Ficha Técnica para ${selectedLead.user_name || selectedLead.user_phone}`,
-      price: selectedLead.budget_max_usd || 150000,
+      title: `Ficha Ejecutiva de Prospecto - ${selectedLead.user_name || selectedLead.user_phone}`,
+      price: selectedLead.budget_max_usd || 120000,
       currency: 'USD',
-      operationType: 'Venta',
-      location: selectedLead.preferred_zone || 'Mendoza / Palermo',
+      operationType: 'Venta / Consulta Inmobiliaria',
+      location: selectedLead.preferred_zone || (selectedLead as any).zone || 'Mendoza / San Rafael',
       bedrooms: 2,
       bathrooms: 1,
-      totalAreaM2: 75,
-      coveredAreaM2: 65,
-      description: `Propiedad de interés seleccionada para el lead ${selectedLead.user_name || selectedLead.user_phone}. Presupuesto consultado: $${selectedLead.budget_max_usd || 'N/A'} USD.`,
-      features: ['Luminoso', 'Excelente Ubicación', 'Apto Crédito', 'Seguridad 24hs'],
+      totalAreaM2: 85,
+      coveredAreaM2: 70,
+      description: `Lead Comercial: ${selectedLead.user_name || selectedLead.user_phone}. Canal: ${selectedLead.channel || 'WHATSAPP'}. Presupuesto máximo indicado: ${selectedLead.budget_max_usd ? Number(selectedLead.budget_max_usd).toLocaleString('en-US') : 'Por definir'} USD. Zona de búsqueda: ${selectedLead.preferred_zone || (selectedLead as any).zone || 'Mendoza'}. Último mensaje registrado: "${selectedLead.last_message || 'Sin mensaje'}"`,
+      features: ['Lead Calificado por Aria Prop', 'Atención WhatsApp 24/7', 'Interés Inmobiliario Activo', 'Verificado en CRM'],
+      agencyName: 'ARIA PROP INMOBILIARIA',
+      agencyPhone: '+54 9 260 401-4372',
+      agencyEmail: 'valentinlautaromorales@gmail.com',
     });
 
-    const w = window.open();
-    if (w) {
-      w.document.write(bundle.html);
-      w.document.close();
+    const blob = new Blob([bundle.html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (win) {
+      win.focus();
+      setTimeout(() => {
+        try { win.print(); } catch (_) {}
+      }, 500);
     }
   };
 
