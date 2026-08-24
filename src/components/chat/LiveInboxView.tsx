@@ -171,63 +171,73 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
     }
 
     try {
-      if (supabase) {
-        let { data } = await supabase
+      let rawList: any[] = [];
+
+      // 1. Intento vía API Backend Segura (/api/crm?action=get_messages&lead_id=UUID)
+      try {
+        const res = await fetch(`/api/crm?action=get_messages&lead_id=${encodeURIComponent(leadId)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            rawList = json.data;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[LiveInboxView] Error fetching via /api/crm:', apiErr);
+      }
+
+      // 2. Fallback a Supabase Directo si la API no devolvió mensajes
+      if (rawList.length === 0 && supabase) {
+        const { data: directData } = await supabase
           .from('chat_messages')
           .select('*')
           .eq('lead_id', leadId)
           .order('created_at', { ascending: true });
 
-        if (!data || data.length === 0) {
-          const { data: leadData } = await supabase
-            .from('lead_messages')
+        if (directData && directData.length > 0) {
+          rawList = directData;
+        } else if (selected?.user_phone) {
+          const { data: phoneData } = await supabase
+            .from('chat_messages')
             .select('*')
-            .eq('lead_id', leadId)
+            .eq('phone', selected.user_phone)
             .order('created_at', { ascending: true });
-          data = leadData;
-        }
-
-        if (!data || data.length === 0) {
-          const { data: waData } = await supabase
-            .from('wa_messages')
-            .select('*')
-            .eq('conversation_id', leadId)
-            .order('created_at', { ascending: true });
-          data = waData;
-        }
-
-        if (data && data.length > 0) {
-          const mappedMsgs: ChatMessage[] = data.map((m: any) => {
-            const rawSender = m.sender || m.sender_type || m.role || '';
-            let normalizedSender: 'user' | 'assistant' | 'human_agent' | 'system' = 'assistant';
-            if (rawSender === 'user' || rawSender === 'lead' || rawSender === 'client') {
-              normalizedSender = 'user';
-            } else if (rawSender === 'human_agent' || rawSender === 'human' || rawSender === 'operator') {
-              normalizedSender = 'human_agent';
-            } else if (rawSender === 'system') {
-              normalizedSender = 'system';
-            } else {
-              normalizedSender = 'assistant';
-            }
-
-            return {
-              id: m.id,
-              sender_type: normalizedSender,
-              message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
-              media_type: m.media_type || m.message_type,
-              media_url: m.media_url || null,
-              message_text: m.message_text || m.content || '',
-              content: m.content || m.message_text || '',
-              created_at: m.created_at || new Date().toISOString(),
-            };
-          });
-          setMessages(mappedMsgs);
-          return;
+          if (phoneData && phoneData.length > 0) rawList = phoneData;
         }
       }
+
+      if (rawList.length > 0) {
+        const mappedMsgs: ChatMessage[] = rawList.map((m: any) => {
+          const rawSender = m.sender || m.sender_type || m.role || '';
+          let normalizedSender: 'user' | 'assistant' | 'human_agent' | 'system' = 'assistant';
+          if (rawSender === 'user' || rawSender === 'lead' || rawSender === 'client') {
+            normalizedSender = 'user';
+          } else if (rawSender === 'human_agent' || rawSender === 'human' || rawSender === 'operator') {
+            normalizedSender = 'human_agent';
+          } else if (rawSender === 'system') {
+            normalizedSender = 'system';
+          } else {
+            normalizedSender = 'assistant';
+          }
+
+          return {
+            id: m.id,
+            sender_type: normalizedSender,
+            message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
+            media_type: m.media_type || m.message_type,
+            media_url: m.media_url || null,
+            message_text: m.message_text || m.content || '',
+            content: m.content || m.message_text || '',
+            created_at: m.created_at || new Date().toISOString(),
+          };
+        });
+        setMessages(mappedMsgs);
+        return;
+      }
+
       setMessages([]);
     } catch (e) {
-      console.error('Error fetching messages:', e);
+      console.error('[LiveInboxView] Error fetching messages:', e);
       setMessages([]);
     }
   };

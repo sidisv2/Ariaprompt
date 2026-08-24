@@ -263,20 +263,36 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
   const fetchConversationMessages = useCallback(async (conversationId: string) => {
     setLoadingMessages(true);
     try {
-      if (!supabase) {
-        setMessages([]);
-        return;
-      }
-      
-      // 1. Consultar chat_messages por lead_id
-      const { data: chatData, error: chatErr } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('lead_id', conversationId)
-        .order('created_at', { ascending: true });
+      let rawList: any[] = [];
 
-      if (!chatErr && chatData && chatData.length > 0) {
-        setMessages(chatData.map((m: any) => {
+      // 1. Intento vía API Backend Segura (/api/crm?action=get_messages&lead_id=UUID)
+      try {
+        const res = await fetch(`/api/crm?action=get_messages&lead_id=${encodeURIComponent(conversationId)}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            rawList = json.data;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[LeadsView] Error fetching via /api/crm:', apiErr);
+      }
+
+      // 2. Fallback a Supabase Directo
+      if (rawList.length === 0 && supabase) {
+        const { data: chatData } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('lead_id', conversationId)
+          .order('created_at', { ascending: true });
+
+        if (chatData && chatData.length > 0) {
+          rawList = chatData;
+        }
+      }
+
+      if (rawList.length > 0) {
+        setMessages(rawList.map((m: any) => {
           const rawSender = m.sender || m.sender_type || m.role || '';
           let normalizedSender: 'user' | 'assistant' | 'human_agent' = 'assistant';
           if (rawSender === 'user' || rawSender === 'lead' || rawSender === 'client') {
@@ -300,29 +316,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
           };
         }));
       } else {
-        // 2. Fallback a wa_messages
-        const { data: waData } = await supabase
-          .from('wa_messages')
-          .select('*')
-          .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true });
-
-        if (waData && waData.length > 0) {
-          setMessages(waData.map((m: any) => ({
-            id: m.id,
-            conversation_id: m.conversation_id,
-            sender_type: m.sender_type || (m.sender === 'user' ? 'user' : 'assistant'),
-            message_type: m.media_type || 'text',
-            message_text: m.message_text || '',
-            content: m.message_text || '',
-            media_type: m.media_type,
-            media_url: m.media_url || null,
-            transcription: m.transcription || null,
-            created_at: m.created_at || new Date().toISOString(),
-          })));
-        } else {
-          setMessages([]);
-        }
+        setMessages([]);
       }
     } catch (e) {
       console.warn('Error fetching conversation messages:', e);

@@ -346,4 +346,44 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
   }
 
   return res.status(404).json({ error: `CRM Sub-route '${subRoute}' not found` });
+
+  // 4. ACTION: GET LEADS MESSAGES (/api/crm/messages?lead_id=UUID o subRoute === 'messages')
+  if (subRoute === 'messages' || action === 'get_messages' || subRoute === 'conversation') {
+    try {
+      const targetLeadId = (req.query.leadId as string) || (req.query.lead_id as string) || (req.query.id as string) || '';
+      const targetPhone = (req.query.phone as string) || '';
+
+      if (!targetLeadId && !targetPhone) {
+        return res.status(400).json({ success: false, error: 'lead_id o phone requerido' });
+      }
+
+      let query = supabase
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (targetLeadId) {
+        query = query.eq('lead_id', targetLeadId);
+      } else if (targetPhone) {
+        query = query.eq('phone', targetPhone);
+      }
+
+      const { data: messages, error } = await query;
+
+      if (error) {
+        console.error('Error fetching chat_messages in crmHandler:', error);
+        return res.status(500).json({ success: false, error: error.message });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: messages || [],
+        messages: messages || [],
+      });
+    } catch (err: any) {
+      console.error('Exception in crmHandler messages:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
 }
