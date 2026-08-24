@@ -180,6 +180,20 @@ async function startServer() {
     }
   });
 
+
+  // CRM API Endpoints (/api/crm, /api/crm/*)
+  app.all(['/api/crm', '/api/crm/:route*'], async (req, res) => {
+    try {
+      const { handleCrmRoute } = await import('./api/_handlers/crmHandler.js');
+      const routeParam = req.params?.route ? `${req.params.route}${req.params[0] || ''}` : (req.path.replace(/^\/api\/crm\/?/, '') || 'leads');
+      const cleanSubRoute = routeParam || 'leads';
+      return handleCrmRoute(req as any, res as any, cleanSubRoute);
+    } catch (err: any) {
+      console.error('❌ Express /api/crm error:', err);
+      res.status(500).json({ success: false, error: 'Error calling CRM handler', details: err?.message, leads: [], messages: [] });
+    }
+  });
+
   // WhatsApp Meta Cloud API Endpoints (/api/whatsapp/*, /api/whatsapp-webhook)
   app.all(['/api/whatsapp', '/api/whatsapp/:route*', '/api/whatsapp-webhook', '/api/webhook/whatsapp', '/api/webhook/whatsapp/:route*'], async (req, res) => {
     try {
