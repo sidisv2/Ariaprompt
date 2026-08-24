@@ -197,16 +197,30 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
         }
 
         if (data && data.length > 0) {
-          const mappedMsgs: ChatMessage[] = data.map((m: any) => ({
-            id: m.id,
-            sender_type: m.sender_type || (m.role === 'user' ? 'user' : 'assistant'),
-            message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
-            media_type: m.media_type || m.message_type,
-            media_url: m.media_url || null,
-            message_text: m.message_text || m.content || '',
-            content: m.content || m.message_text || '',
-            created_at: m.created_at || new Date().toISOString(),
-          }));
+          const mappedMsgs: ChatMessage[] = data.map((m: any) => {
+            const rawSender = m.sender || m.sender_type || m.role || '';
+            let normalizedSender: 'user' | 'assistant' | 'human_agent' | 'system' = 'assistant';
+            if (rawSender === 'user' || rawSender === 'lead' || rawSender === 'client') {
+              normalizedSender = 'user';
+            } else if (rawSender === 'human_agent' || rawSender === 'human' || rawSender === 'operator') {
+              normalizedSender = 'human_agent';
+            } else if (rawSender === 'system') {
+              normalizedSender = 'system';
+            } else {
+              normalizedSender = 'assistant';
+            }
+
+            return {
+              id: m.id,
+              sender_type: normalizedSender,
+              message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
+              media_type: m.media_type || m.message_type,
+              media_url: m.media_url || null,
+              message_text: m.message_text || m.content || '',
+              content: m.content || m.message_text || '',
+              created_at: m.created_at || new Date().toISOString(),
+            };
+          });
           setMessages(mappedMsgs);
           return;
         }
@@ -468,7 +482,7 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30 flex items-center gap-1 shrink-0 uppercase tracking-wider">
                           📸 INSTAGRAM ADS
                         </span>
-                      ) : (activeLead.channel === 'whatsapp' || (activeLead as any).source === 'whatsapp') ? (
+                      ) : (String(activeLead.channel || '').toLowerCase().includes('whatsapp') || String((activeLead as any).source || '').toLowerCase().includes('whatsapp')) ? (
                         <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
                           🟢 WHATSAPP
                         </span>

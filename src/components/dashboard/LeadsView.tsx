@@ -276,18 +276,29 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
         .order('created_at', { ascending: true });
 
       if (!chatErr && chatData && chatData.length > 0) {
-        setMessages(chatData.map((m: any) => ({
-          id: m.id,
-          lead_id: m.lead_id,
-          sender_type: m.sender_type || (m.sender === 'user' ? 'user' : m.sender === 'human_agent' ? 'human_agent' : 'assistant'),
-          message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
-          message_text: m.message_text || m.content || '',
-          content: m.content || m.message_text || '',
-          media_type: m.media_type || m.message_type,
-          media_url: m.media_url || null,
-          transcription: m.transcription || null,
-          created_at: m.created_at || new Date().toISOString(),
-        })));
+        setMessages(chatData.map((m: any) => {
+          const rawSender = m.sender || m.sender_type || m.role || '';
+          let normalizedSender: 'user' | 'assistant' | 'human_agent' = 'assistant';
+          if (rawSender === 'user' || rawSender === 'lead' || rawSender === 'client') {
+            normalizedSender = 'user';
+          } else if (rawSender === 'human_agent' || rawSender === 'human' || rawSender === 'operator') {
+            normalizedSender = 'human_agent';
+          } else {
+            normalizedSender = 'assistant';
+          }
+          return {
+            id: m.id,
+            lead_id: m.lead_id,
+            sender_type: normalizedSender,
+            message_type: m.message_type || m.media_type || (m.media_url ? 'image' : 'text'),
+            message_text: m.message_text || m.content || '',
+            content: m.content || m.message_text || '',
+            media_type: m.media_type || m.message_type,
+            media_url: m.media_url || null,
+            transcription: m.transcription || null,
+            created_at: m.created_at || new Date().toISOString(),
+          };
+        }));
       } else {
         // 2. Fallback a wa_messages
         const { data: waData } = await supabase
