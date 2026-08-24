@@ -35,7 +35,7 @@ function getBackendSupabaseClient() {
 /**
  * Resolver organización autenticada del usuario de forma estricta (Multi-Tenant B2B Isolation).
  */
-async function resolveAuthenticatedOrganizationId(req: VercelRequest, supabase: any): Promise<string | null> {
+async function resolveAuthenticatedContext(req: VercelRequest, supabase: any): Promise<{ organizationId: string; userId: string | null }> {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim() || (req.query.token as string) || '';
 
@@ -53,7 +53,7 @@ async function resolveAuthenticatedOrganizationId(req: VercelRequest, supabase: 
           .maybeSingle();
 
         if (member?.organization_id) {
-          return member.organization_id;
+          return { organizationId: member.organization_id, userId };
         }
 
         // 2. Consultar organización en profiles
@@ -64,25 +64,25 @@ async function resolveAuthenticatedOrganizationId(req: VercelRequest, supabase: 
           .maybeSingle();
 
         if (profile?.organization_id) {
-          return profile.organization_id;
+          return { organizationId: profile.organization_id, userId };
         }
 
         // 3. Fallback: El usuario es el ID de su propia organización (Owner)
-        return userId;
+        return { organizationId: userId, userId };
       }
     } catch (err) {
       console.warn('[CRM API] Warning resolving user token:', err);
     }
   }
 
-  // Si no hay token de sesión, verificar si se envió el header x-organization-id explícito o query param
+  // Header explícito x-organization-id o query params
   const explicitOrg = (req.headers['x-organization-id'] as string) || (req.query.organizationId as string) || (req.query.organization_id as string);
   if (explicitOrg) {
-    return explicitOrg;
+    return { organizationId: explicitOrg, userId: null };
   }
 
-  // Organización de referencia por defecto para la cuenta activa en producción
-  return '13d92ac1-1b4a-4d3f-8418-abff914b0500';
+  // Organización activa de referencia para la cuenta en producción
+  return { organizationId: '13d92ac1-1b4a-4d3f-8418-abff914b0500', userId: '13d92ac1-1b4a-4d3f-8418-abff914b0500' };
 }
 
 export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, subRoute: string = 'leads') {
@@ -105,7 +105,7 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
   }
 
   const action = (req.query.action as string) || '';
-  const organizationId = await resolveAuthenticatedOrganizationId(req, supabase);
+  const { organizationId, userId } = await resolveAuthenticatedContext(req, supabase);
 
   // 1. ACTION: GET LEADS LIST (/api/crm?action=get_leads o /api/crm/leads)
   if (subRoute === 'leads' || action === 'get_leads' || action === 'leads') {
@@ -115,7 +115,9 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
         .select('*')
         .order('updated_at', { ascending: false });
 
-      if (organizationId) {
+      if (organizationId && userId && organizationId !== userId) {
+        query = query.or(`organization_id.eq.${organizationId},user_id.eq.${userId}`);
+      } else if (organizationId) {
         query = query.or(`organization_id.eq.${organizationId},user_id.eq.${organizationId}`);
       }
 
@@ -131,7 +133,7 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
         });
       }
 
-      console.log(`[CRM API] get_leads: ${leads?.length || 0} leads para org: ${organizationId}`);
+      console.log(`[CRM API] get_leads: ${leads?.length || 0} leads recuperados para org: ${organizationId}`);
       return res.status(200).json({
         success: true,
         leads: leads ?? [],
@@ -163,7 +165,7 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
         });
       }
 
-      // Validar pertenencia del lead a la organización autenticada si se especificó leadId
+      // Validar pertenencia del lead a la organización
       if (targetLeadId && organizationId) {
         const { data: leadRecord, error: leadCheckErr } = await supabase
           .from('leads')
@@ -174,9 +176,9 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
         if (leadCheckErr) {
           console.warn('[CRM API] Error checking lead ownership:', leadCheckErr);
         } else if (leadRecord) {
-          const leadOrg = leadRecord.organization_id || leadRecord.user_id;
-          if (leadOrg && leadOrg !== organizationId) {
-            console.warn(`[CRM API] Multi-tenant isolation: Lead ${targetLeadId} (org: ${leadOrg}) does not match session org: ${organizationId}`);
+          const isOwner = leadRecord.organization_id === organizationId || (userId && leadRecord.user_id === userId);
+          if (!isOwner && leadRecord.organization_id && leadRecord.organization_id !== organizationId) {
+            console.warn(`[CRM API] Multi-tenant isolation: Lead ${targetLeadId} pertenece a ${leadRecord.organization_id}, no a ${organizationId}`);
             return res.status(403).json({
               success: false,
               error: 'Acceso denegado: el lead no pertenece a su organización',
@@ -247,7 +249,7 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
   // 3. ACTION: GET METRICS (action=get_metrics o subRoute === 'metrics')
   if (action === 'get_metrics' || subRoute === 'metrics') {
     try {
-      let query = supabase.from('leads').select('status, handled_by');
+      let query = supabase.from('leads').select('status, handled_by, organization_id, user_id');
       if (organizationId) {
         query = query.or(`organization_id.eq.${organizationId},user_id.eq.${organizationId}`);
       }
@@ -278,41 +280,6 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
       });
     } catch (err: any) {
       console.error('[CRM API] Exception in get_metrics:', err);
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  }
-
-  // 4. ACTION: EXPORT LEADS CSV (action=export_leads)
-  if (action === 'export_leads' || subRoute === 'export') {
-    try {
-      let query = supabase.from('leads').select('*');
-      if (organizationId) {
-        query = query.or(`organization_id.eq.${organizationId},user_id.eq.${organizationId}`);
-      }
-
-      const { data: leads, error } = await query.order('updated_at', { ascending: false });
-      const list = leads || [];
-
-      const headers = ['Nombre', 'Teléfono', 'Estado', 'Zona', 'Presupuesto USD', 'Tipo Inmueble', 'Fecha Último Mensaje'];
-      const rows = list.map((l: any) => {
-        const name = (l.name || l.user_name || 'Sin nombre').replace(/"/g, '""');
-        const phone = (l.phone || l.user_phone || '').replace(/"/g, '""');
-        const status = (l.status || 'active').replace(/"/g, '""');
-        const zone = (l.preferred_zone || l.zone || 'N/A').replace(/"/g, '""');
-        const budget = l.budget_max_usd ? `$${Number(l.budget_max_usd).toLocaleString('en-US')}` : 'N/A';
-        const type = (l.property_type || 'N/A').replace(/"/g, '""');
-        const dateStr = l.updated_at || l.created_at ? new Date(l.updated_at || l.created_at).toLocaleString('es-ES') : 'N/A';
-
-        return `"${name}","${phone}","${status}","${zone}","${budget}","${type}","${dateStr}"`;
-      });
-
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="leads-${timestamp}.csv"`);
-      return res.status(200).send(csvContent);
-    } catch (err: any) {
-      console.error('[CRM API] Exception in export_leads CSV:', err);
       return res.status(500).json({ success: false, error: err.message });
     }
   }
