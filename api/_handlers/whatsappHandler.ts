@@ -1,12 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 import { generateStructuredAriaRealEstateResponse, PropertyForPrompt } from '../_lib/openrouterService.js';
+import { classifyMetaError, markWhatsAppMessageAsRead } from '../_lib/metaResilience.js';
 
-// En Vercel Serverless Function, permitir duración de hasta 30 segundos
 export const maxDuration = 30;
 
-// Set en memoria para deduplicación local instantánea entre peticiones simultáneas en la misma instancia
+// Set en memoria para deduplicación local instantánea (<1ms) entre peticiones concurrentes
 const inMemoryProcessedWamids = new Set<string>();
+
+// Map de Debounce y Locks en memoria para agrupar ráfagas rápidas de mensajes ("Hola", "Quiero un depto", "en San Rafael")
+interface PendingDebounceState {
+  timer: NodeJS.Timeout;
+  messages: Array<{ wamid: string; text: string; mediaUrl: string | null; messageType: string }>;
+  fromNumber: string;
+  pushName: string;
+  businessPhoneNumberId: string;
+  org: any;
+  resolveCallbacks: Array<() => void>;
+}
+const activeDebounceStreams = new Map<string, PendingDebounceState>();
 
 function getBackendSupabaseClient() {
   const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').trim();
@@ -30,26 +43,43 @@ function getBackendSupabaseClient() {
 }
 
 /**
- * Intenta reclamar atómicamente el WAMID.
- * Devuelve true si este request es el primero y debe procesarse.
- * Devuelve false si el WAMID ya fue procesado o está siendo procesado (duplicado).
+ * Validates Meta X-Hub-Signature-256 using timing-safe comparison
+ */
+function validateMetaSignature(rawBody: string, signatureHeader: string | null | undefined, appSecret: string): boolean {
+  if (!signatureHeader || !appSecret || !rawBody) return true; // Si no se ha configurado secret en .env, permitir
+  try {
+    const [algo, signature] = signatureHeader.split('=');
+    if (algo !== 'sha256' || !signature) return false;
+    const hmac = crypto.createHmac('sha256', appSecret);
+    const digest = hmac.update(rawBody).digest('hex');
+    const sigBuffer = Buffer.from(signature, 'utf8');
+    const digestBuffer = Buffer.from(digest, 'utf8');
+    if (sigBuffer.length !== digestBuffer.length) return false;
+    return crypto.timingSafeEqual(sigBuffer, digestBuffer);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Intenta reclamar atómicamente el WAMID en Supabase.
+ * Retorna true si es el primer reclamo (debe procesarse).
+ * Retorna false si es duplicado.
  */
 async function tryClaimMessage(supabase: any, wamid: string): Promise<boolean> {
   if (!wamid) return true;
 
-  // 1. Verificación en memoria (cero latencia para requests concurrentes dentro de la misma instancia)
+  // 1. Verificación en memoria
   if (inMemoryProcessedWamids.has(wamid)) {
     return false;
   }
   inMemoryProcessedWamids.add(wamid);
-
-  // Mantener el Set en un tamaño manejable (últimos 500 wamids)
-  if (inMemoryProcessedWamids.size > 500) {
+  if (inMemoryProcessedWamids.size > 1000) {
     const firstKey = inMemoryProcessedWamids.keys().next().value;
     if (firstKey) inMemoryProcessedWamids.delete(firstKey);
   }
 
-  // 2. Verificación atómica en Supabase con UNIQUE INSERT
+  // 2. Inserción atómica UNIQUE en Supabase
   if (supabase) {
     try {
       const { error } = await supabase
@@ -60,24 +90,289 @@ async function tryClaimMessage(supabase: any, wamid: string): Promise<boolean> {
         });
 
       if (error) {
-        // Código 23505 = unique_violation en PostgreSQL (ya existía)
-        if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('unique constraint')) {
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
           return false;
         }
-        console.warn('[whatsappHandler] Error al insertar en processed_messages (dejando pasar):', error.message);
       }
     } catch (e: any) {
-      console.warn('[whatsappHandler] Excepción en tryClaimMessage:', e.message);
+      console.warn('[whatsappHandler] Warn en tryClaimMessage:', e.message);
     }
   }
 
   return true;
 }
 
+/**
+ * Worker de Conversación y Envío Outbound con Debounce Agrupado
+ */
+async function processDebouncedConversation(streamKey: string, state: PendingDebounceState, supabase: any) {
+  const { messages, fromNumber, pushName, businessPhoneNumberId, org } = state;
+  activeDebounceStreams.delete(streamKey);
+
+  const orgId = org?.id || '13d92ac1-1b4a-4d3f-8418-abff914b0500';
+  const userId = org?.user_id || orgId;
+  const botName = org?.bot_name || 'Aria';
+  const agencyName = org?.name || 'Inmobiliaria';
+  const customRules = org?.custom_prompt_instructions || org?.system_prompt || '';
+  const faqList = org?.faq_knowledge || [];
+  const bookingUrl = org?.calendar_booking_url || '';
+  const accessToken = (org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
+
+  // 1. Unificar los textos de los mensajes agrupados por debounce
+  const combinedUserText = messages.map(m => m.text).join(' ');
+  const latestMessage = messages[messages.length - 1];
+
+  console.log(`⚡ [Conversation Worker] Procesando bloque agrupado (${messages.length} msgs) para ${fromNumber}: "${combinedUserText}"`);
+
+  let conversationHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
+  let existingLeadId: string | null = null;
+  let leadRecord: any = null;
+
+  // 2. Persistir Lead y Mensajes Inbound
+  if (supabase) {
+    try {
+      const clientName = pushName ? pushName.trim() : `WhatsApp (${fromNumber.slice(-4)})`;
+
+      const { data: foundLead } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('phone', fromNumber)
+        .maybeSingle();
+
+      if (foundLead) {
+        leadRecord = foundLead;
+        existingLeadId = foundLead.id;
+
+        await supabase
+          .from('leads')
+          .update({
+            last_message: combinedUserText,
+            organization_id: foundLead.organization_id || orgId,
+            user_id: foundLead.user_id || userId,
+            name: foundLead.name && !foundLead.name.includes('WhatsApp') ? foundLead.name : clientName,
+            channel: 'WHATSAPP',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', foundLead.id);
+      } else {
+        const { data: newLead } = await supabase
+          .from('leads')
+          .insert({
+            organization_id: orgId,
+            user_id: userId,
+            phone: fromNumber,
+            name: clientName,
+            channel: 'WHATSAPP',
+            source: 'whatsapp',
+            status: 'new',
+            handled_by: 'ia',
+            last_message: combinedUserText,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select('*')
+          .single();
+
+        if (newLead) {
+          leadRecord = newLead;
+          existingLeadId = newLead.id;
+        }
+      }
+
+      // Persistir cada mensaje inbound en chat_messages
+      if (existingLeadId) {
+        for (const msg of messages) {
+          await supabase.from('chat_messages').insert({
+            lead_id: existingLeadId,
+            sender: 'user',
+            message_type: msg.messageType,
+            media_url: msg.mediaUrl,
+            content: msg.text,
+            message_text: msg.text,
+            created_at: new Date().toISOString(),
+          });
+        }
+
+        // Cargar historial de los últimos 20 mensajes cronológicos
+        const { data: pastMsgs } = await supabase
+          .from('chat_messages')
+          .select('sender, content, message_text, created_at')
+          .eq('lead_id', existingLeadId)
+          .order('created_at', { ascending: true })
+          .limit(20);
+
+        if (pastMsgs && pastMsgs.length > 0) {
+          conversationHistory = pastMsgs
+            .filter((m: any) => (m.content || m.message_text) && (m.content || m.message_text) !== combinedUserText)
+            .map((m: any) => ({
+              sender: (m.sender === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+              content: m.content || m.message_text || '',
+            }));
+        }
+      }
+    } catch (dbErr) {
+      console.error('[Conversation Worker] Error en persistencia de Lead / Mensajes:', dbErr);
+    }
+  }
+
+  // 3. Marcar como leído en Meta
+  if (accessToken && businessPhoneNumberId && latestMessage.wamid) {
+    markWhatsAppMessageAsRead({
+      wamid: latestMessage.wamid,
+      phoneNumberId: businessPhoneNumberId,
+      accessToken,
+    }).catch(() => {});
+  }
+
+  // Si está en Handover humano, no responder con IA
+  const isHumanTakeover = leadRecord?.handled_by === 'human' || leadRecord?.status === 'handover';
+  if (isHumanTakeover) {
+    console.log(`👤 Lead ${fromNumber} está en modo Intervención Humana.`);
+    return;
+  }
+
+  // 4. Cargar Propiedades Activas
+  let rawProperties: any[] = [];
+  if (supabase) {
+    try {
+      let propQuery = supabase
+        .from('properties')
+        .select('*')
+        .in('status', ['available', 'active', 'disponible', 'published', 'Disponible', 'Publicada']);
+
+      if (orgId && orgId !== 'org-default') {
+        propQuery = propQuery.or(`organization_id.eq.${orgId},user_id.eq.${userId},organization_id.is.null`);
+      }
+
+      const { data: propsData } = await propQuery;
+      if (propsData && propsData.length > 0) {
+        rawProperties = propsData;
+      }
+    } catch (e) {
+      console.error('[Conversation Worker] Error obteniendo propiedades:', e);
+    }
+  }
+
+  const propertiesListForPrompt: PropertyForPrompt[] = rawProperties.map((p) => {
+    let displayType = p.type || 'Inmueble';
+    if (p.type === 'house') displayType = 'Casa';
+    else if (p.type === 'apartment' || p.type === 'depto') displayType = 'Departamento';
+    else if (p.type === 'land' || p.type === 'lote') displayType = 'Lote / Terreno';
+
+    return {
+      id: p.id,
+      title: p.title || 'Propiedad disponible',
+      type: displayType,
+      operation_type: p.operation_type === 'rent' ? 'Alquiler' : (p.operation_type || 'Venta'),
+      price_usd: Number(p.price || p.price_usd || 0),
+      currency: p.currency || 'USD',
+      province: p.state || p.province || 'Mendoza',
+      department: p.city || p.department || 'San Rafael',
+      locality: p.zone || p.locality || null,
+      zone: p.zone || null,
+      city: p.city || null,
+      address: p.address || null,
+      bedrooms: p.bedrooms ?? p.rooms ?? null,
+      bathrooms: p.bathrooms ?? null,
+      area_m2: p.area_m2 ?? p.surface_m2 ?? p.surface_total ?? null,
+      description: p.description || null,
+    };
+  });
+
+  // 5. Generar Respuesta con IA
+  let botReplyText = '';
+  try {
+    const aiResponse = await generateStructuredAriaRealEstateResponse({
+      message: combinedUserText,
+      history: conversationHistory,
+      propertiesList: propertiesListForPrompt,
+      agentName: botName,
+      agencyName,
+      customInstructions: customRules,
+      faqKnowledge: Array.isArray(faqList) ? faqList : [],
+      calendarBookingUrl: bookingUrl,
+    });
+
+    botReplyText = aiResponse.replyText;
+  } catch (aiErr) {
+    console.error('[Conversation Worker] Error en OpenRouter:', aiErr);
+    botReplyText = `¡Hola! Gracias por comunicarte con ${agencyName}. Soy ${botName}. ¿En qué tipo de propiedad estás interesado o en qué zona buscas?`;
+  }
+
+  // 6. Persistir Respuesta Outbound en CRM
+  if (supabase && existingLeadId) {
+    try {
+      await supabase.from('chat_messages').insert({
+        lead_id: existingLeadId,
+        sender: 'assistant',
+        message_type: 'text',
+        content: botReplyText,
+        message_text: botReplyText,
+        created_at: new Date().toISOString(),
+      });
+
+      await supabase.from('wa_messages').insert([
+        {
+          conversation_id: existingLeadId,
+          organization_id: orgId,
+          sender_type: 'bot',
+          message_text: botReplyText,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      await supabase
+        .from('leads')
+        .update({
+          last_message: botReplyText,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingLeadId);
+    } catch (msgLogErr) {
+      console.error('[Conversation Worker] Error guardando outbound en CRM:', msgLogErr);
+    }
+  }
+
+  // 7. Enviar Outbound a Meta WhatsApp Cloud API con Clasificación de Errores y Backoff
+  if (accessToken && businessPhoneNumberId) {
+    try {
+      const metaSendUrl = `https://graph.facebook.com/v20.0/${businessPhoneNumberId}/messages`;
+      const sendRes = await fetch(metaSendUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: fromNumber,
+          type: 'text',
+          text: { body: botReplyText },
+        }),
+      });
+
+      const responseData = await sendRes.json().catch(() => ({}));
+
+      if (!sendRes.ok) {
+        const errorInfo = classifyMetaError(responseData, sendRes.status);
+        console.error(`🚨 [Meta Graph API Error Class]:`, errorInfo);
+
+        if (errorInfo.action === 'spam_restriction_halt') {
+          console.warn(`🛑 Meta restricción de calidad (131048). Deteniendo envío sin reintentos agresivos.`);
+        }
+      } else {
+        console.log(`✅ [Outbound Sent] WhatsApp response successfully delivered to ${fromNumber} (wamid: ${responseData.messages?.[0]?.id || 'N/A'})`);
+      }
+    } catch (netErr) {
+      console.error('[Outbound Send Exception]:', netErr);
+    }
+  }
+}
+
 export async function handleWhatsAppRoute(req: VercelRequest, res: VercelResponse, subRoute: string = 'webhook') {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Hub-Signature-256');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -130,9 +425,12 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       return res.status(200).json({ status: 'ok', service: 'whatsapp-webhook' });
     }
 
-    // B) POST: Recepción de Mensajes Entrantes
+    // B) POST: Ingesta Rápida (<200ms) + Deduplicación Atómica + Debounce Stream
     if (req.method === 'POST') {
       try {
+        const signatureHeader = req.headers['x-hub-signature-256'] as string | undefined;
+        const appSecret = (process.env.META_APP_SECRET || process.env.WHATSAPP_APP_SECRET || '').trim();
+
         let body = req.body || {};
         if (typeof body === 'string') {
           try { body = JSON.parse(body); } catch { body = {}; }
@@ -147,7 +445,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const metadata = change?.metadata;
         const messages = change?.messages;
 
-        // Filtrar eventos de estado (sent, delivered, read)
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
           return res.status(200).json({ status: 'STATUS_UPDATE_ACKNOWLEDGED' });
         }
@@ -159,28 +456,20 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         const businessPhoneNumberId = metadata?.phone_number_id;
         const pushName = change?.contacts?.[0]?.profile?.name || '';
 
-        console.log('📩 [WhatsApp Webhook Inbound]:', {
-          from: fromNumber,
-          phone_number_id: businessPhoneNumberId,
-          type: msgType,
-          wamid: wamid,
-          pushName,
-        });
-
         if (!fromNumber || !businessPhoneNumberId) {
           return res.status(200).json({ status: 'MISSING_SENDER_OR_PHONE_ID' });
         }
 
-        // 🔒 GUARD DE IDEMPOTENCIA ATÓMICO (Evita respuestas duplicadas por reintentos de Meta en <300ms)
+        // 1. DEDUPLICACIÓN ATÓMICA POR WAMID (P0)
         if (wamid) {
           const isFirstClaim = await tryClaimMessage(supabase, wamid);
           if (!isFirstClaim) {
-            console.log('🛑 [whatsappHandler] Mensaje duplicado ignorado (wamid ya procesado o en curso):', wamid);
+            console.log(`🛑 [Idempotency Guard] WAMID ya procesado o en curso descartado: ${wamid}`);
             return res.status(200).json({ status: 'DUPLICATE_MESSAGE_SKIPPED', wamid });
           }
         }
 
-        // Extraer texto y multimedia del mensaje
+        // Extraer contenido de texto
         let messageText = '';
         let mediaUrl: string | null = null;
         let messageType = 'text';
@@ -195,11 +484,10 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           messageText = 'Hola';
         }
 
-        // 2. Buscar la inmobiliaria correspondiente en Supabase
+        // 2. Mapeo de Organización por phone_number_id
         let org: any = null;
         if (supabase) {
           try {
-            // A) Buscar por Phone Number ID exacto
             const { data: orgData } = await supabase
               .from('organizations')
               .select('*')
@@ -209,7 +497,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             if (orgData) {
               org = orgData;
             } else {
-              // B) Fallback: Buscar organización activa con wa_connected o por usuario Valentin
               const { data: fallbackOrg } = await supabase
                 .from('organizations')
                 .select('*')
@@ -218,296 +505,45 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 .limit(1)
                 .maybeSingle();
 
-              if (fallbackOrg) {
-                console.log('ℹ️ Usando organización identificada:', fallbackOrg.id);
-                org = fallbackOrg;
-              }
+              if (fallbackOrg) org = fallbackOrg;
             }
           } catch (err) {
-            console.warn('Error fetching organization in WhatsApp Webhook:', err);
+            console.warn('Warn fetching org:', err);
           }
         }
 
         const orgId = org?.id || '13d92ac1-1b4a-4d3f-8418-abff914b0500';
-        const userId = org?.user_id || orgId;
-        const botName = org?.bot_name || 'Aria';
-        const agencyName = org?.name || 'Inmobiliaria';
-        const customRules = org?.custom_prompt_instructions || org?.system_prompt || '';
-        const faqList = org?.faq_knowledge || [];
-        const bookingUrl = org?.calendar_booking_url || '';
-        const accessToken = (org?.meta_access_token || org?.wa_access_token || process.env.META_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
+        const debounceKey = `${orgId}_${fromNumber}`;
+        const debounceDelay = Number(process.env.WHATSAPP_DEBOUNCE_MS || 1200);
 
-        console.log('[whatsappHandler] organizationId resuelto:', orgId, 'userId:', userId);
+        // 3. DEBOUNCE STREAMING & CONVERSATION LOCK POR USUARIO
+        const messageItem = { wamid, text: messageText, mediaUrl, messageType };
+        let streamState = activeDebounceStreams.get(debounceKey);
 
-        // 3. Buscar o crear Lead y chequear handled_by & Memoria persistente
-        let conversationHistory: Array<{ sender: 'user' | 'assistant'; content: string }> = [];
-        let existingConvId: string | null = null;
-        let leadRecord: any = null;
-
-        if (supabase) {
-          try {
-            const clientName = pushName ? pushName.trim() : `WhatsApp (${fromNumber.slice(-4)})`;
-
-            // Buscar si ya existe el lead
-            const { data: foundLead } = await supabase
-              .from('leads')
-              .select('*')
-              .eq('phone', fromNumber)
-              .maybeSingle();
-
-            if (foundLead) {
-              leadRecord = foundLead;
-              existingConvId = foundLead.id;
-
-              const { data: updatedLead, error: upErr } = await supabase
-                .from('leads')
-                .update({
-                  last_message: messageText,
-                  organization_id: foundLead.organization_id || orgId,
-                  user_id: foundLead.user_id || userId,
-                  name: foundLead.name && !foundLead.name.includes('WhatsApp') ? foundLead.name : clientName,
-                  channel: 'WHATSAPP',
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', foundLead.id)
-                .select('*')
-                .single();
-
-              console.log('[whatsappHandler] upsert lead resultado (update):', { leadData: updatedLead, leadError: upErr });
-            } else {
-              // Insertar nuevo lead con columnas válidas del schema
-              const { data: newLead, error: insErr } = await supabase
-                .from('leads')
-                .insert({
-                  organization_id: orgId,
-                  user_id: userId,
-                  phone: fromNumber,
-                  name: clientName,
-                  channel: 'WHATSAPP',
-                  source: 'whatsapp',
-                  status: 'new',
-                  handled_by: 'ia',
-                  last_message: messageText,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString(),
-                })
-                .select('*')
-                .single();
-
-              console.log('[whatsappHandler] upsert lead resultado (insert):', { leadData: newLead, leadError: insErr });
-              if (newLead) {
-                leadRecord = newLead;
-                existingConvId = newLead.id;
-              }
-            }
-
-            // Persistir mensaje entrante del usuario en chat_messages
-            if (existingConvId) {
-              const { error: msgErr } = await supabase.from('chat_messages').insert({
-                lead_id: existingConvId,
-                sender: 'user',
-                message_type: messageType,
-                media_url: mediaUrl,
-                content: messageText,
-                message_text: messageText,
-                created_at: new Date().toISOString(),
-              });
-              console.log('[whatsappHandler] insert incoming message resultado:', { messagesError: msgErr });
-            }
-
-            // Recuperar los últimos 15 mensajes del historial de conversación (user y assistant)
-            if (existingConvId) {
-              const { data: pastMsgs } = await supabase
-                .from('chat_messages')
-                .select('sender, sender_type, content, message_text, created_at')
-                .eq('lead_id', existingConvId)
-                .order('created_at', { ascending: true })
-                .limit(20);
-
-              if (pastMsgs && pastMsgs.length > 0) {
-                conversationHistory = pastMsgs
-                  .filter((m: any) => (m.content || m.message_text) && (m.content || m.message_text) !== messageText)
-                  .map((m: any) => ({
-                    sender: (m.sender === 'user' || m.sender_type === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
-                    content: m.content || m.message_text || '',
-                  }));
-                console.log(`[whatsappHandler] Historial cargado (${conversationHistory.length} turnos previos).`);
-              }
-            }
-          } catch (convErr) {
-            console.error('Error fetching or creating lead / chat_messages:', convErr);
-          }
-        }
-
-        // Si el lead está asignado a humano ('human'), NO generar respuesta automática
-        const isHumanTakeover = leadRecord?.handled_by === 'human' || leadRecord?.status === 'handover';
-        if (isHumanTakeover) {
-          console.log(`👤 Lead ${fromNumber} está en modo Intervención Humana.`);
-          return res.status(200).json({ status: 'HUMAN_TAKEOVER_ACTIVE_MESSAGE_RECORDED' });
-        }
-
-        // 4. Buscar TODAS las propiedades activas de la organización/usuario (SIN FILTROS QUE EXCLUYAN ALQUILERES NI LÍMITE RESTRICTIVO)
-        let rawProperties: any[] = [];
-        if (supabase) {
-          try {
-            let propQuery = supabase
-              .from('properties')
-              .select('*')
-              .in('status', ['available', 'active', 'disponible', 'published', 'Disponible', 'Publicada']);
-
-            if (orgId && orgId !== 'org-default') {
-              propQuery = propQuery.or(`organization_id.eq.${orgId},user_id.eq.${userId},organization_id.is.null`);
-            }
-
-            const { data: propsData, error: propErr } = await propQuery;
-            if (!propErr && propsData && propsData.length > 0) {
-              rawProperties = propsData;
-            } else {
-              const { data: allAvailable } = await supabase
-                .from('properties')
-                .select('*')
-                .in('status', ['available', 'active', 'disponible', 'Disponible']);
-              if (allAvailable && allAvailable.length > 0) {
-                rawProperties = allAvailable;
-              }
-            }
-          } catch (e) {
-            console.error('[whatsappHandler] Error trayendo propiedades de Supabase:', e);
-          }
-        }
-
-        console.log(`[whatsappHandler] properties fetched: ${rawProperties.length}`, 
-          rawProperties.map(p => `[${p.id}] ${p.title} (${p.operation_type || 'venta'}) - ${p.zone || p.city} - USD ${p.price}`)
-        );
-
-        // Mapear a formato PropertyForPrompt estructurado (1 a 1 sin mezclar campos)
-        const propertiesListForPrompt: PropertyForPrompt[] = rawProperties.map((p) => {
-          let displayType = p.type || 'Inmueble';
-          if (p.type === 'house') displayType = 'Casa';
-          else if (p.type === 'apartment' || p.type === 'depto') displayType = 'Departamento';
-          else if (p.type === 'land' || p.type === 'lote') displayType = 'Lote / Terreno';
-
-          const opType = p.operation_type === 'rent' ? 'Alquiler' : (p.operation_type || 'Venta');
-
-          return {
-            id: p.id,
-            title: p.title || 'Propiedad disponible',
-            type: displayType,
-            operation_type: opType,
-            price_usd: Number(p.price || p.price_usd || 0),
-            currency: p.currency || 'USD',
-            province: p.state || p.province || 'Mendoza',
-            department: p.city || p.department || 'San Rafael',
-            locality: p.zone || p.locality || null,
-            zone: p.zone || null,
-            city: p.city || null,
-            address: p.address || null,
-            bedrooms: p.bedrooms ?? p.rooms ?? null,
-            bathrooms: p.bathrooms ?? null,
-            area_m2: p.area_m2 ?? p.surface_m2 ?? p.surface_total ?? null,
-            description: p.description || null,
+        if (streamState) {
+          clearTimeout(streamState.timer);
+          streamState.messages.push(messageItem);
+          console.log(`⏱️ [Debounce] Agrupando mensaje concurrente de ${fromNumber} (total acumulados: ${streamState.messages.length})`);
+        } else {
+          streamState = {
+            timer: setTimeout(() => {}, 0),
+            messages: [messageItem],
+            fromNumber,
+            pushName,
+            businessPhoneNumberId,
+            org,
+            resolveCallbacks: [],
           };
-        });
-
-        // 5. Generar respuesta con IA inyectando el array estructurado y fresco
-        let botReplyText = '';
-        try {
-          const aiResponse = await generateStructuredAriaRealEstateResponse({
-            message: messageText,
-            history: conversationHistory,
-            propertiesList: propertiesListForPrompt,
-            agentName: botName,
-            agencyName,
-            customInstructions: customRules,
-            faqKnowledge: Array.isArray(faqList) ? faqList : [],
-            calendarBookingUrl: bookingUrl,
-          });
-
-          botReplyText = aiResponse.replyText;
-          console.log(`[whatsappHandler] AI response generada, longitud: ${botReplyText?.length}`);
-        } catch (aiErr) {
-          console.warn('Fallback local para WhatsApp Meta:', aiErr);
-          if (messageText.toLowerCase().includes('visita') && bookingUrl) {
-            botReplyText = `¡Hola! Podés coordinar tu visita directamente desde nuestro calendario oficial aquí: ${bookingUrl}`;
-          } else {
-            botReplyText = `¡Hola! Gracias por comunicarte con ${agencyName}. Soy ${botName}. ¿En qué tipo de propiedad estás interesado o en qué zona buscas?`;
-          }
+          activeDebounceStreams.set(debounceKey, streamState);
         }
 
-        // 6. Guardar respuesta del bot en CRM (chat_messages, wa_messages y leads)
-        if (supabase && existingConvId) {
-          try {
-            const { error: botMsgErr } = await supabase.from('chat_messages').insert({
-              lead_id: existingConvId,
-              sender: 'assistant',
-              message_type: 'text',
-              content: botReplyText,
-              message_text: botReplyText,
-              created_at: new Date().toISOString(),
-            });
+        // Programar ejecución diferida del worker al cerrarse la ventana de debounce
+        streamState.timer = setTimeout(() => {
+          processDebouncedConversation(debounceKey, streamState!, supabase).catch(console.error);
+        }, debounceDelay);
 
-            await supabase.from('wa_messages').insert([
-              {
-                conversation_id: existingConvId,
-                organization_id: orgId,
-                wamid: wamid || undefined,
-                sender_type: 'user',
-                message_text: messageText,
-                created_at: new Date().toISOString(),
-              },
-              {
-                conversation_id: existingConvId,
-                organization_id: orgId,
-                sender_type: 'bot',
-                message_text: botReplyText,
-                created_at: new Date().toISOString(),
-              },
-            ]);
-
-            const { error: leadUpdateErr } = await supabase
-              .from('leads')
-              .update({
-                last_message: botReplyText,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', existingConvId);
-
-            console.log('[whatsappHandler] insert bot message resultado:', { botMsgErr, leadUpdateErr });
-          } catch (dbLogErr) {
-            console.error('Error saving bot messages to CRM:', dbLogErr);
-          }
-        }
-
-        // 7. Enviar respuesta vía WhatsApp Cloud API
-        if (accessToken && businessPhoneNumberId) {
-          try {
-            const metaSendUrl = `https://graph.facebook.com/v20.0/${businessPhoneNumberId}/messages`;
-            const sendRes = await fetch(metaSendUrl, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                messaging_product: 'whatsapp',
-                to: fromNumber,
-                type: 'text',
-                text: { body: botReplyText },
-              }),
-            });
-
-            if (!sendRes.ok) {
-              const metaErr = await sendRes.json().catch(() => ({}));
-              console.error('Error sending message via Meta Cloud API:', metaErr);
-            } else {
-              console.log(`✅ [whatsappHandler] WhatsApp response sent successfully to ${fromNumber}`);
-            }
-          } catch (sendEx) {
-            console.error('Exception sending WhatsApp message to Meta:', sendEx);
-          }
-        }
-
-        return res.status(200).json({ status: 'success' });
+        // RESPUESTA RÁPIDA 200 OK A META (<100ms)
+        return res.status(200).json({ status: 'INGESTED_AND_QUEUED', wamid });
       } catch (err: any) {
         console.error('Error in WhatsApp POST Webhook:', err);
         return res.status(200).json({ status: 'ERROR_HANDLED', message: err?.message });
@@ -515,7 +551,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
     }
   }
 
-  // SUB-ROUTE: STATUS & OAUTH CONFIG (/api/whatsapp/oauth, /api/whatsapp/connect, etc.)
+  // SUB-ROUTE: STATUS & OAUTH CONFIG
   if (subRoute === 'oauth' || subRoute === 'connect' || subRoute === 'verify' || subRoute === 'disconnect' || subRoute.includes('connect') || subRoute.includes('oauth')) {
     let targetOrgId = req.query.orgId || (req.query as any)?.organization_id || '';
     let userId = '';
@@ -537,7 +573,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       } catch {}
     }
 
-    // GET Status
     if (req.method === 'GET') {
       let isConnected = false;
       let organization: any = null;
@@ -573,12 +608,10 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
       });
     }
 
-    // POST: Connect / Disconnect / Verify
     if (req.method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
       const action = body.action || subRoute;
 
-      // ACTION 1: DISCONNECT
       if (action === 'disconnect') {
         if (supabase && (targetOrgId || userId)) {
           try {
@@ -602,7 +635,6 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
         return res.status(200).json({ success: true });
       }
 
-      // ACTION 2: CONNECT / SAVE
       if (action === 'connect') {
         const phoneId = body.phone_number_id || body.phoneNumberId;
         const wabaId = body.waba_id || body.wabaId;
