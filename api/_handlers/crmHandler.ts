@@ -347,6 +347,37 @@ export async function handleCrmRoute(req: VercelRequest, res: VercelResponse, su
 
   return res.status(404).json({ error: `CRM Sub-route '${subRoute}' not found` });
 
+  
+  // 5. ACTION: GET LEADS LIST (/api/crm?action=get_leads o subRoute === 'leads')
+  if (subRoute === 'leads' || action === 'get_leads' || action === 'leads') {
+    try {
+      let query = supabase
+        .from('leads')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (organizationId) {
+        query = query.or(`organization_id.eq.${organizationId},user_id.eq.${organizationId}`);
+      }
+
+      const { data: leads, error } = await query;
+
+      if (error) {
+        console.error('[crmHandler] Error fetching leads:', error);
+        return res.status(500).json({ success: false, error: error.message, leads: [] });
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: leads || [],
+        leads: leads || [],
+      });
+    } catch (err: any) {
+      console.error('[crmHandler] Exception fetching leads:', err);
+      return res.status(500).json({ success: false, error: err.message, leads: [] });
+    }
+  }
+
   // 4. ACTION: GET LEADS MESSAGES (/api/crm/messages?lead_id=UUID o subRoute === 'messages')
   if (subRoute === 'messages' || action === 'get_messages' || subRoute === 'conversation') {
     try {

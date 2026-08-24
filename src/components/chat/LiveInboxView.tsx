@@ -85,78 +85,65 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
   const fetchLeads = async () => {
     setLoading(true);
     try {
-      if (supabase) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLeads([]);
-          setSelectedLeadId(null);
-          setLoading(false);
-          return;
-        }
+      let rawList: any[] = [];
 
-        let query = supabase.from('leads').select('*, lead_messages(*)');
-        if (!(user as any)?.isDemoAccount) {
+      // 1. Intento vía API Backend Segura (/api/crm?action=get_leads)
+      try {
+        const res = await fetch('/api/crm?action=get_leads');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            rawList = json.data;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('[LiveInboxView] Fallback to direct supabase for leads list:', apiErr);
+      }
+
+      // 2. Fallback a Supabase Directo si la API backend devolvió vacío
+      if (rawList.length === 0 && supabase) {
+        const { data: { user } } = await supabase.auth.getUser();
+        let query = supabase.from('leads').select('*');
+
+        if (user && !(user as any)?.isDemoAccount) {
           query = query.or(`user_id.eq.${user.id},organization_id.eq.${user.id}`);
         }
 
         const { data, error } = await query.order('updated_at', { ascending: false });
-
         if (!error && data && data.length > 0) {
-          const mapped: InboxLeadItem[] = data.map((item: any) => ({
-            id: item.id,
-            user_phone: item.phone || item.user_phone || item.name || 'Sin teléfono',
-            user_name: item.name || item.user_name || item.phone || 'Cliente',
-            status: item.status || 'active',
-            preferred_zone: item.preferred_zone || item.preferredZone || null,
-            budget_max_usd: item.budget_max_usd || item.budgetMax || null,
-            last_message: item.last_message || item.chatHistorySummary || 'Sin mensajes aún',
-            last_message_at: item.updated_at || item.created_at || new Date().toISOString(),
-            total_messages: item.total_messages || (item.lead_messages ? item.lead_messages.length : 0),
-            channel: item.channel || 'whatsapp',
-            handled_by: item.handled_by || (item.is_bot_active === false || item.status === 'handover' ? 'human' : 'ia'),
-            is_bot_active: item.handled_by === 'human' ? false : item.is_bot_active !== false,
-          }));
-          setLeads(mapped);
-          if (!selectedLeadId && mapped.length > 0) {
-            setSelectedLeadId(mapped[0].id);
-          }
+          rawList = data;
         } else {
-          // Check wa_conversations fallback
-          const { data: waConvs } = await supabase
-            .from('wa_conversations')
-            .select('*')
-            .eq('organization_id', user.id)
-            .order('last_message_at', { ascending: false });
+          const { data: generalData } = await supabase.from('leads').select('*').order('updated_at', { ascending: false });
+          if (generalData && generalData.length > 0) rawList = generalData;
+        }
+      }
 
-          if (waConvs && waConvs.length > 0) {
-            const mapped: InboxLeadItem[] = waConvs.map((item: any) => ({
-              id: item.id,
-              user_phone: item.user_phone || 'WhatsApp Lead',
-              user_name: item.user_name || item.user_phone || 'Prospecto WhatsApp',
-              status: item.status || 'active',
-              preferred_zone: item.preferred_zone || null,
-              budget_max_usd: item.budget_max_usd || null,
-              last_message: item.last_message || 'Mensaje de WhatsApp',
-              last_message_at: item.last_message_at || item.created_at || new Date().toISOString(),
-              total_messages: 1,
-              channel: 'whatsapp',
-              is_bot_active: item.is_bot_active !== false,
-            }));
-            setLeads(mapped);
-            if (!selectedLeadId && mapped.length > 0) {
-              setSelectedLeadId(mapped[0].id);
-            }
-          } else {
-            setLeads([]);
-            setSelectedLeadId(null);
-          }
+      if (rawList.length > 0) {
+        const mapped: InboxLeadItem[] = rawList.map((item: any) => ({
+          id: item.id,
+          user_phone: item.phone || item.user_phone || item.name || 'Sin teléfono',
+          user_name: item.name || item.user_name || item.phone || 'Cliente',
+          status: item.status || 'active',
+          preferred_zone: item.preferred_zone || item.preferredZone || item.zone || null,
+          budget_max_usd: item.budget_max_usd || item.budgetMax || null,
+          last_message: item.last_message || item.chatHistorySummary || 'Sin mensajes aún',
+          last_message_at: item.updated_at || item.created_at || new Date().toISOString(),
+          total_messages: item.total_messages || (item.lead_messages ? item.lead_messages.length : 1),
+          channel: item.channel || 'WHATSAPP',
+          handled_by: item.handled_by || (item.status === 'handover' ? 'human' : 'ia'),
+          is_bot_active: item.handled_by === 'human' || item.status === 'handover' ? false : (item.is_bot_active !== false),
+        }));
+
+        setLeads(mapped);
+        if (!selectedLeadId && mapped.length > 0) {
+          setSelectedLeadId(mapped[0].id);
         }
       } else {
         setLeads([]);
         setSelectedLeadId(null);
       }
     } catch (e) {
-      console.error('Error fetching inbox leads:', e);
+      console.error('[LiveInboxView] Error fetching inbox leads:', e);
       setLeads([]);
       setSelectedLeadId(null);
     } finally {
