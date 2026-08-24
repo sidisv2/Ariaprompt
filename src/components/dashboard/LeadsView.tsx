@@ -527,8 +527,8 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
       );
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
-        🌐 WEBCHAT
+      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1 shrink-0 uppercase tracking-wider">
+        📱 WHATSAPP
       </span>
     );
   };

@@ -266,10 +266,9 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
     if (!inputMessage.trim() || !selectedLeadId || sending) return;
 
     const userText = inputMessage.trim();
-    setInputMessage('');
     setSending(true);
 
-    // 1. Inmediata transición a Modo Humano (Auto-Switch)
+    // 1. Transición local optimista a Modo Humano
     setIsBotActive(false);
     setLeads((prev) =>
       prev.map((l) =>
@@ -279,55 +278,29 @@ export const LiveInboxView: React.FC<LiveInboxViewProps> = ({ initialLeadId }) =
       )
     );
 
-    const newMsg: ChatMessage = {
-      id: 'human-' + Date.now(),
-      sender_type: 'human_agent',
-      message_text: userText,
-      content: userText,
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-
     try {
-      if (supabase) {
-        // 2. Persistir mensaje manual del operador en chat_messages
-        await supabase.from('chat_messages').insert({
-          lead_id: selectedLeadId,
-          sender: 'human_agent',
-          sender_type: 'human_agent',
+      // 2. Llamada real al backend para enviar vía Meta WhatsApp Cloud API y persistir
+      const response = await fetch('/api/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: selectedLeadId,
           content: userText,
-          message_text: userText,
-          created_at: new Date().toISOString(),
-        });
+        }),
+      });
 
-        // 3. Mutación en Supabase: UPDATE leads SET handled_by = 'human'
-        await supabase
-          .from('leads')
-          .update({
-            handled_by: 'human',
-            is_bot_active: false,
-            status: 'handover',
-            last_message: userText,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', selectedLeadId);
+      const data = await response.json();
 
-        try {
-          await supabase
-            .from('wa_conversations')
-            .update({
-              handled_by: 'human',
-              status: 'handover',
-              last_message: userText,
-              last_message_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', selectedLeadId);
-        } catch (_) {}
+      if (!response.ok || data.error) {
+        console.error('Error enviando mensaje por WhatsApp Cloud API:', data.error);
+        alert(data.error || 'Error al enviar mensaje por WhatsApp');
+      } else {
+        setInputMessage('');
+        fetchConversationMessages(selectedLeadId);
       }
-    } catch (err) {
-      console.error('Error sending human response:', err);
+    } catch (err: any) {
+      console.error('Error en llamada a /api/whatsapp/send:', err);
+      alert('Error de conexión al enviar el mensaje');
     } finally {
       setSending(false);
     }

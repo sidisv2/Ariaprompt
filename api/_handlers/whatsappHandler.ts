@@ -673,5 +673,141 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
     }
   }
 
+  
+  // SUB-ROUTE: SEND MESSAGE / HUMAN TAKEOVER OUTBOUND (/api/whatsapp/send, /api/whatsapp/messages, /api/whatsapp/outbound)
+  if (subRoute === 'send' || subRoute === 'messages' || subRoute === 'outbound' || subRoute.endsWith('/messages')) {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    try {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+      const { leadId, message, content, phone: explicitPhone, orgId: explicitOrgId } = body;
+      const textToSend = (content || message || '').trim();
+
+      if (!textToSend) {
+        return res.status(400).json({ error: 'El contenido del mensaje no puede estar vacío.' });
+      }
+
+      if (!supabase) {
+        return res.status(500).json({ error: 'Supabase no inicializado en el servidor.' });
+      }
+
+      // 1. Obtener el lead
+      let targetLead: any = null;
+      if (leadId) {
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('id', leadId)
+          .maybeSingle();
+        targetLead = leadData;
+      } else if (explicitPhone) {
+        const { data: leadData } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('phone', explicitPhone)
+          .maybeSingle();
+        targetLead = leadData;
+      }
+
+      if (!targetLead && !explicitPhone) {
+        return res.status(404).json({ error: 'Lead no encontrado para el envío.' });
+      }
+
+      const recipientPhone = targetLead?.phone || explicitPhone;
+      const organizationId = targetLead?.organization_id || explicitOrgId || '13d92ac1-1b4a-4d3f-8418-abff914b0500';
+
+      // 2. Obtener credenciales de la organización
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('*')
+        .or(`id.eq.${organizationId},user_id.eq.${organizationId}`)
+        .maybeSingle();
+
+      const businessPhoneNumberId = orgData?.meta_phone_number_id || orgData?.wa_phone_number_id || process.env.META_WA_PHONE_NUMBER_ID || process.env.META_PHONE_NUMBER_ID;
+      const accessToken = (orgData?.meta_access_token || orgData?.wa_access_token || process.env.META_WA_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || '').trim();
+
+      if (!businessPhoneNumberId || !accessToken) {
+        return res.status(400).json({ error: 'Faltan credenciales de WhatsApp Business (Phone Number ID o Access Token) en la organización.' });
+      }
+
+      // 3. Enviar a Meta WhatsApp Cloud API
+      const metaSendUrl = `https://graph.facebook.com/v20.0/${businessPhoneNumberId}/messages`;
+      const sendRes = await fetch(metaSendUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: recipientPhone,
+          type: 'text',
+          text: { body: textToSend },
+        }),
+      });
+
+      const responseData = await sendRes.json().catch(() => ({}));
+
+      if (!sendRes.ok) {
+        console.error('🚨 [Human Takeover Send] Error Meta Cloud API:', responseData);
+        return res.status(sendRes.status || 400).json({
+          error: responseData.error?.message || 'Error enviando mensaje vía Meta Cloud API',
+          details: responseData,
+        });
+      }
+
+      const wamid = responseData.messages?.[0]?.id || null;
+
+      // 4. Persistir mensaje en chat_messages con sender = 'human_agent'
+      if (targetLead?.id) {
+        await supabase.from('chat_messages').insert({
+          lead_id: targetLead.id,
+          sender: 'human_agent',
+          message_type: 'text',
+          content: textToSend,
+          message_text: textToSend,
+          created_at: new Date().toISOString(),
+        });
+
+        await supabase.from('wa_messages').insert([
+          {
+            conversation_id: targetLead.id,
+            organization_id: organizationId,
+            wamid: wamid || undefined,
+            sender_type: 'human_agent',
+            message_text: textToSend,
+            created_at: new Date().toISOString(),
+          },
+        ]);
+
+        // 5. Activar Human Takeover en el Lead (handled_by = 'human')
+        await supabase
+          .from('leads')
+          .update({
+            handled_by: 'human',
+            is_bot_active: false,
+            status: 'handover',
+            last_message: textToSend,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', targetLead.id);
+      }
+
+      console.log(`✅ [Human Takeover Sent] Mensaje humano entregado con éxito a ${recipientPhone} (wamid: ${wamid})`);
+      return res.status(200).json({
+        success: true,
+        wamid,
+        leadId: targetLead?.id,
+        handled_by: 'human',
+        message: textToSend,
+      });
+    } catch (err: any) {
+      console.error('[Human Takeover Send Exception]:', err);
+      return res.status(500).json({ error: err.message || 'Error interno del servidor' });
+    }
+  }
+
   return res.status(404).json({ error: `Sub-route '${subRoute}' not found` });
 }
