@@ -558,7 +558,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 <span>Total Leads</span>
                 <Users className="w-4 h-4 text-emerald-400" />
               </div>
-              <p className="text-2xl font-extrabold text-white font-mono">{metrics.total}</p>
+              <p data-testid="kpi-total" className="text-2xl font-extrabold text-white font-mono">{metrics.total}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 space-y-1 backdrop-blur-xl">
@@ -566,7 +566,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 <span>Calificados</span>
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
-              <p className="text-2xl font-extrabold text-emerald-400 font-mono">{metrics.qualified}</p>
+              <p data-testid="kpi-qualified" className="text-2xl font-extrabold text-emerald-400 font-mono">{metrics.qualified}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-blue-500/20 space-y-1 backdrop-blur-xl">
@@ -574,7 +574,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 <span>Activos (IA)</span>
                 <Clock className="w-4 h-4 text-blue-400" />
               </div>
-              <p className="text-2xl font-extrabold text-blue-400 font-mono">{metrics.active}</p>
+              <p data-testid="kpi-active" className="text-2xl font-extrabold text-blue-400 font-mono">{metrics.active}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-amber-500/20 space-y-1 backdrop-blur-xl">
@@ -582,7 +582,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 <span>Derivados a Humano</span>
                 <Sparkles className="w-4 h-4 text-amber-400" />
               </div>
-              <p className="text-2xl font-extrabold text-amber-400 font-mono">{metrics.handover}</p>
+              <p data-testid="kpi-human" className="text-2xl font-extrabold text-amber-400 font-mono">{metrics.handover}</p>
             </div>
           </div>
 
@@ -607,6 +607,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                 {['all', 'qualified', 'active', 'handover', 'closed'].map((f) => (
                   <button
                     key={f}
+                    data-testid={`lead-filter-${f}`}
                     onClick={() => setStatusFilter(f)}
                     className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                       statusFilter === f
@@ -622,7 +623,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
               {/* List */}
               <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-thin">
                 {loading ? (
-                  <div className="p-8 text-center text-slate-400 text-xs space-y-2">
+                  <div data-testid="leads-loading" className="p-8 text-center text-slate-400 text-xs space-y-2">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-400" />
                     <p>Cargando lista de prospectos...</p>
                   </div>
@@ -648,6 +649,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                     return (
                       <div
                         key={lead.id}
+                        data-testid="lead-row"
                         onClick={() => {
                           setSelectedLead(lead);
                           fetchConversationMessages(lead.id);
@@ -871,6 +873,7 @@ export const LeadsView: React.FC<LeadsViewProps> = ({
                           return (
                             <div
                               key={msg.id}
+                              data-testid="chat-message"
                               className={`flex flex-col ${isUser ? 'items-start' : 'items-end'}`}
                             >
                               <div
