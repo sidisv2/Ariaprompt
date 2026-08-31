@@ -85,6 +85,7 @@ export const WhatsAppSettings: React.FC = () => {
   // Ref to prevent subsequent background re-fetches from overriding user modifications
   const hasLoadedInitialData = useRef<boolean>(false);
   const userHasModifiedInputs = useRef<boolean>(false);
+  const embeddedSignupDataRef = useRef<{ wabaId?: string; phoneNumberId?: string }>({});
 
   const webhookUrl = 'https://ariaprop.online/api/webhook/whatsapp';
   const webhookVerifyToken = 'aria_prop_whatsapp_webhook_secret_verify_token_2026';
@@ -453,7 +454,11 @@ export const WhatsAppSettings: React.FC = () => {
       window.FB.login((response: any) => {
         if (response.authResponse?.code) {
           const code = response.authResponse.code;
-          handleCompleteSignup({ code });
+          handleCompleteSignup({
+            code,
+            wabaId: embeddedSignupDataRef.current.wabaId,
+            phoneNumberId: embeddedSignupDataRef.current.phoneNumberId,
+          });
         } else {
           setErrorMsg('El proceso de vinculación con Meta fue cancelado o no otorgó los permisos requeridos.');
         }
