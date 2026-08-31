@@ -429,6 +429,72 @@ async function processDebouncedConversation(streamKey: string, state: PendingDeb
 /**
  * Main Controller Handler para todas las rutas de WhatsApp
  */
+/**
+ * Resuelve contextualmente el organization_id y user_id mediante Supabase Auth
+ * Idéntico y canónico con crmHandler.ts
+ */
+async function resolveWhatsAppAuthContext(req: VercelRequest, supabase: any): Promise<{ organizationId: string; userId: string | null }> {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader && supabase) {
+    try {
+      const token = authHeader.replace('Bearer ', '').trim();
+      const { data: userData } = await supabase.auth.getUser(token);
+
+      if (userData?.user?.id) {
+        const userId = userData.user.id;
+
+        // 1. Consultar organización en organization_members
+        const { data: member } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (member?.organization_id) {
+          return { organizationId: member.organization_id, userId };
+        }
+
+        // 2. Consultar organización en profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profile?.organization_id) {
+          return { organizationId: profile.organization_id, userId };
+        }
+
+        // 3. Consultar si existe organización vinculada por user_id o id
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('id')
+          .or(`user_id.eq.${userId},id.eq.${userId}`)
+          .maybeSingle();
+
+        if (orgData?.id) {
+          return { organizationId: orgData.id, userId };
+        }
+
+        // 4. Fallback: El usuario es el ID de su propia organización (Owner)
+        return { organizationId: userId, userId };
+      }
+    } catch (err) {
+      console.warn('[WhatsApp API] Warning resolving user token:', err);
+    }
+  }
+
+  // Header explícito x-organization-id o query params
+  const explicitOrg = (req.headers['x-organization-id'] as string) || (req.query.organizationId as string) || (req.query.organization_id as string) || (req.query.orgId as string);
+  if (explicitOrg) {
+    return { organizationId: explicitOrg, userId: null };
+  }
+
+  // Organización activa de referencia para la cuenta en producción
+  return { organizationId: '13d92ac1-1b4a-4d3f-8418-abff914b0500', userId: '13d92ac1-1b4a-4d3f-8418-abff914b0500' };
+}
+
 export async function handleWhatsAppRoute(req: VercelRequest, res: VercelResponse, subRoute: string = 'webhook') {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -622,25 +688,9 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
     subRoute.includes('connect') ||
     subRoute.includes('oauth')
   ) {
-    let targetOrgId = req.query.orgId || (req.query as any)?.organization_id || '';
-    let userId = '';
-
-    const authHeader = req.headers.authorization;
-    if (authHeader && supabase) {
-      try {
-        const token = authHeader.replace('Bearer ', '').trim();
-        const { data: userData } = await supabase.auth.getUser(token);
-        if (userData?.user?.id) {
-          userId = userData.user.id;
-          const { data: orgData } = await supabase
-            .from('organizations')
-            .select('id')
-            .or(`user_id.eq.${userId},id.eq.${userId}`)
-            .maybeSingle();
-          if (orgData?.id) targetOrgId = orgData.id;
-        }
-      } catch {}
-    }
+    const authContext = await resolveWhatsAppAuthContext(req, supabase);
+    const targetOrgId = authContext.organizationId || '13d92ac1-1b4a-4d3f-8418-abff914b0500';
+    const userId = authContext.userId || targetOrgId;
 
     if (req.method === 'GET') {
       let isConnected = false;
@@ -651,7 +701,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           const { data: orgData } = await supabase
             .from('organizations')
             .select('*')
-            .or(`id.eq.${targetOrgId || userId},user_id.eq.${userId || targetOrgId}`)
+            .or(`id.eq.${targetOrgId},user_id.eq.${userId},id.eq.${userId}`)
             .maybeSingle();
 
           if (orgData && (orgData.meta_phone_number_id || orgData.wa_phone_number_id)) {
@@ -695,7 +745,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
                 wa_connected: false,
                 updated_at: new Date().toISOString(),
               })
-              .or(`id.eq.${targetOrgId || userId},user_id.eq.${userId || targetOrgId}`);
+              .or(`id.eq.${targetOrgId},user_id.eq.${userId},id.eq.${userId}`);
 
             return res.status(200).json({ success: true, message: 'WhatsApp disconnected successfully' });
           } catch (err: any) {
@@ -762,7 +812,7 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
             const { data: updatedOrg, error: updErr } = await supabase
               .from('organizations')
               .update(updatePayload)
-              .or(`id.eq.${targetOrgId || userId},user_id.eq.${userId || targetOrgId}`)
+              .or(`id.eq.${targetOrgId},user_id.eq.${userId},id.eq.${userId}`)
               .select()
               .single();
 
