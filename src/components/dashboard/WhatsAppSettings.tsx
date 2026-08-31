@@ -425,13 +425,13 @@ export const WhatsAppSettings: React.FC = () => {
     }
   };
 
-  // 7. Trigger FB.login Embedded Signup Popup
+    // 7. Trigger FB.login Embedded Signup Popup (Official Meta Cloud API v20.0 Standard)
   const handleLaunchEmbeddedSignup = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
 
     const appId = import.meta.env.VITE_META_APP_ID || '891096146948509';
-    const configId = import.meta.env.VITE_META_CONFIG_ID || '';
+    const configId = import.meta.env.VITE_META_CONFIG_ID || '4773318829578824';
 
     if (!window.FB) {
       setErrorMsg('El SDK de Meta se está inicializando o está bloqueado por tu navegador. Recarga la página o usa la Configuración Manual.');
@@ -440,16 +440,18 @@ export const WhatsAppSettings: React.FC = () => {
 
     try {
       const loginOptions: any = {
-        scope: 'whatsapp_business_management,whatsapp_business_messaging',
+        config_id: configId,
         response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          featureType: 'whatsapp_business_app_onboarding',
+          sessionInfoVersion: '3',
+          version: 'v4',
+        },
       };
 
-      if (configId && configId !== 'null') {
-        loginOptions.config_id = configId;
-      }
-
       window.FB.login((response: any) => {
-        if (response.authResponse) {
+        if (response.authResponse?.code) {
           const code = response.authResponse.code;
           handleCompleteSignup({ code });
         } else {
