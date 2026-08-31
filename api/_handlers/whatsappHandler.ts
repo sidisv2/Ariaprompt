@@ -596,11 +596,16 @@ export async function handleWhatsAppRoute(req: VercelRequest, res: VercelRespons
           activeDebounceStreams.set(debounceKey, streamState);
         }
 
-        streamState.timer = setTimeout(() => {
-          processDebouncedConversation(debounceKey, streamState!, supabase).catch(console.error);
-        }, debounceDelay);
+        // Ejecución sincrónica garantizada en Vercel Serverless con medición de latencia
+        const t0 = Date.now();
+        console.log(`[whatsappHandler] 🚀 Iniciando procesamiento para ${fromNumber} (wamid: ${wamid})`);
+        
+        await processDebouncedConversation(debounceKey, streamState, supabase);
+        
+        const totalDuration = Date.now() - t0;
+        console.log(`[whatsappHandler] 🏁 Procesamiento completado en ${totalDuration}ms para ${fromNumber}`);
 
-        return res.status(200).json({ status: 'INGESTED_AND_QUEUED', wamid });
+        return res.status(200).json({ status: 'PROCESSED_AND_REPLIED', wamid, durationMs: totalDuration });
       } catch (err: any) {
         console.error('Error in WhatsApp POST Webhook:', err);
         return res.status(200).json({ status: 'ERROR_HANDLED', message: err?.message });
