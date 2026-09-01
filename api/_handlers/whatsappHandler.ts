@@ -175,9 +175,11 @@ async function inspectMetaTokenOrWaba(accessToken: string, candidateWabaId?: str
  * Helper: Suscribe el WABA ID a los webhooks de la App (OBLIGATORIO para Tech Providers)
  * POST https://graph.facebook.com/v20.0/{WABA_ID}/subscribed_apps
  */
-async function subscribeWabaToWebhooks(wabaId: string, accessToken: string): Promise<{ success: boolean; error?: string }> {
+async function subscribeWabaToWebhooks(wabaId: string, accessToken: string): Promise<{ success: boolean; error?: string; rawResponse?: any }> {
   try {
     const endpoint = `https://graph.facebook.com/v20.0/${encodeURIComponent(wabaId)}/subscribed_apps`;
+    console.log(`[whatsappHandler] 📡 Enviando POST a Meta subscribed_apps para WABA ID: ${wabaId}...`);
+
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -186,18 +188,27 @@ async function subscribeWabaToWebhooks(wabaId: string, accessToken: string): Pro
       },
     });
 
-    const data = await res.json().catch(() => ({}));
+    const rawData = await res.json().catch(() => ({}));
 
-    if (!res.ok || (data.success !== true && !data.data)) {
-      const errMsg = data.error?.message || `Meta subscribed_apps HTTP ${res.status}`;
-      console.warn(`[whatsappHandler] Subscribed Apps Warning for WABA ${wabaId}:`, errMsg);
-      return { success: false, error: errMsg };
+    // Log exhaustivo del body completo de la respuesta de Meta Graph API v20.0
+    console.log(`[whatsappHandler] 📥 Respuesta de Meta subscribed_apps (HTTP ${res.status}) para WABA ${wabaId}:`, JSON.stringify(rawData, null, 2));
+
+    const isExplicitSuccess = res.ok && (rawData.success === true || Array.isArray(rawData.data) || Boolean(rawData.data));
+
+    if (!isExplicitSuccess) {
+      const errMsg = rawData.error?.message || `Meta subscribed_apps HTTP ${res.status}: ${JSON.stringify(rawData)}`;
+      console.error(`[whatsappHandler] ❌ Error detallado al suscribir WABA ${wabaId}:`, {
+        httpStatus: res.status,
+        metaError: rawData.error,
+        rawBody: rawData,
+      });
+      return { success: false, error: errMsg, rawResponse: rawData };
     }
 
-    console.log(`[whatsappHandler] WABA ${wabaId} exitosamente suscripto a los webhooks de Aria Prop.`);
-    return { success: true };
+    console.log(`[whatsappHandler] ✅ WABA ${wabaId} exitosamente suscripto a los webhooks de Aria Prop (success=true).`);
+    return { success: true, rawResponse: rawData };
   } catch (err: any) {
-    console.error(`[whatsappHandler] Excepción al suscribir WABA ${wabaId}:`, err);
+    console.error(`[whatsappHandler] 💥 Excepción de red al suscribir WABA ${wabaId}:`, err);
     return { success: false, error: err.message || String(err) };
   }
 }
